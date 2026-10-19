@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PositionPips | Excelência Trading</title>
+  <title>Diário Trader ASRV | Excelência Trading</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome Icons -->
@@ -62,8 +62,8 @@
       <!-- Header / Logo -->
       <div class="p-5 border-b border-brand-border">
         <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-          <span class="bg-blue-600 text-white p-1 rounded text-xs font-black">PP</span>
-          PositionPips
+          <span class="bg-blue-600 text-white p-1.5 rounded text-xs font-black">DT</span>
+          Diário Trader ASRV
         </h1>
         <p class="text-xs text-gray-400 mt-1">Gestão de risco e diário com disciplina</p>
       </div>
@@ -143,7 +143,7 @@
     <!-- TOP BAR WITH DUOLINGO STREAK AND BALANCE -->
     <header class="h-16 bg-brand-card border-b border-brand-border flex items-center justify-between px-4 md:px-6 flex-shrink-0">
       <div class="flex items-center gap-3">
-        <span class="text-sm font-semibold text-white tracking-wide hidden sm:inline">PositionPips</span>
+        <span class="text-sm font-semibold text-white tracking-wide hidden sm:inline">Diário Trader ASRV</span>
         
         <!-- OFENSIVA STREAK (DUOLINGO STYLE) -->
         <div class="flex items-center gap-1.5 bg-orange-950/60 border border-orange-700/50 px-3 py-1 rounded-full text-orange-400 font-bold text-xs" title="Dias seguidos sem estourar limites (máx 2 trades/dia e máx -20% de perda diária)">
@@ -517,12 +517,12 @@
 
     // LOAD INITIAL DATA FROM LOCALSTORAGE
     function loadInitialData() {
-      const savedTrades = localStorage.getItem('positionpips_trades');
+      const savedTrades = localStorage.getItem('diario_trader_asrv_trades') || localStorage.getItem('positionpips_trades');
       if (savedTrades) {
         try { trades = JSON.parse(savedTrades); } catch (e) { trades = []; }
       }
 
-      const savedBal = localStorage.getItem('positionpips_initial_bal');
+      const savedBal = localStorage.getItem('diario_trader_asrv_initial_bal') || localStorage.getItem('positionpips_initial_bal');
       if (savedBal) {
         initialBalance = parseFloat(savedBal) || 1000;
       }
@@ -535,14 +535,14 @@
     // UPDATE INITIAL BALANCE
     function updateInitialBalance(val) {
       initialBalance = parseFloat(val) || 0;
-      localStorage.setItem('positionpips_initial_bal', initialBalance);
+      localStorage.setItem('diario_trader_asrv_initial_bal', initialBalance);
       calculateStreak();
       refreshUI();
     }
 
     // SAVE DATA
     function saveData() {
-      localStorage.setItem('positionpips_trades', JSON.stringify(trades));
+      localStorage.setItem('diario_trader_asrv_trades', JSON.stringify(trades));
       calculateStreak();
     }
 
@@ -599,7 +599,7 @@
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ trades, initialBalance }, null, 2));
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `positionpips_backup_${new Date().toISOString().slice(0,10)}.json`);
+      downloadAnchor.setAttribute("download", `diario_trader_asrv_backup_${new Date().toISOString().slice(0,10)}.json`);
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
@@ -616,7 +616,7 @@
             trades = imported.trades;
             initialBalance = imported.initialBalance || 1000;
             document.getElementById('initial-balance-input').value = initialBalance;
-            localStorage.setItem('positionpips_initial_bal', initialBalance);
+            localStorage.setItem('diario_trader_asrv_initial_bal', initialBalance);
             saveData();
             refreshUI();
             alert('Dados importados com sucesso!');
