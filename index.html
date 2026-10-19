@@ -146,7 +146,7 @@
         <span class="text-sm font-semibold text-white tracking-wide hidden sm:inline">Diário Trader ASRV</span>
         
         <!-- OFENSIVA STREAK (DUOLINGO STYLE) -->
-        <div class="flex items-center gap-1.5 bg-orange-950/60 border border-orange-700/50 px-3 py-1 rounded-full text-orange-400 font-bold text-xs" title="Dias seguidos sem estourar limites (máx 2 trades/dia e máx -20% de perda diária)">
+        <div class="flex items-center gap-1.5 bg-orange-950/60 border border-orange-700/50 px-3 py-1 rounded-full text-orange-400 font-bold text-xs" title="Dias seguidos sem estourar limites (máx 2 trades/dia e nenhuma perda individual > 20%)">
           <i class="fa-solid fa-fire text-orange-500 animate-bounce"></i>
           <span id="streak-count">0</span>
           <span class="hidden md:inline font-medium text-[11px] text-orange-300">dias de disciplina</span>
@@ -158,7 +158,7 @@
         <div class="flex items-center gap-1.5 bg-gray-900 border border-brand-border px-3 py-1 rounded-lg">
           <span class="text-xs text-gray-400">Saldo Inicial:</span>
           <span class="text-xs font-bold text-emerald-400">R$</span>
-          <input type="number" id="initial-balance-input" onchange="updateInitialBalance(this.value)" value="1000" class="w-20 bg-transparent text-xs font-bold text-white focus:outline-none focus:border-blue-500">
+          <input type="number" id="initial-balance-input" onchange="updateInitialBalance(this.value)" value="150" class="w-20 bg-transparent text-xs font-bold text-white focus:outline-none focus:border-blue-500">
         </div>
 
         <div class="flex items-center gap-2 border-l border-gray-800 pl-3">
@@ -200,14 +200,14 @@
         <!-- Section Title -->
         <div>
           <h2 class="text-2xl font-bold text-white tracking-tight">Diário de Trading</h2>
-          <p class="text-sm text-gray-400 mt-0.5">Regras: Máx. 2 operações/dia | Perda máx. diária: 20% do capital inicial</p>
+          <p class="text-sm text-gray-400 mt-0.5">Regras: Máx. 2 operações/dia | Nenhuma perda individual &gt; 20% do capital inicial</p>
         </div>
 
         <!-- 4 MAIN KPI CARDS -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div class="bg-brand-card border border-brand-border rounded-xl p-5">
             <p class="text-xs text-gray-400 font-medium">Patrimônio Total</p>
-            <h3 class="text-3xl font-extrabold text-white mt-2" id="kpi-total-balance">R$ 1.000,00</h3>
+            <h3 class="text-3xl font-extrabold text-white mt-2" id="kpi-total-balance">R$ 150,00</h3>
             <span class="text-[11px] text-gray-400" id="kpi-return-pct">+0.00% do saldo inicial</span>
           </div>
 
@@ -418,9 +418,9 @@
             <h3 class="text-base font-semibold text-white">Regras de Ouro da Plataforma</h3>
             <div class="p-3 bg-red-950/40 border border-red-800/60 rounded-lg text-xs text-red-300 space-y-2">
               <p>⚡ <strong>Limite estrito:</strong> Máximo de 2 operações por dia.</p>
-              <p>🛑 <strong>Perda Diária Máxima:</strong> No máximo -20% do capital inicial em um único dia.</p>
-              <p>🔥 <strong>Ofensiva:</strong> A cada dia operado respeitando o número de trades e a perda máxima, sua ofensiva aumenta em 1 dia.</p>
-              <p>💀 <strong>Penalidade de Zeramento:</strong> A sua ofensiva é **ZERADA** se você realizar a 3ª operação no mesmo dia, perder mais de 20% do capital inicial em um dia, ou se o saldo total zerar!</p>
+              <p>🛑 <strong>Perda Individual Máxima:</strong> Nenhuma operação pode ter um prejuízo superior a 20% do capital inicial (ex: max R$ 30,00 de perda por trade em conta de R$ 150,00).</p>
+              <p>🔥 <strong>Ofensiva:</strong> A cada dia operado respeitando o número de trades e sem nenhuma perda individual &gt; 20%, sua ofensiva aumenta em 1 dia.</p>
+              <p>💀 <strong>Penalidade de Zeramento:</strong> A sua ofensiva é **ZERADA** se você realizar a 3ª operação no mesmo dia, fizer qualquer trade com perda maior que 20% do saldo inicial, ou se o saldo total zerar!</p>
             </div>
           </div>
           <div class="bg-brand-card border border-brand-border rounded-xl p-5 space-y-3">
@@ -432,7 +432,7 @@
               <input type="checkbox" class="rounded bg-gray-900 border-gray-700 text-blue-600"> Respeitar o limite de 2 trades diários
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-300">
-              <input type="checkbox" class="rounded bg-gray-900 border-gray-700 text-blue-600"> Encerrar o dia caso atinja 20% de perda
+              <input type="checkbox" class="rounded bg-gray-900 border-gray-700 text-blue-600"> Nunca aceitar um stop individual &gt; 20% do capital inicial
             </label>
           </div>
         </div>
@@ -486,7 +486,7 @@
 
         <div>
           <label class="block text-gray-400 mb-1">Resultado Financeiro (R$ ou $)</label>
-          <input type="number" id="form-pnl" step="0.01" required placeholder="Ex: 150 ou -80" class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-white focus:outline-none focus:border-blue-500">
+          <input type="number" id="form-pnl" step="0.01" required placeholder="Ex: 150 ou -32" class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-white focus:outline-none focus:border-blue-500">
         </div>
 
         <div>
@@ -505,7 +505,7 @@
   <!-- JAVASCRIPT LOGIC -->
   <script>
     let trades = [];
-    let initialBalance = 1000;
+    let initialBalance = 150;
     let streakDays = 0;
     let currentMarket = 'internacional';
     let currentView = 'grid';
@@ -524,7 +524,7 @@
 
       const savedBal = localStorage.getItem('diario_trader_asrv_initial_bal') || localStorage.getItem('positionpips_initial_bal');
       if (savedBal) {
-        initialBalance = parseFloat(savedBal) || 1000;
+        initialBalance = parseFloat(savedBal) || 150;
       }
       document.getElementById('initial-balance-input').value = initialBalance;
 
@@ -554,26 +554,31 @@
         return;
       }
 
-      // Group trades by date (count and total daily PnL)
-      const dailyStats = {};
+      // Group trades by date
+      const dailyTrades = {};
       trades.forEach(t => {
-        if (!dailyStats[t.date]) {
-          dailyStats[t.date] = { count: 0, pnl: 0 };
+        if (!dailyTrades[t.date]) {
+          dailyTrades[t.date] = [];
         }
-        dailyStats[t.date].count += 1;
-        dailyStats[t.date].pnl += t.pnl;
+        dailyTrades[t.date].push(t);
       });
 
-      const maxAllowedDailyLoss = initialBalance * 0.20; // 20% max loss limit
+      const maxAllowedSingleLoss = initialBalance * 0.20; // 20% max single trade loss limit
       let ruleViolated = false;
 
       // Check each day for violations
-      Object.keys(dailyStats).forEach(date => {
-        const { count, pnl } = dailyStats[date];
-        // Violation 1: More than 2 trades in a day
-        if (count > 2) ruleViolated = true;
-        // Violation 2: Lost more than 20% of initial balance in a single day
-        if (pnl < 0 && Math.abs(pnl) > maxAllowedDailyLoss) ruleViolated = true;
+      Object.keys(dailyTrades).forEach(date => {
+        const dayTrades = dailyTrades[date];
+        
+        // Violation 1: More than 2 trades in a single day
+        if (dayTrades.length > 2) ruleViolated = true;
+
+        // Violation 2: ANY individual trade loss > 20% of initial balance
+        dayTrades.forEach(t => {
+          if (t.pnl < 0 && Math.abs(t.pnl) > maxAllowedSingleLoss) {
+            ruleViolated = true;
+          }
+        });
       });
 
       // Violation 3: Total account value reaches <= 0
@@ -584,7 +589,7 @@
         streakDays = 0; // RESET STREAK!
       } else {
         // Count valid distinct trading days
-        streakDays = Object.keys(dailyStats).length;
+        streakDays = Object.keys(dailyTrades).length;
       }
 
       updateStreakUI();
@@ -614,7 +619,7 @@
           const imported = JSON.parse(e.target.result);
           if (imported.trades && Array.isArray(imported.trades)) {
             trades = imported.trades;
-            initialBalance = imported.initialBalance || 1000;
+            initialBalance = imported.initialBalance || 150;
             document.getElementById('initial-balance-input').value = initialBalance;
             localStorage.setItem('diario_trader_asrv_initial_bal', initialBalance);
             saveData();
@@ -693,15 +698,13 @@
       const pnl = parseFloat(document.getElementById('form-pnl').value);
       const notes = document.getElementById('form-notes').value;
 
-      // Check today's trades count
       const tradesOnDate = trades.filter(t => t.date === date);
-      const todayPnl = tradesOnDate.reduce((a, b) => a + b.pnl, 0) + pnl;
-      const maxDailyLoss = initialBalance * 0.20;
+      const maxSingleLoss = initialBalance * 0.20;
 
       if (tradesOnDate.length >= 2) {
         alert("⚠️ ATENÇÃO: Você já realizou 2 operações nesta data! Salvar a 3ª operação irá ZERAR a sua ofensiva!");
-      } else if (todayPnl < 0 && Math.abs(todayPnl) > maxDailyLoss) {
-        alert(`⚠️ ATENÇÃO: Com esta operação, a sua perda no dia atinge R$ ${Math.abs(todayPnl).toFixed(2)}, ultrapassando o limite máximo diário de 20% (R$ ${maxDailyLoss.toFixed(2)}). A sua ofensiva será ZERADA!`);
+      } else if (pnl < 0 && Math.abs(pnl) > maxSingleLoss) {
+        alert(`⚠️ ATENÇÃO: Esta operação tem um prejuízo de R$ ${Math.abs(pnl).toFixed(2)}, o que ultrapassa o limite máximo individual de 20% do capital inicial (R$ ${maxSingleLoss.toFixed(2)}). A sua ofensiva será ZERADA!`);
       }
 
       trades.push({ id: Date.now(), date, asset, type, lots, pnl, notes });
