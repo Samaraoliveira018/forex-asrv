@@ -146,7 +146,7 @@
         <span class="text-sm font-semibold text-white tracking-wide hidden sm:inline">PositionPips</span>
         
         <!-- OFENSIVA STREAK (DUOLINGO STYLE) -->
-        <div class="flex items-center gap-1.5 bg-orange-950/60 border border-orange-700/50 px-3 py-1 rounded-full text-orange-400 font-bold text-xs" title="Dias seguidos cumprindo a regra de no máximo 2 operações/dia sem quebrar!">
+        <div class="flex items-center gap-1.5 bg-orange-950/60 border border-orange-700/50 px-3 py-1 rounded-full text-orange-400 font-bold text-xs" title="Dias seguidos sem estourar limites (máx 2 trades/dia e máx -20% de perda diária)">
           <i class="fa-solid fa-fire text-orange-500 animate-bounce"></i>
           <span id="streak-count">0</span>
           <span class="hidden md:inline font-medium text-[11px] text-orange-300">dias de disciplina</span>
@@ -200,7 +200,7 @@
         <!-- Section Title -->
         <div>
           <h2 class="text-2xl font-bold text-white tracking-tight">Diário de Trading</h2>
-          <p class="text-sm text-gray-400 mt-0.5">Regra de Ouro: Máximo de 2 operações por dia. Mantenha a disciplina!</p>
+          <p class="text-sm text-gray-400 mt-0.5">Regras: Máx. 2 operações/dia | Perda máx. diária: 20% do capital inicial</p>
         </div>
 
         <!-- 4 MAIN KPI CARDS -->
@@ -415,11 +415,12 @@
         <h2 class="text-2xl font-bold text-white">Plano Operacional & Disciplina</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="bg-brand-card border border-brand-border rounded-xl p-5 space-y-3">
-            <h3 class="text-base font-semibold text-white">Regra de Ouro da Plataforma</h3>
+            <h3 class="text-base font-semibold text-white">Regras de Ouro da Plataforma</h3>
             <div class="p-3 bg-red-950/40 border border-red-800/60 rounded-lg text-xs text-red-300 space-y-2">
               <p>⚡ <strong>Limite estrito:</strong> Máximo de 2 operações por dia.</p>
-              <p>🔥 <strong>Ofensiva:</strong> A cada dia operado com 1 ou 2 trades, sua ofensiva aumenta em 1 dia.</p>
-              <p>💀 <strong>Penalidade:</strong> Registrar a 3ª operação no mesmo dia ou zerar o saldo fará a sua ofensiva ser ZERADA imediatamente!</p>
+              <p>🛑 <strong>Perda Diária Máxima:</strong> No máximo -20% do capital inicial em um único dia.</p>
+              <p>🔥 <strong>Ofensiva:</strong> A cada dia operado respeitando o número de trades e a perda máxima, sua ofensiva aumenta em 1 dia.</p>
+              <p>💀 <strong>Penalidade de Zeramento:</strong> A sua ofensiva é **ZERADA** se você realizar a 3ª operação no mesmo dia, perder mais de 20% do capital inicial em um dia, ou se o saldo total zerar!</p>
             </div>
           </div>
           <div class="bg-brand-card border border-brand-border rounded-xl p-5 space-y-3">
@@ -429,6 +430,9 @@
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-300">
               <input type="checkbox" class="rounded bg-gray-900 border-gray-700 text-blue-600"> Respeitar o limite de 2 trades diários
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-300">
+              <input type="checkbox" class="rounded bg-gray-900 border-gray-700 text-blue-600"> Encerrar o dia caso atinja 20% de perda
             </label>
           </div>
         </div>
@@ -532,6 +536,7 @@
     function updateInitialBalance(val) {
       initialBalance = parseFloat(val) || 0;
       localStorage.setItem('positionpips_initial_bal', initialBalance);
+      calculateStreak();
       refreshUI();
     }
 
@@ -549,24 +554,37 @@
         return;
       }
 
-      // Group trades by date
-      const tradesByDate = {};
+      // Group trades by date (count and total daily PnL)
+      const dailyStats = {};
       trades.forEach(t => {
-        tradesByDate[t.date] = (tradesByDate[t.date] || 0) + 1;
+        if (!dailyStats[t.date]) {
+          dailyStats[t.date] = { count: 0, pnl: 0 };
+        }
+        dailyStats[t.date].count += 1;
+        dailyStats[t.date].pnl += t.pnl;
       });
 
-      // Check for overtrading (> 2 trades in a day)
-      const overtradedDates = Object.keys(tradesByDate).filter(date => tradesByDate[date] > 2);
-      
-      // Check total account balance (busted account)
-      const totalPnl = trades.reduce((a, b) => a + b.pnl, 0);
-      const currentAccountValue = initialBalance + totalPnl;
+      const maxAllowedDailyLoss = initialBalance * 0.20; // 20% max loss limit
+      let ruleViolated = false;
 
-      if (overtradedDates.length > 0 || currentAccountValue <= 0) {
+      // Check each day for violations
+      Object.keys(dailyStats).forEach(date => {
+        const { count, pnl } = dailyStats[date];
+        // Violation 1: More than 2 trades in a day
+        if (count > 2) ruleViolated = true;
+        // Violation 2: Lost more than 20% of initial balance in a single day
+        if (pnl < 0 && Math.abs(pnl) > maxAllowedDailyLoss) ruleViolated = true;
+      });
+
+      // Violation 3: Total account value reaches <= 0
+      const totalPnl = trades.reduce((a, b) => a + b.pnl, 0);
+      if ((initialBalance + totalPnl) <= 0) ruleViolated = true;
+
+      if (ruleViolated) {
         streakDays = 0; // RESET STREAK!
       } else {
         // Count valid distinct trading days
-        streakDays = Object.keys(tradesByDate).length;
+        streakDays = Object.keys(dailyStats).length;
       }
 
       updateStreakUI();
@@ -675,10 +693,15 @@
       const pnl = parseFloat(document.getElementById('form-pnl').value);
       const notes = document.getElementById('form-notes').value;
 
-      // Check if adding this trade violates the 2-trade limit
-      const tradesOnDate = trades.filter(t => t.date === date).length;
-      if (tradesOnDate >= 2) {
-        alert("⚠️ ATENÇÃO: Você já realizou 2 operações nesta data! Salvar mais uma operação irá ZERAR a sua ofensiva por desrespeito ao plano!");
+      // Check today's trades count
+      const tradesOnDate = trades.filter(t => t.date === date);
+      const todayPnl = tradesOnDate.reduce((a, b) => a + b.pnl, 0) + pnl;
+      const maxDailyLoss = initialBalance * 0.20;
+
+      if (tradesOnDate.length >= 2) {
+        alert("⚠️ ATENÇÃO: Você já realizou 2 operações nesta data! Salvar a 3ª operação irá ZERAR a sua ofensiva!");
+      } else if (todayPnl < 0 && Math.abs(todayPnl) > maxDailyLoss) {
+        alert(`⚠️ ATENÇÃO: Com esta operação, a sua perda no dia atinge R$ ${Math.abs(todayPnl).toFixed(2)}, ultrapassando o limite máximo diário de 20% (R$ ${maxDailyLoss.toFixed(2)}). A sua ofensiva será ZERADA!`);
       }
 
       trades.push({ id: Date.now(), date, asset, type, lots, pnl, notes });
