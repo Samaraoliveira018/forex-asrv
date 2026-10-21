@@ -213,7 +213,7 @@
           </div>
           
           <div class="w-full bg-gray-900 rounded-full h-3 border border-gray-800 overflow-hidden">
-            <div id="streak-progress-bar" class="bg-gradient-to-r from-orange-500 to-amber-400 h-3 rounded-full transition-all duration-500" style="w-0%"></div>
+            <div id="streak-progress-bar" class="bg-gradient-to-r from-orange-500 to-amber-400 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
           </div>
 
           <div class="grid grid-cols-5 gap-2 text-center pt-1">
@@ -462,6 +462,7 @@
             <div class="p-3 bg-red-950/40 border border-red-800/60 rounded-lg text-xs text-red-300 space-y-2">
               <p>⚡ <strong>Limite estrito:</strong> Máximo de 2 operações por dia.</p>
               <p>🛑 <strong>Perda Individual Máxima:</strong> Nenhuma operação pode ter um prejuízo superior a 20% do capital inicial.</p>
+              <p>⚖️ <strong>Break Even (0x0):</strong> Posições encerradas no zero a zero preservam o capital e mantêm a disciplina ativa.</p>
               <p>🛡️ <strong>Saber Ficar de Fora:</strong> Não operar quando as oportunidades já passaram conta como dia cumprido e avança a ofensiva!</p>
               <p>🔥 <strong>Ofensiva & Metas:</strong> Acumule dias de disciplina para alcançar os níveis de 3, 7, 14, 30 e 60 dias.</p>
             </div>
@@ -475,7 +476,7 @@
               <input type="checkbox" class="rounded bg-gray-900 border-gray-700 text-blue-600"> Respeitar o limite de 2 trades diários
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-300">
-              <input type="checkbox" class="rounded bg-gray-900 border-gray-700 text-blue-600"> Nunca aceitar um stop individual &gt; 20% do capital inicial
+              <input type="checkbox" class="rounded bg-gray-900 border-gray-700 text-blue-600"> Mover o Stop para Break Even ao atingir a primeira parcial
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-300">
               <input type="checkbox" class="rounded bg-gray-900 border-gray-700 text-blue-600"> Se a oportunidade passou, registrar "Não Operei Hoje"
@@ -531,8 +532,13 @@
         </div>
 
         <div>
-          <label class="block text-gray-400 mb-1">Resultado Financeiro ($ / R$)</label>
-          <input type="number" id="form-pnl" step="0.01" required placeholder="Ex: 15 ou -6.50" class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-white focus:outline-none focus:border-blue-500">
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-gray-400">Resultado Financeiro ($ / R$)</label>
+            <button type="button" onclick="setBreakEvenInput()" class="text-[11px] text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1">
+              <i class="fa-solid fa-scale-balanced"></i> Break Even (0x0)
+            </button>
+          </div>
+          <input type="number" id="form-pnl" step="0.01" required placeholder="Ex: 15, -6.50 ou 0" class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-white focus:outline-none focus:border-blue-500">
         </div>
 
         <div>
@@ -618,6 +624,10 @@
       saveData();
       refreshUI();
       alert("🛡️ Excelente disciplina! Registrado com sucesso. Sua ofensiva foi mantida!");
+    }
+
+    function setBreakEvenInput() {
+      document.getElementById('form-pnl').value = 0;
     }
 
     // STREAK & RULES ENGINE
@@ -846,14 +856,18 @@
       document.getElementById('kpi-trades').innerText = totalTrades;
       document.getElementById('kpi-winrate').innerText = `${winRate}%`;
 
-      const formatCurrency = (val) => isValueHidden ? '••••••' : (val >= 0 ? '+ ' : '- ') + Math.abs(val).toLocaleString('en-US', { minimumFractionDigits: 2 });
+      const formatCurrency = (val) => {
+        if (isValueHidden) return '••••••';
+        if (val === 0) return '$ 0.00';
+        return (val > 0 ? '+ ' : '- ') + Math.abs(val).toLocaleString('en-US', { minimumFractionDigits: 2 });
+      };
 
       document.getElementById('kpi-total-balance').innerText = isValueHidden ? '••••••' : `${totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
       document.getElementById('kpi-return-pct').innerText = `${returnPct >= 0 ? '+' : ''}${returnPct}% em relação ao inicial`;
       document.getElementById('kpi-return-pct').className = `text-[11px] font-semibold ${returnPct >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
 
       document.getElementById('kpi-pnl').innerText = formatCurrency(totalPnl);
-      document.getElementById('kpi-pnl').className = `text-3xl font-extrabold mt-2 ${totalPnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+      document.getElementById('kpi-pnl').className = `text-3xl font-extrabold mt-2 ${totalPnl > 0 ? 'text-emerald-400' : totalPnl < 0 ? 'text-red-400' : 'text-gray-300'}`;
 
       document.getElementById('chart-stat-trades').innerText = totalTrades;
       document.getElementById('chart-stat-winrate').innerText = `${winRate}%`;
@@ -867,7 +881,6 @@
     function renderJournalGrid() {
       const container = document.getElementById('journal-grid-view');
       
-      // Renderizar trades e cards de "Não Operei"
       const allItems = [
         ...trades.map(t => ({ ...t, itemType: 'trade' })),
         ...noTradeDays.map(d => ({ date: d, itemType: 'no_trade', id: `nt-${d}` }))
@@ -896,18 +909,23 @@
           `;
         }
 
+        const isBE = item.pnl === 0;
+        const pnlClass = isBE ? 'text-gray-300' : (item.pnl > 0 ? 'text-emerald-400' : 'text-red-400');
+        const pnlText = isValueHidden ? '••••••' : (isBE ? '$ 0.00' : (item.pnl > 0 ? '+ ' : '- ') + Math.abs(item.pnl).toFixed(2));
+
         return `
           <div class="bg-brand-card border border-brand-border rounded-xl p-4 flex flex-col justify-between hover:border-gray-700 transition">
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center gap-2">
                 <span class="font-bold text-white text-base">${item.asset}</span>
                 <span class="text-[10px] px-2 py-0.5 rounded font-semibold ${item.type === 'Compra' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-red-950 text-red-400 border border-red-800'}">${item.type}</span>
+                ${isBE ? `<span class="text-[10px] px-2 py-0.5 rounded font-semibold bg-gray-800 text-gray-300 border border-gray-700">BREAK EVEN</span>` : ''}
               </div>
               <span class="text-xs text-gray-500">${item.date}</span>
             </div>
             <div class="my-2">
               <p class="text-xs text-gray-400">Lotes / Contratos: <strong class="text-gray-200">${item.lots}</strong></p>
-              <p class="text-2xl font-black mt-2 ${item.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}">${isValueHidden ? '••••••' : (item.pnl >= 0 ? '+ ' : '- ') + Math.abs(item.pnl).toFixed(2)}</p>
+              <p class="text-2xl font-black mt-2 ${pnlClass}">${pnlText}</p>
               ${item.notes ? `<p class="text-xs text-gray-400 italic mt-2 bg-gray-900/50 p-2 rounded">${item.notes}</p>` : ''}
             </div>
             <div class="flex justify-end pt-3 border-t border-brand-border">
@@ -924,18 +942,25 @@
         tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-gray-500">Nenhum registo encontrado.</td></tr>`;
         return;
       }
-      tbody.innerHTML = trades.map((t, idx) => `
-        <tr class="hover:bg-gray-800/40">
-          <td class="p-3 text-gray-500">${idx + 1}</td>
-          <td class="p-3 font-medium">${t.date}</td>
-          <td class="p-3 font-bold text-white">${t.asset}</td>
-          <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] ${t.type === 'Compra' ? 'bg-emerald-950 text-emerald-400' : 'bg-red-950 text-red-400'}">${t.type}</span></td>
-          <td class="p-3">${t.lots}</td>
-          <td class="p-3 font-bold ${t.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}">${isValueHidden ? '••••••' : (t.pnl >= 0 ? '+' : '') + t.pnl.toFixed(2)}</td>
-          <td class="p-3"><span class="text-[10px] px-2 py-0.5 rounded bg-gray-800 ${t.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}">${t.pnl >= 0 ? 'WIN' : 'LOSS'}</span></td>
-          <td class="p-3 text-right"><button onclick="deleteTrade(${t.id})" class="text-gray-500 hover:text-red-400"><i class="fa-solid fa-trash"></i></button></td>
-        </tr>
-      `).join('');
+      tbody.innerHTML = trades.map((t, idx) => {
+        const isBE = t.pnl === 0;
+        const statusBadge = isBE 
+          ? `<span class="text-[10px] px-2 py-0.5 rounded bg-gray-800 text-gray-300 font-semibold">BREAK EVEN</span>`
+          : `<span class="text-[10px] px-2 py-0.5 rounded bg-gray-800 ${t.pnl > 0 ? 'text-emerald-400' : 'text-red-400'}">${t.pnl > 0 ? 'WIN' : 'LOSS'}</span>`;
+
+        return `
+          <tr class="hover:bg-gray-800/40">
+            <td class="p-3 text-gray-500">${idx + 1}</td>
+            <td class="p-3 font-medium">${t.date}</td>
+            <td class="p-3 font-bold text-white">${t.asset}</td>
+            <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] ${t.type === 'Compra' ? 'bg-emerald-950 text-emerald-400' : 'bg-red-950 text-red-400'}">${t.type}</span></td>
+            <td class="p-3">${t.lots}</td>
+            <td class="p-3 font-bold ${isBE ? 'text-gray-300' : (t.pnl > 0 ? 'text-emerald-400' : 'text-red-400')}">${isValueHidden ? '••••••' : (isBE ? '0.00' : (t.pnl > 0 ? '+' : '') + t.pnl.toFixed(2))}</td>
+            <td class="p-3">${statusBadge}</td>
+            <td class="p-3 text-right"><button onclick="deleteTrade(${t.id})" class="text-gray-500 hover:text-red-400"><i class="fa-solid fa-trash"></i></button></td>
+          </tr>
+        `;
+      }).join('');
     }
 
     function renderEquityChart() {
