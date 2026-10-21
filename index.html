@@ -146,7 +146,7 @@
         <span class="text-sm font-semibold text-white tracking-wide hidden sm:inline">Diário Trader ASRV</span>
         
         <!-- OFENSIVA STREAK (DUOLINGO STYLE) -->
-        <div class="flex items-center gap-1.5 bg-orange-950/60 border border-orange-700/50 px-3 py-1 rounded-full text-orange-400 font-bold text-xs" title="Dias seguidos sem estourar limites (máx 2 trades/dia e nenhuma perda individual > 20%)">
+        <div class="flex items-center gap-1.5 bg-orange-950/60 border border-orange-700/50 px-3 py-1 rounded-full text-orange-400 font-bold text-xs" title="Dias seguidos de disciplina (operando com até 2 trades sem estourar limites, ou registrando dia sem operações)">
           <i class="fa-solid fa-fire text-orange-500 animate-bounce"></i>
           <span id="streak-count">0</span>
           <span class="hidden md:inline font-medium text-[11px] text-orange-300">dias de disciplina</span>
@@ -157,7 +157,7 @@
       <div class="flex items-center gap-2">
         <div class="flex items-center gap-1.5 bg-gray-900 border border-brand-border px-3 py-1 rounded-lg">
           <span class="text-xs text-gray-400">Saldo Inicial:</span>
-          <span class="text-xs font-bold text-emerald-400">R$</span>
+          <span class="text-xs font-bold text-emerald-400">$ / R$</span>
           <input type="number" id="initial-balance-input" onchange="updateInitialBalance(this.value)" value="150" class="w-20 bg-transparent text-xs font-bold text-white focus:outline-none focus:border-blue-500">
         </div>
 
@@ -175,18 +175,23 @@
       <!-- TAB 1: DIÁRIO DE TRADING -->
       <section id="tab-journal" class="tab-content space-y-6">
         
-        <!-- Top Market Selector Bar -->
+        <!-- Top Market Selector & Action Buttons -->
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div class="bg-gray-900/80 p-1 rounded-lg border border-brand-border inline-flex text-xs">
             <button onclick="setMarket('nacional')" id="btn-m-nac" class="px-4 py-1.5 rounded-md font-medium text-gray-400 hover:text-white transition">Mercado Nacional</button>
             <button onclick="setMarket('internacional')" id="btn-m-int" class="px-4 py-1.5 rounded-md font-medium text-white bg-blue-600 shadow transition">Mercado Internacional</button>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
             <!-- Limite Diário Badge -->
             <div id="today-limit-badge" class="px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 bg-gray-900 border-gray-700 text-gray-300">
               <i class="fa-solid fa-gauge-high"></i> Hoje: <span id="today-trade-count">0</span>/2 trades
             </div>
+
+            <!-- Botão Não Operei Hoje -->
+            <button onclick="markNoTradeDay()" class="bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700 font-medium text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-shield-halved text-emerald-400"></i> Não Operei Hoje
+            </button>
 
             <button onclick="toggleVisibility()" class="p-2 bg-brand-card border border-brand-border rounded-lg text-gray-400 hover:text-white">
               <i class="fa-solid fa-eye" id="eye-icon"></i>
@@ -194,6 +199,44 @@
             <button onclick="openModal()" class="bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg shadow-blue-600/20 transition">
               <i class="fa-solid fa-plus text-xs"></i> Nova operação
             </button>
+          </div>
+        </div>
+
+        <!-- METAS DE OFENSIVA (DUOLINGO STYLE METAS) -->
+        <div class="bg-gradient-to-r from-orange-950/40 via-brand-card to-brand-card border border-orange-900/40 rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-trophy text-amber-400 text-base"></i>
+              <h3 class="text-sm font-bold text-white">Metas de Ofensiva (Disciplina Trader)</h3>
+            </div>
+            <span class="text-xs font-semibold text-orange-400" id="streak-goal-text">Próxima meta: 3 dias</span>
+          </div>
+          
+          <div class="w-full bg-gray-900 rounded-full h-3 border border-gray-800 overflow-hidden">
+            <div id="streak-progress-bar" class="bg-gradient-to-r from-orange-500 to-amber-400 h-3 rounded-full transition-all duration-500" style="w-0%"></div>
+          </div>
+
+          <div class="grid grid-cols-5 gap-2 text-center pt-1">
+            <div id="milestone-3" class="p-1.5 rounded-lg bg-gray-900 border border-gray-800 text-[11px]">
+              <p class="font-bold text-gray-400">3 Dias</p>
+              <p class="text-[9px] text-gray-500">Iniciante</p>
+            </div>
+            <div id="milestone-7" class="p-1.5 rounded-lg bg-gray-900 border border-gray-800 text-[11px]">
+              <p class="font-bold text-gray-400">7 Dias</p>
+              <p class="text-[9px] text-gray-500">Focado</p>
+            </div>
+            <div id="milestone-14" class="p-1.5 rounded-lg bg-gray-900 border border-gray-800 text-[11px]">
+              <p class="font-bold text-gray-400">14 Dias</p>
+              <p class="text-[9px] text-gray-500">Blindado</p>
+            </div>
+            <div id="milestone-30" class="p-1.5 rounded-lg bg-gray-900 border border-gray-800 text-[11px]">
+              <p class="font-bold text-gray-400">30 Dias</p>
+              <p class="text-[9px] text-gray-500">Mestre</p>
+            </div>
+            <div id="milestone-60" class="p-1.5 rounded-lg bg-gray-900 border border-gray-800 text-[11px]">
+              <p class="font-bold text-gray-400">60 Dias</p>
+              <p class="text-[9px] text-gray-500">Lenda</p>
+            </div>
           </div>
         </div>
 
@@ -207,13 +250,13 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div class="bg-brand-card border border-brand-border rounded-xl p-5">
             <p class="text-xs text-gray-400 font-medium">Patrimônio Total</p>
-            <h3 class="text-3xl font-extrabold text-white mt-2" id="kpi-total-balance">R$ 150,00</h3>
+            <h3 class="text-3xl font-extrabold text-white mt-2" id="kpi-total-balance">$ 150.00</h3>
             <span class="text-[11px] text-gray-400" id="kpi-return-pct">+0.00% do saldo inicial</span>
           </div>
 
           <div class="bg-brand-card border border-brand-border rounded-xl p-5">
             <p class="text-xs text-gray-400 font-medium">Resultado Acumulado</p>
-            <h3 class="text-3xl font-extrabold text-white mt-2" id="kpi-pnl">+ R$ 0,00</h3>
+            <h3 class="text-3xl font-extrabold text-white mt-2" id="kpi-pnl">+ $ 0.00</h3>
           </div>
 
           <div class="bg-brand-card border border-brand-border rounded-xl p-5">
@@ -239,7 +282,7 @@
             <div class="flex items-center gap-3 bg-gray-900/60 px-3 py-1.5 rounded-lg border border-gray-800 text-xs">
               <span class="text-gray-400">Trades: <strong class="text-white" id="chart-stat-trades">0</strong></span>
               <span class="text-gray-400">Win Rate: <strong class="text-white" id="chart-stat-winrate">0%</strong></span>
-              <span class="text-gray-400">P/L: <strong class="text-emerald-400" id="chart-stat-pnl">+R$0.00</strong></span>
+              <span class="text-gray-400">P/L: <strong class="text-emerald-400" id="chart-stat-pnl">+$0.00</strong></span>
             </div>
           </div>
 
@@ -302,11 +345,11 @@
           </div>
           <div class="bg-brand-card border border-brand-border rounded-xl p-5">
             <p class="text-xs text-gray-400">Maior Gain</p>
-            <h3 class="text-2xl font-bold text-emerald-400 mt-1" id="dash-max-win">+ R$ 0,00</h3>
+            <h3 class="text-2xl font-bold text-emerald-400 mt-1" id="dash-max-win">+ $ 0.00</h3>
           </div>
           <div class="bg-brand-card border border-brand-border rounded-xl p-5">
             <p class="text-xs text-gray-400">Maior Loss</p>
-            <h3 class="text-2xl font-bold text-red-400 mt-1" id="dash-max-loss">- R$ 0,00</h3>
+            <h3 class="text-2xl font-bold text-red-400 mt-1" id="dash-max-loss">- $ 0.00</h3>
           </div>
         </div>
 
@@ -418,9 +461,9 @@
             <h3 class="text-base font-semibold text-white">Regras de Ouro da Plataforma</h3>
             <div class="p-3 bg-red-950/40 border border-red-800/60 rounded-lg text-xs text-red-300 space-y-2">
               <p>⚡ <strong>Limite estrito:</strong> Máximo de 2 operações por dia.</p>
-              <p>🛑 <strong>Perda Individual Máxima:</strong> Nenhuma operação pode ter um prejuízo superior a 20% do capital inicial (ex: max R$ 30,00 de perda por trade em conta de R$ 150,00).</p>
-              <p>🔥 <strong>Ofensiva:</strong> A cada dia operado respeitando o número de trades e sem nenhuma perda individual &gt; 20%, sua ofensiva aumenta em 1 dia.</p>
-              <p>💀 <strong>Penalidade de Zeramento:</strong> A sua ofensiva é **ZERADA** se você realizar a 3ª operação no mesmo dia, fizer qualquer trade com perda maior que 20% do saldo inicial, ou se o saldo total zerar!</p>
+              <p>🛑 <strong>Perda Individual Máxima:</strong> Nenhuma operação pode ter um prejuízo superior a 20% do capital inicial.</p>
+              <p>🛡️ <strong>Saber Ficar de Fora:</strong> Não operar quando as oportunidades já passaram conta como dia cumprido e avança a ofensiva!</p>
+              <p>🔥 <strong>Ofensiva & Metas:</strong> Acumule dias de disciplina para alcançar os níveis de 3, 7, 14, 30 e 60 dias.</p>
             </div>
           </div>
           <div class="bg-brand-card border border-brand-border rounded-xl p-5 space-y-3">
@@ -433,6 +476,9 @@
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-300">
               <input type="checkbox" class="rounded bg-gray-900 border-gray-700 text-blue-600"> Nunca aceitar um stop individual &gt; 20% do capital inicial
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-300">
+              <input type="checkbox" class="rounded bg-gray-900 border-gray-700 text-blue-600"> Se a oportunidade passou, registrar "Não Operei Hoje"
             </label>
           </div>
         </div>
@@ -485,8 +531,8 @@
         </div>
 
         <div>
-          <label class="block text-gray-400 mb-1">Resultado Financeiro (R$ ou $)</label>
-          <input type="number" id="form-pnl" step="0.01" required placeholder="Ex: 150 ou -32" class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-white focus:outline-none focus:border-blue-500">
+          <label class="block text-gray-400 mb-1">Resultado Financeiro ($ / R$)</label>
+          <input type="number" id="form-pnl" step="0.01" required placeholder="Ex: 15 ou -6.50" class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-white focus:outline-none focus:border-blue-500">
         </div>
 
         <div>
@@ -505,6 +551,7 @@
   <!-- JAVASCRIPT LOGIC -->
   <script>
     let trades = [];
+    let noTradeDays = []; // Armazena dias de disciplina sem operar
     let initialBalance = 150;
     let streakDays = 0;
     let currentMarket = 'internacional';
@@ -520,6 +567,11 @@
       const savedTrades = localStorage.getItem('diario_trader_asrv_trades') || localStorage.getItem('positionpips_trades');
       if (savedTrades) {
         try { trades = JSON.parse(savedTrades); } catch (e) { trades = []; }
+      }
+
+      const savedNoTrades = localStorage.getItem('diario_trader_asrv_notrades');
+      if (savedNoTrades) {
+        try { noTradeDays = JSON.parse(savedNoTrades); } catch (e) { noTradeDays = []; }
       }
 
       const savedBal = localStorage.getItem('diario_trader_asrv_initial_bal') || localStorage.getItem('positionpips_initial_bal');
@@ -543,37 +595,55 @@
     // SAVE DATA
     function saveData() {
       localStorage.setItem('diario_trader_asrv_trades', JSON.stringify(trades));
+      localStorage.setItem('diario_trader_asrv_notrades', JSON.stringify(noTradeDays));
       calculateStreak();
+    }
+
+    // REGISTRAR DIA SEM OPERAR
+    function markNoTradeDay() {
+      const today = new Date().toISOString().slice(0, 10);
+      const tradesToday = trades.filter(t => t.date === today).length;
+
+      if (tradesToday > 0) {
+        alert("⚠️ Você já possui operações registradas hoje! O registro de 'Não Operei' é exclusivo para dias zerados.");
+        return;
+      }
+
+      if (noTradeDays.includes(today)) {
+        alert("🛡️ O dia de hoje já está registrado como um dia de disciplina consciente!");
+        return;
+      }
+
+      noTradeDays.push(today);
+      saveData();
+      refreshUI();
+      alert("🛡️ Excelente disciplina! Registrado com sucesso. Sua ofensiva foi mantida!");
     }
 
     // STREAK & RULES ENGINE
     function calculateStreak() {
-      if (trades.length === 0) {
+      const allDates = new Set();
+      trades.forEach(t => allDates.add(t.date));
+      noTradeDays.forEach(d => allDates.add(d));
+
+      if (allDates.size === 0) {
         streakDays = 0;
         updateStreakUI();
         return;
       }
 
-      // Group trades by date
       const dailyTrades = {};
       trades.forEach(t => {
-        if (!dailyTrades[t.date]) {
-          dailyTrades[t.date] = [];
-        }
+        if (!dailyTrades[t.date]) dailyTrades[t.date] = [];
         dailyTrades[t.date].push(t);
       });
 
-      const maxAllowedSingleLoss = initialBalance * 0.20; // 20% max single trade loss limit
+      const maxAllowedSingleLoss = initialBalance * 0.20;
       let ruleViolated = false;
 
-      // Check each day for violations
       Object.keys(dailyTrades).forEach(date => {
         const dayTrades = dailyTrades[date];
-        
-        // Violation 1: More than 2 trades in a single day
         if (dayTrades.length > 2) ruleViolated = true;
-
-        // Violation 2: ANY individual trade loss > 20% of initial balance
         dayTrades.forEach(t => {
           if (t.pnl < 0 && Math.abs(t.pnl) > maxAllowedSingleLoss) {
             ruleViolated = true;
@@ -581,15 +651,13 @@
         });
       });
 
-      // Violation 3: Total account value reaches <= 0
       const totalPnl = trades.reduce((a, b) => a + b.pnl, 0);
       if ((initialBalance + totalPnl) <= 0) ruleViolated = true;
 
       if (ruleViolated) {
-        streakDays = 0; // RESET STREAK!
+        streakDays = 0;
       } else {
-        // Count valid distinct trading days
-        streakDays = Object.keys(dailyTrades).length;
+        streakDays = allDates.size;
       }
 
       updateStreakUI();
@@ -597,11 +665,37 @@
 
     function updateStreakUI() {
       document.getElementById('streak-count').innerText = streakDays;
+
+      // Atualizar metas do Duolingo
+      const milestones = [3, 7, 14, 30, 60];
+      let nextMilestone = 60;
+      for (let m of milestones) {
+        if (streakDays < m) {
+          nextMilestone = m;
+          break;
+        }
+      }
+
+      document.getElementById('streak-goal-text').innerText = `Próxima meta: ${nextMilestone} dias (${streakDays}/${nextMilestone})`;
+      const pct = Math.min(100, (streakDays / nextMilestone) * 100);
+      document.getElementById('streak-progress-bar').style.width = `${pct}%`;
+
+      // Atualizar destaque dos cards de marcos
+      milestones.forEach(m => {
+        const el = document.getElementById(`milestone-${m}`);
+        if (el) {
+          if (streakDays >= m) {
+            el.className = "p-1.5 rounded-lg bg-orange-950/80 border border-orange-500 text-[11px] text-orange-300 font-bold shadow-sm shadow-orange-500/20";
+          } else {
+            el.className = "p-1.5 rounded-lg bg-gray-900 border border-gray-800 text-[11px]";
+          }
+        }
+      });
     }
 
     // EXPORT / IMPORT
     function exportData() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ trades, initialBalance }, null, 2));
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ trades, noTradeDays, initialBalance }, null, 2));
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute("href", dataStr);
       downloadAnchor.setAttribute("download", `diario_trader_asrv_backup_${new Date().toISOString().slice(0,10)}.json`);
@@ -619,6 +713,7 @@
           const imported = JSON.parse(e.target.result);
           if (imported.trades && Array.isArray(imported.trades)) {
             trades = imported.trades;
+            noTradeDays = imported.noTradeDays || [];
             initialBalance = imported.initialBalance || 150;
             document.getElementById('initial-balance-input').value = initialBalance;
             localStorage.setItem('diario_trader_asrv_initial_bal', initialBalance);
@@ -634,6 +729,7 @@
     function resetData() {
       if (confirm('Tem a certeza de que deseja resetar todo o histórico e a sua ofensiva?')) {
         trades = [];
+        noTradeDays = [];
         saveData();
         refreshUI();
       }
@@ -698,13 +794,18 @@
       const pnl = parseFloat(document.getElementById('form-pnl').value);
       const notes = document.getElementById('form-notes').value;
 
+      // Remover da lista de noTradeDays caso insira trade no mesmo dia
+      if (noTradeDays.includes(date)) {
+        noTradeDays = noTradeDays.filter(d => d !== date);
+      }
+
       const tradesOnDate = trades.filter(t => t.date === date);
       const maxSingleLoss = initialBalance * 0.20;
 
       if (tradesOnDate.length >= 2) {
         alert("⚠️ ATENÇÃO: Você já realizou 2 operações nesta data! Salvar a 3ª operação irá ZERAR a sua ofensiva!");
       } else if (pnl < 0 && Math.abs(pnl) > maxSingleLoss) {
-        alert(`⚠️ ATENÇÃO: Esta operação tem um prejuízo de R$ ${Math.abs(pnl).toFixed(2)}, o que ultrapassa o limite máximo individual de 20% do capital inicial (R$ ${maxSingleLoss.toFixed(2)}). A sua ofensiva será ZERADA!`);
+        alert(`⚠️ ATENÇÃO: Esta operação tem um prejuízo de ${Math.abs(pnl).toFixed(2)}, o que ultrapassa o limite máximo individual de 20% do capital inicial (${maxSingleLoss.toFixed(2)}). A sua ofensiva será ZERADA!`);
       }
 
       trades.push({ id: Date.now(), date, asset, type, lots, pnl, notes });
@@ -745,9 +846,9 @@
       document.getElementById('kpi-trades').innerText = totalTrades;
       document.getElementById('kpi-winrate').innerText = `${winRate}%`;
 
-      const formatCurrency = (val) => isValueHidden ? '••••••' : (val >= 0 ? '+ R$ ' : '- R$ ') + Math.abs(val).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+      const formatCurrency = (val) => isValueHidden ? '••••••' : (val >= 0 ? '+ ' : '- ') + Math.abs(val).toLocaleString('en-US', { minimumFractionDigits: 2 });
 
-      document.getElementById('kpi-total-balance').innerText = isValueHidden ? '••••••' : `R$ ${totalBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+      document.getElementById('kpi-total-balance').innerText = isValueHidden ? '••••••' : `${totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
       document.getElementById('kpi-return-pct').innerText = `${returnPct >= 0 ? '+' : ''}${returnPct}% em relação ao inicial`;
       document.getElementById('kpi-return-pct').className = `text-[11px] font-semibold ${returnPct >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
 
@@ -765,29 +866,56 @@
 
     function renderJournalGrid() {
       const container = document.getElementById('journal-grid-view');
-      if (trades.length === 0) {
-        container.innerHTML = `<div class="col-span-full text-center py-12 bg-brand-card rounded-xl border border-brand-border"><p class="text-gray-400 text-sm">Nenhuma operação registrada ainda.</p></div>`;
+      
+      // Renderizar trades e cards de "Não Operei"
+      const allItems = [
+        ...trades.map(t => ({ ...t, itemType: 'trade' })),
+        ...noTradeDays.map(d => ({ date: d, itemType: 'no_trade', id: `nt-${d}` }))
+      ].sort((a, b) => b.date.localeCompare(a.date));
+
+      if (allItems.length === 0) {
+        container.innerHTML = `<div class="col-span-full text-center py-12 bg-brand-card rounded-xl border border-brand-border"><p class="text-gray-400 text-sm">Nenhuma operação ou dia de disciplina registrado ainda.</p></div>`;
         return;
       }
-      container.innerHTML = trades.map(t => `
-        <div class="bg-brand-card border border-brand-border rounded-xl p-4 flex flex-col justify-between hover:border-gray-700 transition">
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-2">
-              <span class="font-bold text-white text-base">${t.asset}</span>
-              <span class="text-[10px] px-2 py-0.5 rounded font-semibold ${t.type === 'Compra' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-red-950 text-red-400 border border-red-800'}">${t.type}</span>
+
+      container.innerHTML = allItems.map(item => {
+        if (item.itemType === 'no_trade') {
+          return `
+            <div class="bg-brand-card border border-emerald-900/60 rounded-xl p-4 flex flex-col justify-between hover:border-emerald-700 transition">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-emerald-400 text-sm flex items-center gap-1.5"><i class="fa-solid fa-shield-halved"></i> Preservação de Capital</span>
+                </div>
+                <span class="text-xs text-gray-500">${item.date}</span>
+              </div>
+              <div class="my-2">
+                <p class="text-xs text-gray-400 italic">"Mercado sem padrão claro. Decisão consciente de não operar e proteger o capital."</p>
+                <p class="text-xs font-bold text-emerald-400 mt-2">+1 dia de Ofensiva 🔥</p>
+              </div>
             </div>
-            <span class="text-xs text-gray-500">${t.date}</span>
+          `;
+        }
+
+        return `
+          <div class="bg-brand-card border border-brand-border rounded-xl p-4 flex flex-col justify-between hover:border-gray-700 transition">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-white text-base">${item.asset}</span>
+                <span class="text-[10px] px-2 py-0.5 rounded font-semibold ${item.type === 'Compra' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-red-950 text-red-400 border border-red-800'}">${item.type}</span>
+              </div>
+              <span class="text-xs text-gray-500">${item.date}</span>
+            </div>
+            <div class="my-2">
+              <p class="text-xs text-gray-400">Lotes / Contratos: <strong class="text-gray-200">${item.lots}</strong></p>
+              <p class="text-2xl font-black mt-2 ${item.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}">${isValueHidden ? '••••••' : (item.pnl >= 0 ? '+ ' : '- ') + Math.abs(item.pnl).toFixed(2)}</p>
+              ${item.notes ? `<p class="text-xs text-gray-400 italic mt-2 bg-gray-900/50 p-2 rounded">${item.notes}</p>` : ''}
+            </div>
+            <div class="flex justify-end pt-3 border-t border-brand-border">
+              <button onclick="deleteTrade(${item.id})" class="text-xs text-gray-500 hover:text-red-400"><i class="fa-solid fa-trash"></i> Eliminar</button>
+            </div>
           </div>
-          <div class="my-2">
-            <p class="text-xs text-gray-400">Lotes / Contratos: <strong class="text-gray-200">${t.lots}</strong></p>
-            <p class="text-2xl font-black mt-2 ${t.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}">${isValueHidden ? '••••••' : (t.pnl >= 0 ? '+ R$ ' : '- R$ ') + Math.abs(t.pnl).toFixed(2)}</p>
-            ${t.notes ? `<p class="text-xs text-gray-400 italic mt-2 bg-gray-900/50 p-2 rounded">${t.notes}</p>` : ''}
-          </div>
-          <div class="flex justify-end pt-3 border-t border-brand-border">
-            <button onclick="deleteTrade(${t.id})" class="text-xs text-gray-500 hover:text-red-400"><i class="fa-solid fa-trash"></i> Eliminar</button>
-          </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     function renderJournalList() {
@@ -833,7 +961,7 @@
         data: {
           labels: chartLabels,
           datasets: [{
-            label: 'Patrimônio (R$)',
+            label: 'Patrimônio',
             data: chartData,
             borderColor: '#10b981',
             borderWidth: 2.5,
