@@ -188,9 +188,9 @@
               <i class="fa-solid fa-gauge-high"></i> Hoje: <span id="today-trade-count">0</span>/2 trades
             </div>
 
-            <!-- Botão Não Operei Hoje -->
+            <!-- Botão Marcar Dia Sem Operar (Retroativo) -->
             <button onclick="markNoTradeDay()" class="bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700 font-medium text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
-              <i class="fa-solid fa-shield-halved text-emerald-400"></i> Não Operei Hoje
+              <i class="fa-solid fa-calendar-check text-emerald-400"></i> Registrar Dia Sem Operar
             </button>
 
             <button onclick="toggleVisibility()" class="p-2 bg-brand-card border border-brand-border rounded-lg text-gray-400 hover:text-white">
@@ -463,7 +463,7 @@
               <p>⚡ <strong>Limite estrito:</strong> Máximo de 2 operações por dia.</p>
               <p>🛑 <strong>Perda Individual Máxima:</strong> Nenhuma operação pode ter um prejuízo superior a 20% do capital inicial.</p>
               <p>⚖️ <strong>Break Even (0x0):</strong> Posições encerradas no zero a zero preservam o capital e mantêm a disciplina ativa.</p>
-              <p>🛡️ <strong>Saber Ficar de Fora:</strong> Não operar quando as oportunidades já passaram conta como dia cumprido e avança a ofensiva!</p>
+              <p>🛡️ <strong>Saber Ficar de Fora:</strong> Registrar dias em que você não operou mantém a sua ofensiva ativa!</p>
               <p>🔥 <strong>Ofensiva & Metas:</strong> Acumule dias de disciplina para alcançar os níveis de 3, 7, 14, 30 e 60 dias.</p>
             </div>
           </div>
@@ -479,7 +479,7 @@
               <input type="checkbox" class="rounded bg-gray-900 border-gray-700 text-blue-600"> Mover o Stop para Break Even ao atingir a primeira parcial
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-300">
-              <input type="checkbox" class="rounded bg-gray-900 border-gray-700 text-blue-600"> Se a oportunidade passou, registrar "Não Operei Hoje"
+              <input type="checkbox" class="rounded bg-gray-900 border-gray-700 text-blue-600"> Se a oportunidade passou, registrar o dia sem operação
             </label>
           </div>
         </div>
@@ -605,25 +605,35 @@
       calculateStreak();
     }
 
-    // REGISTRAR DIA SEM OPERAR
+    // REGISTRAR DIA SEM OPERAR (PERMITE SELECIONAR A DATA FIXA/RETROATIVA)
     function markNoTradeDay() {
       const today = new Date().toISOString().slice(0, 10);
-      const tradesToday = trades.filter(t => t.date === today).length;
+      const targetDate = prompt("Digite a data em que você não operou (AAAA-MM-DD):", today);
+      
+      if (!targetDate) return; // Cancelado pelo usuário
+
+      // Validar formato AAAA-MM-DD simples
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+        alert("⚠️ Formato de data inválido! Use o formato AAAA-MM-DD (exemplo: 2026-10-20).");
+        return;
+      }
+
+      const tradesToday = trades.filter(t => t.date === targetDate).length;
 
       if (tradesToday > 0) {
-        alert("⚠️ Você já possui operações registradas hoje! O registro de 'Não Operei' é exclusivo para dias zerados.");
+        alert(`⚠️ Você já possui operações registradas na data ${targetDate}! O registro de 'Não Operei' é exclusivo para dias sem trades.`);
         return;
       }
 
-      if (noTradeDays.includes(today)) {
-        alert("🛡️ O dia de hoje já está registrado como um dia de disciplina consciente!");
+      if (noTradeDays.includes(targetDate)) {
+        alert(`🛡️ A data ${targetDate} já está registrada como um dia de disciplina consciente!`);
         return;
       }
 
-      noTradeDays.push(today);
+      noTradeDays.push(targetDate);
       saveData();
       refreshUI();
-      alert("🛡️ Excelente disciplina! Registrado com sucesso. Sua ofensiva foi mantida!");
+      alert(`🛡️ Excelente disciplina! O dia ${targetDate} foi registrado com sucesso e sua ofensiva foi mantida!`);
     }
 
     function setBreakEvenInput() {
@@ -740,6 +750,14 @@
       if (confirm('Tem a certeza de que deseja resetar todo o histórico e a sua ofensiva?')) {
         trades = [];
         noTradeDays = [];
+        saveData();
+        refreshUI();
+      }
+    }
+
+    function deleteNoTradeDay(date) {
+      if (confirm(`Remover o registro de 'Não Operei' da data ${date}?`)) {
+        noTradeDays = noTradeDays.filter(d => d !== date);
         saveData();
         refreshUI();
       }
@@ -904,6 +922,9 @@
               <div class="my-2">
                 <p class="text-xs text-gray-400 italic">"Mercado sem padrão claro. Decisão consciente de não operar e proteger o capital."</p>
                 <p class="text-xs font-bold text-emerald-400 mt-2">+1 dia de Ofensiva 🔥</p>
+              </div>
+              <div class="flex justify-end pt-3 border-t border-brand-border">
+                <button onclick="deleteNoTradeDay('${item.date}')" class="text-xs text-gray-500 hover:text-red-400"><i class="fa-solid fa-trash"></i> Eliminar</button>
               </div>
             </div>
           `;
