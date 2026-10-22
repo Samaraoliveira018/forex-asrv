@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Supabase JS (cliente da nuvem; inativo enquanto URL/anon key estiverem vazias) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -95,10 +97,21 @@
     <!-- Storage / Export Options Footer -->
     <div class="p-3 border-t border-brand-border space-y-2">
       <div class="px-2 py-1 bg-gray-900/80 rounded border border-gray-800">
-        <p class="text-[10px] text-gray-400 uppercase font-semibold">Armazenamento Local</p>
-        <p class="text-xs text-emerald-400 font-medium flex items-center gap-1 mt-0.5">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Salvo Automaticamente
+        <p class="text-[10px] text-gray-400 uppercase font-semibold">Armazenamento</p>
+        <p class="text-xs font-medium flex items-center gap-1 mt-0.5">
+          <span id="cloud-status-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="cloud-status-text" class="text-emerald-400">Salvo Automaticamente</span>
         </p>
+        <div id="cloud-actions" class="hidden mt-2">
+          <div class="grid grid-cols-2 gap-1.5">
+            <button onclick="forceSync()" class="px-2 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded text-[11px] flex items-center justify-center gap-1">
+              <i class="fa-solid fa-rotate text-[10px]"></i> Sincronizar
+            </button>
+            <button onclick="signOut()" class="px-2 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded text-[11px] flex items-center justify-center gap-1">
+              <i class="fa-solid fa-right-from-bracket text-[10px]"></i> Sair
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="grid grid-cols-2 gap-1.5 pt-1">
@@ -494,6 +507,40 @@
     </div>
   </div>
 
+  <!-- MODAL: LOGIN NA NUVEM (Supabase) -->
+  <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] hidden p-4">
+    <div class="bg-brand-card border border-brand-border rounded-xl w-full max-w-sm p-6 space-y-4 shadow-2xl m-auto">
+      <div class="flex items-center gap-2">
+        <span class="bg-blue-600 text-white p-1.5 rounded text-xs font-black">DT</span>
+        <div>
+          <h3 class="text-base font-bold text-white">Entrar na nuvem</h3>
+          <p class="text-[11px] text-gray-400">Seus dados ficam salvos no Supabase</p>
+        </div>
+      </div>
+
+      <form id="auth-form" onsubmit="signIn(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block text-gray-400 mb-1">E-mail</label>
+          <input type="email" id="auth-email" required autocomplete="username" placeholder="voce@exemplo.com" class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-white focus:outline-none focus:border-blue-500">
+        </div>
+        <div>
+          <label class="block text-gray-400 mb-1">Senha</label>
+          <input type="password" id="auth-password" required autocomplete="current-password" placeholder="••••••••" class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-white focus:outline-none focus:border-blue-500">
+        </div>
+
+        <p id="auth-error" class="text-[11px] text-red-400 min-h-[1rem]"></p>
+
+        <button type="submit" id="auth-submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 rounded-lg transition">Entrar</button>
+        <button type="button" onclick="resetPassword()" class="w-full text-[11px] text-blue-400 hover:text-blue-300 py-1">Esqueci a senha</button>
+      </form>
+
+      <p class="text-[10px] text-gray-500 text-center border-t border-brand-border pt-3">
+        O cadastro é fechado. Use o usuário criado no painel do Supabase.
+        <br>Os dados continuam disponíveis neste dispositivo mesmo sem entrar.
+      </p>
+    </div>
+  </div>
+
   <!-- JAVASCRIPT LOGIC -->
   <script>
     let trades = [];
@@ -566,6 +613,404 @@
       return !!el && !el.classList.contains('hidden');
     }
 
+    /* ================= SUPABASE (NUVEM) =================
+       Preencha as constantes abaixo com os dados do seu projeto:
+       Supabase > Project Settings > API
+         - Project URL  ->  SUPABASE_URL
+         - anon public  ->  SUPABASE_ANON_KEY
+       A anon key é pública (pode ficar no site). NUNCA coloque a service_role aqui.
+       Enquanto as duas estiverem vazias, o app funciona 100% local, como antes. */
+    const SUPABASE_URL = '';
+    const SUPABASE_ANON_KEY = '';
+
+    const PENDING_KEY = 'diario_trader_asrv_pending';
+
+    let sb = null;
+    let cloudUser = null;
+    let pendingOps = [];
+    let flushingPending = false;
+
+    function cloudConfigured() {
+      return SUPABASE_URL.trim() !== '' && SUPABASE_ANON_KEY.trim() !== '' && !!window.supabase;
+    }
+
+    function cloudEnabled() {
+      return cloudConfigured() && !!sb && !!cloudUser;
+    }
+
+    const CLOUD_STATUS = {
+      local:     { text: 'Somente neste dispositivo', dot: 'bg-emerald-400', textClass: 'text-emerald-400' },
+      connected: { text: 'Sincronizado com a nuvem',  dot: 'bg-emerald-400', textClass: 'text-emerald-400' },
+      syncing:   { text: 'Sincronizando...',          dot: 'bg-blue-400',    textClass: 'text-blue-400' },
+      pending:   { text: 'Pendências para enviar',    dot: 'bg-amber-400',   textClass: 'text-amber-400' },
+      offline:   { text: 'Sem conexão com a nuvem',   dot: 'bg-red-400',     textClass: 'text-red-400' }
+    };
+
+    function setCloudStatus(status) {
+      const conf = CLOUD_STATUS[status] || CLOUD_STATUS.local;
+      const dot = document.getElementById('cloud-status-dot');
+      const label = document.getElementById('cloud-status-text');
+      if (dot) dot.className = `w-1.5 h-1.5 rounded-full ${conf.dot} animate-pulse`;
+      if (label) {
+        label.className = conf.textClass;
+        label.innerText = conf.text;
+      }
+    }
+
+    // ---------- LOGIN ----------
+    function showAuth(message) {
+      const modal = document.getElementById('auth-modal');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex', 'items-center', 'justify-center');
+      const err = document.getElementById('auth-error');
+      if (err) err.innerText = message || '';
+    }
+
+    function hideAuth() {
+      const modal = document.getElementById('auth-modal');
+      if (!modal) return;
+      modal.classList.add('hidden');
+      modal.classList.remove('flex', 'items-center', 'justify-center');
+      const pass = document.getElementById('auth-password');
+      if (pass) pass.value = '';
+      const err = document.getElementById('auth-error');
+      if (err) err.innerText = '';
+    }
+
+    function traduzErroAuth(err) {
+      const msg = String((err && err.message) || err || '');
+      if (/invalid login credentials/i.test(msg)) return 'E-mail ou senha incorretos.';
+      if (/email not confirmed/i.test(msg)) return 'E-mail ainda não confirmado no Supabase.';
+      if (/rate limit|too many/i.test(msg)) return 'Muitas tentativas. Aguarde alguns minutos.';
+      if (/failed to fetch|network/i.test(msg)) return 'Sem conexão com o Supabase.';
+      return msg || 'Não foi possível entrar.';
+    }
+
+    async function signIn(event) {
+      if (event && typeof event.preventDefault === 'function') event.preventDefault();
+      if (!cloudConfigured()) return;
+
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      const btn = document.getElementById('auth-submit');
+
+      if (!email || !password) {
+        showAuth('Informe e-mail e senha.');
+        return;
+      }
+
+      if (btn) { btn.disabled = true; btn.innerText = 'Entrando...'; }
+      try {
+        const { data, error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        cloudUser = data.user;
+        document.getElementById('auth-email').value = '';
+        hideAuth();
+        await bootCloudData();
+      } catch (err) {
+        showAuth(traduzErroAuth(err));
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerText = 'Entrar'; }
+      }
+    }
+
+    async function resetPassword() {
+      if (!cloudConfigured()) return;
+      const email = document.getElementById('auth-email').value.trim();
+      if (!email) {
+        showAuth('Digite seu e-mail para receber o link de redefinição.');
+        return;
+      }
+      try {
+        const { error } = await sb.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.href.split('#')[0]
+        });
+        if (error) throw error;
+        showAuth('Link enviado! Confira sua caixa de entrada.');
+      } catch (err) {
+        showAuth(traduzErroAuth(err));
+      }
+    }
+
+    async function signOut() {
+      if (!sb) return;
+      try { await sb.auth.signOut(); } catch (err) { console.warn(err); }
+      cloudUser = null;
+      setCloudStatus('local');
+      showAuth();
+    }
+
+    // ---------- LEITURA ----------
+    async function pullAll() {
+      if (!cloudEnabled()) return;
+
+      const [tradesRes, noTradeRes, settingsRes] = await Promise.all([
+        sb.from('trades').select('id,date,asset,type,lots,pnl,notes').order('date', { ascending: true }),
+        sb.from('no_trade_days').select('day'),
+        sb.from('settings').select('initial_balance').maybeSingle()
+      ]);
+
+      if (tradesRes.error) throw tradesRes.error;
+      if (noTradeRes.error) throw noTradeRes.error;
+      if (settingsRes.error) throw settingsRes.error;
+
+      trades = normalizeTrades(tradesRes.data || []);
+      noTradeDays = normalizeNoTradeDays((noTradeRes.data || []).map(r => r.day));
+
+      const cloudBalance = settingsRes.data ? Number(settingsRes.data.initial_balance) : NaN;
+      if (Number.isFinite(cloudBalance)) initialBalance = cloudBalance;
+
+      const balInput = document.getElementById('initial-balance-input');
+      if (balInput) balInput.value = initialBalance;
+
+      saveData();
+      refreshUI();
+    }
+
+    // ---------- ESCRITA (com fila offline) ----------
+    function loadPending() {
+      try { return JSON.parse(localStorage.getItem(PENDING_KEY)) || []; } catch (e) { return []; }
+    }
+
+    function savePending() {
+      if (pendingOps.length === 0) localStorage.removeItem(PENDING_KEY);
+      else localStorage.setItem(PENDING_KEY, JSON.stringify(pendingOps));
+    }
+
+    async function execCloudOp(job) {
+      const uid = cloudUser.id;
+
+      switch (job.op) {
+        case 'upsertTrade': {
+          const t = job.payload;
+          const { error } = await sb.from('trades').upsert({
+            user_id: uid,
+            id: t.id,
+            date: t.date,
+            asset: t.asset,
+            type: t.type,
+            lots: Number(t.lots) || 0,
+            pnl: Number(t.pnl) || 0,
+            notes: t.notes || ''
+          }, { onConflict: 'user_id,id' });
+          if (error) throw error;
+          return;
+        }
+        case 'deleteTrade': {
+          const { error } = await sb.from('trades').delete().eq('user_id', uid).eq('id', String(job.payload));
+          if (error) throw error;
+          return;
+        }
+        case 'upsertNoTrade': {
+          const { error } = await sb.from('no_trade_days').upsert(
+            { user_id: uid, day: job.payload },
+            { onConflict: 'user_id,day' }
+          );
+          if (error) throw error;
+          return;
+        }
+        case 'deleteNoTrade': {
+          const { error } = await sb.from('no_trade_days').delete().eq('user_id', uid).eq('day', job.payload);
+          if (error) throw error;
+          return;
+        }
+        case 'upsertSettings': {
+          const { error } = await sb.from('settings').upsert(
+            { user_id: uid, initial_balance: Number(job.payload) || 0 },
+            { onConflict: 'user_id' }
+          );
+          if (error) throw error;
+          return;
+        }
+        default:
+          return;
+      }
+    }
+
+    async function queueCloud(op, payload) {
+      if (!cloudEnabled()) return;
+      try {
+        await execCloudOp({ op, payload });
+        setCloudStatus('connected');
+        if (pendingOps.length > 0) flushPending();
+      } catch (err) {
+        console.warn('Falha ao enviar para a nuvem, guardando na fila:', err);
+        pendingOps.push({ op, payload, at: Date.now() });
+        savePending();
+        setCloudStatus('pending');
+      }
+    }
+
+    async function flushPending() {
+      if (!cloudEnabled() || flushingPending || pendingOps.length === 0) return;
+      flushingPending = true;
+      setCloudStatus('syncing');
+      try {
+        while (pendingOps.length > 0) {
+          await execCloudOp(pendingOps[0]);
+          pendingOps.shift();
+          savePending();
+        }
+        setCloudStatus('connected');
+      } catch (err) {
+        console.warn('Fila da nuvem interrompida:', err);
+        setCloudStatus('pending');
+      } finally {
+        flushingPending = false;
+      }
+    }
+
+    // ---------- MIGRAÇÃO / SINCRONIZAÇÃO COMPLETA ----------
+    async function replaceCloudWithLocal() {
+      if (!cloudEnabled()) return;
+      const uid = cloudUser.id;
+
+      const { error: e1 } = await sb.from('trades').delete().eq('user_id', uid);
+      if (e1) throw e1;
+      const { error: e2 } = await sb.from('no_trade_days').delete().eq('user_id', uid);
+      if (e2) throw e2;
+
+      if (trades.length > 0) {
+        const rows = trades.map(t => ({
+          user_id: uid,
+          id: t.id,
+          date: t.date,
+          asset: t.asset,
+          type: t.type,
+          lots: Number(t.lots) || 0,
+          pnl: Number(t.pnl) || 0,
+          notes: t.notes || ''
+        }));
+        const { error } = await sb.from('trades').upsert(rows, { onConflict: 'user_id,id' });
+        if (error) throw error;
+      }
+
+      if (noTradeDays.length > 0) {
+        const rows = noTradeDays.map(day => ({ user_id: uid, day }));
+        const { error } = await sb.from('no_trade_days').upsert(rows, { onConflict: 'user_id,day' });
+        if (error) throw error;
+      }
+
+      const { error: e3 } = await sb.from('settings').upsert(
+        { user_id: uid, initial_balance: initialBalance },
+        { onConflict: 'user_id' }
+      );
+      if (e3) throw e3;
+    }
+
+    async function bootCloudData() {
+      const snapshot = {
+        trades: trades.slice(),
+        noTradeDays: noTradeDays.slice(),
+        initialBalance
+      };
+
+      setCloudStatus('syncing');
+      await pullAll();
+
+      const cloudEmpty = trades.length === 0 && noTradeDays.length === 0;
+      const localTotal = snapshot.trades.length + snapshot.noTradeDays.length;
+
+      if (cloudEmpty && localTotal > 0) {
+        const enviar = confirm(
+          `Encontramos ${localTotal} registro(s) salvos neste navegador e a nuvem está vazia.\n\n` +
+          `Enviar esses dados para o Supabase agora?`
+        );
+
+        if (enviar) {
+          trades = snapshot.trades;
+          noTradeDays = snapshot.noTradeDays;
+          initialBalance = snapshot.initialBalance;
+          saveData();
+          await replaceCloudWithLocal();
+          await pullAll();
+        } else {
+          trades = snapshot.trades;
+          noTradeDays = snapshot.noTradeDays;
+          initialBalance = snapshot.initialBalance;
+          const balInput = document.getElementById('initial-balance-input');
+          if (balInput) balInput.value = initialBalance;
+          saveData();
+          refreshUI();
+          setCloudStatus('local');
+          return;
+        }
+      }
+
+      await flushPending();
+      setCloudStatus('connected');
+    }
+
+    async function forceSync() {
+      if (!cloudConfigured()) {
+        alert('Nuvem não configurada. Preencha SUPABASE_URL e SUPABASE_ANON_KEY no index.html.');
+        return;
+      }
+      if (!cloudUser) {
+        showAuth();
+        return;
+      }
+      try {
+        setCloudStatus('syncing');
+        await flushPending();
+        if (pendingOps.length > 0) {
+          alert('Não foi possível enviar as pendências. Verifique a conexão e tente novamente.');
+          setCloudStatus('pending');
+          return;
+        }
+        await pullAll();
+        setCloudStatus('connected');
+        alert('Sincronizado com a nuvem.');
+      } catch (err) {
+        console.warn('Falha na sincronização:', err);
+        setCloudStatus('offline');
+        alert('Não foi possível sincronizar: ' + ((err && err.message) || err));
+      }
+    }
+
+    // ---------- INICIALIZAÇÃO ----------
+    async function initCloud() {
+      if (!cloudConfigured()) return;
+
+      const actions = document.getElementById('cloud-actions');
+      if (actions) actions.classList.remove('hidden');
+
+      sb = window.supabase.createClient(SUPABASE_URL.trim(), SUPABASE_ANON_KEY.trim());
+      pendingOps = loadPending();
+      setCloudStatus('syncing');
+
+      sb.auth.onAuthStateChange((event) => {
+        if (event === 'SIGNED_OUT') {
+          cloudUser = null;
+          setCloudStatus('local');
+          showAuth();
+        }
+      });
+
+      try {
+        const { data, error } = await sb.auth.getSession();
+        if (error) throw error;
+        if (!data || !data.session) {
+          setCloudStatus('local');
+          showAuth();
+          return;
+        }
+        cloudUser = data.session.user;
+        hideAuth();
+        await bootCloudData();
+      } catch (err) {
+        console.warn('Supabase indisponível:', err);
+        setCloudStatus('offline');
+      }
+    }
+
+    window.addEventListener('online', () => { flushPending(); });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) flushPending();
+    });
+
+
     // LOAD INITIAL DATA FROM LOCALSTORAGE
     function loadInitialData() {
       const savedTrades = localStorage.getItem('diario_trader_asrv_trades') || localStorage.getItem('positionpips_trades');
@@ -596,6 +1041,7 @@
       localStorage.setItem('diario_trader_asrv_initial_bal', initialBalance);
       calculateStreak();
       refreshUI();
+      queueCloud('upsertSettings', initialBalance);
     }
 
     // SAVE DATA
@@ -631,6 +1077,7 @@
 
       noTradeDays.push(targetDate);
       saveData();
+      queueCloud('upsertNoTrade', targetDate);
       refreshUI();
       alert(`🛡️ Excelente disciplina! O dia ${targetDate} foi registrado com sucesso e sua ofensiva foi mantida!`);
     }
@@ -738,18 +1185,53 @@
             saveData();
             refreshUI();
             alert('Dados importados com sucesso!');
+
+            if (cloudConfigured()) {
+              if (cloudEnabled()) {
+                if (confirm('Enviar os dados importados para a nuvem, substituindo os que estão lá?')) {
+                  replaceCloudWithLocal()
+                    .then(() => {
+                      setCloudStatus('connected');
+                      alert('Dados enviados para a nuvem.');
+                    })
+                    .catch(err => {
+                      console.warn('Falha ao enviar dados importados:', err);
+                      setCloudStatus('pending');
+                      alert('Importado neste dispositivo, mas o envio para a nuvem falhou.');
+                    });
+                }
+              } else {
+                showAuth('Entre na nuvem para enviar os dados importados.');
+              }
+            }
           }
         } catch (err) { alert('Ficheiro inválido.'); }
       };
       reader.readAsText(file);
     }
 
-    function resetData() {
+    async function resetData() {
       if (confirm('Tem a certeza de que deseja resetar todo o histórico e a sua ofensiva?')) {
         trades = [];
         noTradeDays = [];
         saveData();
         refreshUI();
+
+        if (cloudEnabled()) {
+          try {
+            const uid = cloudUser.id;
+            const { error: e1 } = await sb.from('trades').delete().eq('user_id', uid);
+            if (e1) throw e1;
+            const { error: e2 } = await sb.from('no_trade_days').delete().eq('user_id', uid);
+            if (e2) throw e2;
+            pendingOps = [];
+            savePending();
+            setCloudStatus('connected');
+          } catch (err) {
+            console.warn('Falha ao limpar a nuvem:', err);
+            setCloudStatus('pending');
+          }
+        }
       }
     }
 
@@ -757,6 +1239,7 @@
       if (confirm(`Remover o registro de 'Não Operei' da data ${date}?`)) {
         noTradeDays = noTradeDays.filter(d => d !== date);
         saveData();
+        queueCloud('deleteNoTrade', date);
         refreshUI();
       }
     }
@@ -864,13 +1347,20 @@
         alert(`⚠️ ATENÇÃO: Esta operação tem um prejuízo de ${Math.abs(pnl).toFixed(2)}, o que ultrapassa o limite máximo individual de 20% do capital inicial (${maxSingleLoss.toFixed(2)}). A sua ofensiva será ZERADA!`);
       }
 
+      let savedTrade;
       if (editId) {
-        trades = trades.map(t => String(t.id) === editId ? { ...t, date, asset, type, lots, pnl, notes } : t);
+        trades = trades.map(t => {
+          if (String(t.id) !== editId) return t;
+          savedTrade = { ...t, date, asset, type, lots, pnl, notes };
+          return savedTrade;
+        });
       } else {
-        trades.push({ id: newTradeId(), date, asset, type, lots, pnl, notes });
+        savedTrade = { id: newTradeId(), date, asset, type, lots, pnl, notes };
+        trades.push(savedTrade);
       }
 
       saveData();
+      queueCloud('upsertTrade', savedTrade);
       closeModal();
       refreshUI();
     }
@@ -879,6 +1369,7 @@
       if (confirm("Tem a certeza de que deseja eliminar esta operação?")) {
         trades = trades.filter(t => String(t.id) !== String(id));
         saveData();
+        queueCloud('deleteTrade', id);
         refreshUI();
       }
     }
@@ -1197,8 +1688,13 @@
       document.getElementById('sidebar').classList.toggle('hidden');
     }
 
-    window.onload = function() {
+    window.onload = async function() {
       loadInitialData();
+      try {
+        await initCloud();
+      } catch (err) {
+        console.warn('Nuvem indisponível, seguindo somente com dados locais:', err);
+      }
     };
   </script>
 </body>
