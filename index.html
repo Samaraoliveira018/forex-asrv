@@ -514,17 +514,71 @@
       return pnl >= -0.30 && pnl <= 0.30;
     }
 
+    // Data no fuso LOCAL (evita o deslocamento de UTC, que no Brasil adianta o dia após as 21h)
+    function getLocalDateStr(date = new Date()) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    // IDs seguros (somente letras, números, "_" e "-") para uso dentro de atributos HTML
+    function normalizeId(id) {
+      const safe = String(id == null ? '' : id).replace(/[^a-zA-Z0-9_-]/g, '');
+      return safe || newTradeId();
+    }
+
+    function newTradeId() {
+      return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    }
+
+    // Sanitiza dados vindos do localStorage / backup importado
+    function normalizeTrades(list) {
+      if (!Array.isArray(list)) return [];
+      const seen = new Set();
+      return list
+        .filter(t => t && typeof t === 'object')
+        .map(t => {
+          let id = normalizeId(t.id);
+          while (seen.has(id)) id = newTradeId();
+          seen.add(id);
+          return {
+            ...t,
+            id,
+            date: typeof t.date === 'string' ? t.date.slice(0, 10) : '',
+            asset: String(t.asset || '').toUpperCase(),
+            type: t.type === 'Venda' ? 'Venda' : 'Compra',
+            lots: Number(t.lots) || 0,
+            pnl: Number(t.pnl) || 0,
+            notes: typeof t.notes === 'string' ? t.notes : ''
+          };
+        });
+    }
+
+    function normalizeNoTradeDays(list) {
+      if (!Array.isArray(list)) return [];
+      return [...new Set(list.filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)))];
+    }
+
+    // Só redesenha gráficos de abas visíveis (canvas oculto mede 0x0)
+    function isTabVisible(tabId) {
+      const el = document.getElementById(`tab-${tabId}`);
+      return !!el && !el.classList.contains('hidden');
+    }
+
     // LOAD INITIAL DATA FROM LOCALSTORAGE
     function loadInitialData() {
       const savedTrades = localStorage.getItem('diario_trader_asrv_trades') || localStorage.getItem('positionpips_trades');
       if (savedTrades) {
         try { trades = JSON.parse(savedTrades); } catch (e) { trades = []; }
       }
+      trades = normalizeTrades(trades);
 
       const savedNoTrades = localStorage.getItem('diario_trader_asrv_notrades');
       if (savedNoTrades) {
         try { noTradeDays = JSON.parse(savedNoTrades); } catch (e) { noTradeDays = []; }
       }
+      noTradeDays = normalizeNoTradeDays(noTradeDays);
 
       const savedBal = localStorage.getItem('diario_trader_asrv_initial_bal') || localStorage.getItem('positionpips_initial_bal');
       if (savedBal) {
@@ -553,7 +607,7 @@
 
     // REGISTRAR DIA SEM OPERAR (RETROATIVO)
     function markNoTradeDay() {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = getLocalDateStr();
       const targetDate = prompt("Digite a data em que você não operou (AAAA-MM-DD):", today);
       
       if (!targetDate) return;
@@ -662,7 +716,7 @@
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ trades, noTradeDays, initialBalance }, null, 2));
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `diario_trader_asrv_backup_${new Date().toISOString().slice(0,10)}.json`);
+      downloadAnchor.setAttribute("download", `diario_trader_asrv_backup_${getLocalDateStr()}.json`);
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
@@ -676,9 +730,9 @@
         try {
           const imported = JSON.parse(e.target.result);
           if (imported.trades && Array.isArray(imported.trades)) {
-            trades = imported.trades;
-            noTradeDays = imported.noTradeDays || [];
-            initialBalance = imported.initialBalance || 150;
+            trades = normalizeTrades(imported.trades);
+            noTradeDays = normalizeNoTradeDays(imported.noTradeDays || []);
+            initialBalance = Number(imported.initialBalance) || 150;
             document.getElementById('initial-balance-input').value = initialBalance;
             localStorage.setItem('diario_trader_asrv_initial_bal', initialBalance);
             saveData();
@@ -724,6 +778,9 @@
       }
 
       if (window.innerWidth < 768) document.getElementById('sidebar').classList.add('hidden');
+      if (tabId === 'journal') {
+        renderEquityChart();
+      }
       if (tabId === 'dashboard') {
         updateDashboardMetrics();
         renderAssetChart();
@@ -757,12 +814,12 @@
       document.getElementById('form-edit-id').value = '';
       document.getElementById('modal-title').innerText = 'Registrar Nova Operação';
       document.getElementById('modal-submit-btn').innerText = 'Salvar Operação';
-      document.getElementById('form-date').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('form-date').value = getLocalDateStr();
       document.getElementById('trade-modal').classList.remove('hidden');
     }
 
     function editTrade(id) {
-      const trade = trades.find(t => t.id === id);
+      const trade = trades.find(t => String(t.id) === String(id));
       if (!trade) return;
 
       document.getElementById('form-edit-id').value = trade.id;
@@ -808,9 +865,9 @@
       }
 
       if (editId) {
-        trades = trades.map(t => t.id.toString() === editId ? { ...t, date, asset, type, lots, pnl, notes } : t);
+        trades = trades.map(t => String(t.id) === editId ? { ...t, date, asset, type, lots, pnl, notes } : t);
       } else {
-        trades.push({ id: Date.now(), date, asset, type, lots, pnl, notes });
+        trades.push({ id: newTradeId(), date, asset, type, lots, pnl, notes });
       }
 
       saveData();
@@ -820,7 +877,7 @@
 
     function deleteTrade(id) {
       if (confirm("Tem a certeza de que deseja eliminar esta operação?")) {
-        trades = trades.filter(t => t.id !== id);
+        trades = trades.filter(t => String(t.id) !== String(id));
         saveData();
         refreshUI();
       }
@@ -866,7 +923,7 @@
       const totalBalance = initialBalance + totalPnl;
       const returnPct = initialBalance > 0 ? ((totalPnl / initialBalance) * 100).toFixed(2) : 0;
 
-      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayStr = getLocalDateStr();
       const todayCount = trades.filter(t => t.date === todayStr).length;
       const badgeEl = document.getElementById('today-limit-badge');
       document.getElementById('today-trade-count').innerText = todayCount;
@@ -888,7 +945,9 @@
         return (val > 0 ? '+ ' : '- ') + Math.abs(val).toLocaleString('en-US', { minimumFractionDigits: 2 });
       };
 
-      document.getElementById('kpi-total-balance').innerText = isValueHidden ? '••••••' : `${totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+      document.getElementById('kpi-total-balance').innerText = isValueHidden
+        ? '••••••'
+        : `${totalBalance < 0 ? '- ' : ''}$ ${Math.abs(totalBalance).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
       document.getElementById('kpi-return-pct').innerText = `${returnPct >= 0 ? '+' : ''}${returnPct}% em relação ao inicial`;
       document.getElementById('kpi-return-pct').className = `text-[11px] font-semibold ${returnPct >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
 
@@ -902,8 +961,10 @@
       updateDashboardMetrics();
       renderJournalGrid();
       renderJournalList();
-      renderEquityChart();
-      renderStatsCharts();
+      // Desenha apenas gráficos de abas visíveis; as demais são (re)desenhadas ao trocar de aba
+      if (isTabVisible('journal')) renderEquityChart();
+      if (isTabVisible('dashboard')) renderAssetChart();
+      if (isTabVisible('stats')) renderStatsCharts();
     }
 
     function renderJournalGrid() {
@@ -960,8 +1021,8 @@
               ${item.notes ? `<p class="text-xs text-gray-400 italic mt-2 bg-gray-900/50 p-2 rounded">${item.notes}</p>` : ''}
             </div>
             <div class="flex items-center justify-end gap-3 pt-3 border-t border-brand-border">
-              <button onclick="editTrade(${item.id})" class="text-xs text-gray-400 hover:text-blue-400 flex items-center gap-1 transition"><i class="fa-solid fa-pen-to-square"></i> Editar</button>
-              <button onclick="deleteTrade(${item.id})" class="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1 transition"><i class="fa-solid fa-trash"></i> Eliminar</button>
+              <button onclick="editTrade('${item.id}')" class="text-xs text-gray-400 hover:text-blue-400 flex items-center gap-1 transition"><i class="fa-solid fa-pen-to-square"></i> Editar</button>
+              <button onclick="deleteTrade('${item.id}')" class="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1 transition"><i class="fa-solid fa-trash"></i> Eliminar</button>
             </div>
           </div>
         `;
@@ -987,11 +1048,11 @@
             <td class="p-3 font-bold text-white">${t.asset}</td>
             <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] ${t.type === 'Compra' ? 'bg-emerald-950 text-emerald-400' : 'bg-red-950 text-red-400'}">${t.type}</span></td>
             <td class="p-3">${t.lots}</td>
-            <td class="p-3 font-bold ${isBE ? 'text-gray-300' : (t.pnl > 0 ? 'text-emerald-400' : 'text-red-400')}">${isValueHidden ? '••••ّه' : (isBE ? `${t.pnl.toFixed(2)} (BE)` : (t.pnl > 0 ? '+' : '') + t.pnl.toFixed(2))}</td>
+            <td class="p-3 font-bold ${isBE ? 'text-gray-300' : (t.pnl > 0 ? 'text-emerald-400' : 'text-red-400')}">${isValueHidden ? '••••••' : (isBE ? `${t.pnl.toFixed(2)} (BE)` : (t.pnl > 0 ? '+' : '') + t.pnl.toFixed(2))}</td>
             <td class="p-3">${statusBadge}</td>
             <td class="p-3 text-right">
-              <button onclick="editTrade(${t.id})" class="text-gray-400 hover:text-blue-400 mr-2"><i class="fa-solid fa-pen-to-square"></i></button>
-              <button onclick="deleteTrade(${t.id})" class="text-gray-500 hover:text-red-400"><i class="fa-solid fa-trash"></i></button>
+              <button onclick="editTrade('${t.id}')" class="text-gray-400 hover:text-blue-400 mr-2"><i class="fa-solid fa-pen-to-square"></i></button>
+              <button onclick="deleteTrade('${t.id}')" class="text-gray-500 hover:text-red-400"><i class="fa-solid fa-trash"></i></button>
             </td>
           </tr>
         `;
