@@ -61,6 +61,18 @@ Regras que não mudam:
 raiz. A condição `react-native` do pacote de design system faz o Metro carregar
 `src/index.native.ts`, enquanto Vite/Storybook carregam `src/index.ts`.
 
+## Safe area (edge-to-edge)
+
+Android 16 (targetSdk 36+) força edge-to-edge, então o conteúdo fica sob a status bar e os
+botões de navegação do sistema. O app usa `react-native-safe-area-context`:
+
+- `SafeAreaProvider` envolve o app em `index.tsx`;
+- a `topbar` usa `insets.top` e a `tabBar` usa `insets.bottom` (evita as abas ficarem
+  atrás dos botões do celular);
+- a tela de login aplica `insets.top`/`insets.bottom` no conteúdo rolável.
+
+Nos testes, `jest.setup.js` troca a lib pelo mock oficial (`.../jest/mock`).
+
 ## Testes
 
 - `jest-expo` + React Native Testing Library (API assíncrona do RNTL 14).

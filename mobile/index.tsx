@@ -1,13 +1,16 @@
 import { registerRootComponent } from 'expo';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { App } from './src/App';
 import { BffProvider } from './src/BffContext';
 import { bff } from './src/bff';
 
 function Root() {
   return (
-    <BffProvider bff={bff}>
-      <App />
-    </BffProvider>
+    <SafeAreaProvider>
+      <BffProvider bff={bff}>
+        <App />
+      </BffProvider>
+    </SafeAreaProvider>
   );
 }
 

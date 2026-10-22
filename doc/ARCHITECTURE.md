@@ -211,6 +211,8 @@ const bff = createBff({
 - Metro configurado para o monorepo (`watchFolders` + `nodeModulesPaths`).
 - `jest-expo` + React Native Testing Library, com API assíncrona do RNTL 14.
 - Shell com topbar, saldo editável, sincronização e abas Dashboard/Diário/Plano/Estatísticas.
+- Layout respeita safe area (`react-native-safe-area-context`): topbar e tab bar usam os
+  insets, então as abas não ficam mais atrás dos botões do sistema (edge-to-edge Android 16).
 - Diário com modal de criação/edição, grid/lista, metas de ofensiva, gráficos native,
   dias sem operar, backup por compartilhamento e importação por JSON colado.
 - `npm run export:ios -w @asrv/mobile` valida o bundle Metro sem exigir Xcode.

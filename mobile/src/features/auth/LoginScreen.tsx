@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Alert,
   Button,
@@ -20,6 +21,7 @@ import { useBff } from '../../BffContext';
 
 export function LoginScreen({ onSignedIn }: { onSignedIn: () => void }) {
   const bff = useBff();
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -57,7 +59,10 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: () => void }) {
     >
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: spacing.xxl + insets.top, paddingBottom: spacing.xxl + insets.bottom },
+        ]}
         keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.kicker}>DIÁRIO TRADER</Text>

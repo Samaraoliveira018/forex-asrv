@@ -11,8 +11,7 @@
       "bundleIdentifier": "com.asrv.forexdiary"
     },
     "android": {
-      "package": "com.asrv.forexdiary",
-      "edgeToEdgeEnabled": true
+      "package": "com.asrv.forexdiary"
     }
   }
 }

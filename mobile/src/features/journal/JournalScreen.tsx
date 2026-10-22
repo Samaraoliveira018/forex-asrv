@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { JournalSnapshot, Trade, TradeInput } from '@asrv/backend';
 import {
   Alert,
@@ -40,6 +41,7 @@ const tabs: ReadonlyArray<{ id: Tab; label: string; icon: string }> = [
 
 export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
   const bff = useBff();
+  const insets = useSafeAreaInsets();
   const [snapshot, setSnapshot] = useState<JournalSnapshot | null>(null);
   const [error, setError] = useState('');
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -324,7 +326,7 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.topbar}>
+      <View style={[styles.topbar, { paddingTop: insets.top + spacing.sm }]}>
         <View style={styles.brand}>
           <View style={styles.brandMark}>
             <Text style={styles.brandMarkText}>DT</Text>
@@ -431,7 +433,7 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
         </View>
       </ScrollView>
 
-      <View style={styles.tabBar}>
+      <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
         {tabs.map((item) => {
           const active = tab === item.id;
           return (
@@ -613,7 +615,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
-    paddingTop: 48,
     paddingBottom: spacing.sm,
     paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
@@ -731,7 +732,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     backgroundColor: colors.surface,
-    paddingBottom: 20,
   },
   tabItem: {
     flex: 1,
