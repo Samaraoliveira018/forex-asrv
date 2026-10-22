@@ -75,26 +75,6 @@
           Dashboard
         </button>
 
-        <button onclick="switchTab('calc-forex')" id="nav-calc-forex" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition">
-          <i class="fa-solid fa-dollar-sign w-5 text-center"></i>
-          Calculadora Forex
-        </button>
-
-        <button onclick="switchTab('calc-eua')" id="nav-calc-eua" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition">
-          <i class="fa-solid fa-chart-line w-5 text-center"></i>
-          Calculadora Futuros EUA
-        </button>
-
-        <button onclick="switchTab('calc-b3')" id="nav-calc-b3" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition">
-          <i class="fa-solid fa-calculator w-5 text-center"></i>
-          Calculadora B3
-        </button>
-
-        <button onclick="switchTab('calc-btc')" id="nav-calc-btc" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition">
-          <i class="fa-brands fa-bitcoin w-5 text-center"></i>
-          Calculadora BTC CFD
-        </button>
-
         <button onclick="switchTab('journal')" id="nav-journal" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white bg-blue-600 font-semibold transition">
           <i class="fa-solid fa-book-open w-5 text-center"></i>
           Diário de Trading
@@ -361,99 +341,7 @@
         </div>
       </section>
 
-      <!-- CALCULADORAS E OUTRAS ABAS -->
-      <section id="tab-calc-forex" class="tab-content hidden space-y-6">
-        <h2 class="text-2xl font-bold text-white">Calculadora Forex</h2>
-        <div class="max-w-xl bg-brand-card border border-brand-border rounded-xl p-6 space-y-4">
-          <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1">Saldo da Conta (USD)</label>
-            <input type="number" id="fx-balance" value="1000" class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-sm text-white">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1">Risco por Operação (%)</label>
-            <input type="number" id="fx-risk" value="1" class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-sm text-white">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1">Stop Loss (Pips)</label>
-            <input type="number" id="fx-stop" value="20" class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-sm text-white">
-          </div>
-          <button onclick="calculateForex()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg text-sm transition">Calcular Tamanho da Posição</button>
-          <div id="fx-result" class="hidden p-4 bg-gray-900/80 rounded-lg border border-gray-800 space-y-2 text-sm">
-            <p class="text-gray-400">Valor em Risco: <span class="text-white font-bold" id="fx-res-risk">$0.00</span></p>
-            <p class="text-gray-400">Tamanho Recomendado: <span class="text-emerald-400 font-bold" id="fx-res-lots">0.00 Lotes</span></p>
-          </div>
-        </div>
-      </section>
-
-      <section id="tab-calc-eua" class="tab-content hidden space-y-6">
-        <h2 class="text-2xl font-bold text-white">Calculadora Futuros EUA</h2>
-        <div class="max-w-xl bg-brand-card border border-brand-border rounded-xl p-6 space-y-4">
-          <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1">Ativo</label>
-            <select id="us-asset" class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-sm text-white">
-              <option value="20">Nasdaq (NQ) - $20/ponto</option>
-              <option value="50">S&P 500 (ES) - $50/ponto</option>
-              <option value="2">Micro Nasdaq (MNQ) - $2/ponto</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1">Stop Loss (Pontos)</label>
-            <input type="number" id="us-stop" value="15" class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-sm text-white">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1">Risco Máximo Tolerado ($)</label>
-            <input type="number" id="us-max-risk" value="100" class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-sm text-white">
-          </div>
-          <button onclick="calculateUSFutures()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg text-sm transition">Calcular Contratos</button>
-          <div id="us-result" class="hidden p-4 bg-gray-900/80 rounded-lg border border-gray-800 text-sm">
-            <p class="text-gray-400">Contratos Máximos: <span class="text-emerald-400 font-bold" id="us-res-contracts">0</span></p>
-          </div>
-        </div>
-      </section>
-
-      <section id="tab-calc-b3" class="tab-content hidden space-y-6">
-        <h2 class="text-2xl font-bold text-white">Calculadora B3 (WIN / WDO)</h2>
-        <div class="max-w-xl bg-brand-card border border-brand-border rounded-xl p-6 space-y-4">
-          <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1">Contrato</label>
-            <select id="b3-asset" class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-sm text-white">
-              <option value="win">WIN - Mini Índice (R$ 0,20 / ponto)</option>
-              <option value="wdo">WDO - Mini Dólar (R$ 10,00 / ponto)</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1">Stop Loss (Pontos)</label>
-            <input type="number" id="b3-stop" value="150" class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-sm text-white">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1">Risco Financeiro (R$)</label>
-            <input type="number" id="b3-risk" value="100" class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-sm text-white">
-          </div>
-          <button onclick="calculateB3()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg text-sm transition">Calcular Contratos</button>
-          <div id="b3-result" class="hidden p-4 bg-gray-900/80 rounded-lg border border-gray-800 text-sm">
-            <p class="text-gray-400">Quantidade de Contratos: <span class="text-emerald-400 font-bold" id="b3-res-contracts">0</span></p>
-          </div>
-        </div>
-      </section>
-
-      <section id="tab-calc-btc" class="tab-content hidden space-y-6">
-        <h2 class="text-2xl font-bold text-white">Calculadora Bitcoin CFD</h2>
-        <div class="max-w-xl bg-brand-card border border-brand-border rounded-xl p-6 space-y-4">
-          <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1">Distância do Stop Loss ($)</label>
-            <input type="number" id="btc-stop" value="500" class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-sm text-white">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-400 mb-1">Risco Financeiro ($)</label>
-            <input type="number" id="btc-risk" value="50" class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-sm text-white">
-          </div>
-          <button onclick="calculateBTC()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg text-sm transition">Calcular Unidades BTC</button>
-          <div id="btc-result" class="hidden p-4 bg-gray-900/80 rounded-lg border border-gray-800 text-sm">
-            <p class="text-gray-400">Volume Recomendado: <span class="text-emerald-400 font-bold" id="btc-res-vol">0.00 BTC</span></p>
-          </div>
-        </div>
-      </section>
-
+      <!-- TAB 3: PLANO OPERACIONAL -->
       <section id="tab-plan" class="tab-content hidden space-y-6">
         <h2 class="text-2xl font-bold text-white">Plano Operacional & Disciplina</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -485,12 +373,62 @@
         </div>
       </section>
 
+      <!-- TAB 4: DADOS ESTATÍSTICOS (COM DETALHAMENTO QUANTIDADE, WIN, LOSS, BREAK EVEN) -->
       <section id="tab-stats" class="tab-content hidden space-y-6">
-        <h2 class="text-2xl font-bold text-white">Dados Estatísticos</h2>
+        <div>
+          <h2 class="text-2xl font-bold text-white">Dados Estatísticos Detalhados</h2>
+          <p class="text-sm text-gray-400">Análise de métricas de assertividade, resultados e proporção de trades</p>
+        </div>
+
+        <!-- CARDS DE ESTATÍSTICAS RÁPIDAS -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-brand-card border border-brand-border rounded-xl p-5">
+            <div class="flex items-center justify-between">
+              <p class="text-xs text-gray-400 font-medium">Total de Operações</p>
+              <i class="fa-solid fa-list-ol text-blue-500 text-sm"></i>
+            </div>
+            <h3 class="text-3xl font-extrabold text-white mt-2" id="stat-total-count">0</h3>
+            <span class="text-[11px] text-gray-400" id="stat-total-desc">0 Compra / 0 Venda</span>
+          </div>
+
+          <div class="bg-brand-card border border-brand-border rounded-xl p-5">
+            <div class="flex items-center justify-between">
+              <p class="text-xs text-gray-400 font-medium">Operações Win (Gains)</p>
+              <i class="fa-solid fa-circle-check text-emerald-500 text-sm"></i>
+            </div>
+            <h3 class="text-3xl font-extrabold text-emerald-400 mt-2" id="stat-win-count">0</h3>
+            <span class="text-[11px] text-emerald-400 font-semibold" id="stat-win-pct">0% do total</span>
+          </div>
+
+          <div class="bg-brand-card border border-brand-border rounded-xl p-5">
+            <div class="flex items-center justify-between">
+              <p class="text-xs text-gray-400 font-medium">Operações Loss (Perdas)</p>
+              <i class="fa-solid fa-circle-xmark text-red-500 text-sm"></i>
+            </div>
+            <h3 class="text-3xl font-extrabold text-red-400 mt-2" id="stat-loss-count">0</h3>
+            <span class="text-[11px] text-red-400 font-semibold" id="stat-loss-pct">0% do total</span>
+          </div>
+
+          <div class="bg-brand-card border border-brand-border rounded-xl p-5">
+            <div class="flex items-center justify-between">
+              <p class="text-xs text-gray-400 font-medium">Break Even (0x0)</p>
+              <i class="fa-solid fa-scale-balanced text-gray-400 text-sm"></i>
+            </div>
+            <h3 class="text-3xl font-extrabold text-gray-300 mt-2" id="stat-be-count">0</h3>
+            <span class="text-[11px] text-gray-400 font-semibold" id="stat-be-pct">0% do total</span>
+          </div>
+        </div>
+
+        <!-- GRÁFICOS DE DADOS ESTATÍSTICOS -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="bg-brand-card border border-brand-border rounded-xl p-5">
-            <h3 class="text-sm font-semibold text-white mb-3">Distribuição Win vs Loss</h3>
-            <div class="h-56"><canvas id="winLossPieChart"></canvas></div>
+            <h3 class="text-sm font-semibold text-white mb-3">Distribuição (Win vs Loss vs Break Even)</h3>
+            <div class="h-64"><canvas id="winLossPieChart"></canvas></div>
+          </div>
+
+          <div class="bg-brand-card border border-brand-border rounded-xl p-5">
+            <h3 class="text-sm font-semibold text-white mb-3">Proporção por Direção (Compra vs Venda)</h3>
+            <div class="h-64"><canvas id="typeDoughnutChart"></canvas></div>
           </div>
         </div>
       </section>
@@ -569,6 +507,7 @@
     let equityChartInstance = null;
     let assetChartInstance = null;
     let winLossChartInstance = null;
+    let typeDoughnutChartInstance = null;
 
     // LOAD INITIAL DATA FROM LOCALSTORAGE
     function loadInitialData() {
@@ -783,7 +722,9 @@
         updateDashboardMetrics();
         renderAssetChart();
       }
-      if (tabId === 'stats') renderStatsCharts();
+      if (tabId === 'stats') {
+        renderStatsCharts();
+      }
     }
 
     function setMarket(market) {
@@ -956,6 +897,7 @@
       renderJournalGrid();
       renderJournalList();
       renderEquityChart();
+      renderStatsCharts();
     }
 
     function renderJournalGrid() {
@@ -1051,7 +993,8 @@
     }
 
     function renderEquityChart() {
-      const ctx = document.getElementById('equityChart').getContext('2d');
+      const ctx = document.getElementById('equityChart')?.getContext('2d');
+      if (!ctx) return;
       let currentAcc = initialBalance;
       const chartLabels = ['Start'];
       const chartData = [initialBalance];
@@ -1095,44 +1038,6 @@
       });
     }
 
-    function calculateForex() {
-      const bal = parseFloat(document.getElementById('fx-balance').value);
-      const riskPct = parseFloat(document.getElementById('fx-risk').value);
-      const stopPips = parseFloat(document.getElementById('fx-stop').value);
-      const riskVal = bal * (riskPct / 100);
-      const lots = riskVal / (stopPips * 10);
-      document.getElementById('fx-res-risk').innerText = `$${riskVal.toFixed(2)}`;
-      document.getElementById('fx-res-lots').innerText = `${lots.toFixed(2)} Lotes`;
-      document.getElementById('fx-result').classList.remove('hidden');
-    }
-
-    function calculateUSFutures() {
-      const valPerPoint = parseFloat(document.getElementById('us-asset').value);
-      const stopPts = parseFloat(document.getElementById('us-stop').value);
-      const maxRisk = parseFloat(document.getElementById('us-max-risk').value);
-      const contracts = Math.floor(maxRisk / (stopPts * valPerPoint));
-      document.getElementById('us-res-contracts').innerText = `${contracts} Contrato(s)`;
-      document.getElementById('us-result').classList.remove('hidden');
-    }
-
-    function calculateB3() {
-      const type = document.getElementById('b3-asset').value;
-      const stopPts = parseFloat(document.getElementById('b3-stop').value);
-      const riskR$ = parseFloat(document.getElementById('b3-risk').value);
-      const mult = type === 'win' ? 0.20 : 10.0;
-      const contracts = Math.floor(riskR$ / (stopPts * mult));
-      document.getElementById('b3-res-contracts').innerText = `${contracts} Mini Contrato(s)`;
-      document.getElementById('b3-result').classList.remove('hidden');
-    }
-
-    function calculateBTC() {
-      const stopDist = parseFloat(document.getElementById('btc-stop').value);
-      const riskVal = parseFloat(document.getElementById('btc-risk').value);
-      const vol = riskVal / stopDist;
-      document.getElementById('btc-res-vol').innerText = `${vol.toFixed(4)} BTC`;
-      document.getElementById('btc-result').classList.remove('hidden');
-    }
-
     function renderAssetChart() {
       const ctx = document.getElementById('assetChart')?.getContext('2d');
       if (!ctx) return;
@@ -1149,16 +1054,77 @@
       });
     }
 
+    // RENDERIZADOR DE ESTATÍSTICAS DETALHADAS (QUANTIDADE, WIN, LOSS, BREAK EVEN)
     function renderStatsCharts() {
-      const ctx1 = document.getElementById('winLossPieChart')?.getContext('2d');
+      const totalCount = trades.length;
       const wins = trades.filter(t => t.pnl > 0).length;
       const losses = trades.filter(t => t.pnl < 0).length;
+      const breakevens = trades.filter(t => t.pnl === 0).length;
+
+      const buys = trades.filter(t => t.type === 'Compra').length;
+      const sells = trades.filter(t => t.type === 'Venda').length;
+
+      const winPct = totalCount > 0 ? ((wins / totalCount) * 100).toFixed(1) : '0.0';
+      const lossPct = totalCount > 0 ? ((losses / totalCount) * 100).toFixed(1) : '0.0';
+      const bePct = totalCount > 0 ? ((breakevens / totalCount) * 100).toFixed(1) : '0.0';
+
+      const totalCountEl = document.getElementById('stat-total-count');
+      const totalDescEl = document.getElementById('stat-total-desc');
+      const winCountEl = document.getElementById('stat-win-count');
+      const winPctEl = document.getElementById('stat-win-pct');
+      const lossCountEl = document.getElementById('stat-loss-count');
+      const lossPctEl = document.getElementById('stat-loss-pct');
+      const beCountEl = document.getElementById('stat-be-count');
+      const bePctEl = document.getElementById('stat-be-pct');
+
+      if (totalCountEl) totalCountEl.innerText = totalCount;
+      if (totalDescEl) totalDescEl.innerText = `${buys} Compra / ${sells} Venda`;
+      if (winCountEl) winCountEl.innerText = wins;
+      if (winPctEl) winPctEl.innerText = `${winPct}% do total`;
+      if (lossCountEl) lossCountEl.innerText = losses;
+      if (lossPctEl) lossPctEl.innerText = `${lossPct}% do total`;
+      if (beCountEl) beCountEl.innerText = breakevens;
+      if (bePctEl) bePctEl.innerText = `${bePct}% do total`;
+
+      // Gráfico de Rosca: Win vs Loss vs Break Even
+      const ctx1 = document.getElementById('winLossPieChart')?.getContext('2d');
       if (winLossChartInstance) winLossChartInstance.destroy();
       if (ctx1) {
         winLossChartInstance = new Chart(ctx1, {
           type: 'doughnut',
-          data: { labels: ['Gains', 'Losses'], datasets: [{ data: [wins, losses], backgroundColor: ['#10b981', '#ef4444'] }] },
-          options: { responsive: true, maintainAspectRatio: false }
+          data: {
+            labels: ['Gains (Win)', 'Losses (Perda)', 'Break Even (0x0)'],
+            datasets: [{
+              data: totalCount > 0 ? [wins, losses, breakevens] : [0, 0, 1],
+              backgroundColor: totalCount > 0 ? ['#10b981', '#ef4444', '#6b7280'] : ['#1f2937']
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', font: { size: 11 } } } }
+          }
+        });
+      }
+
+      // Gráfico de Rosca: Compra vs Venda
+      const ctx2 = document.getElementById('typeDoughnutChart')?.getContext('2d');
+      if (typeDoughnutChartInstance) typeDoughnutChartInstance.destroy();
+      if (ctx2) {
+        typeDoughnutChartInstance = new Chart(ctx2, {
+          type: 'doughnut',
+          data: {
+            labels: ['Compra (Long)', 'Venda (Short)'],
+            datasets: [{
+              data: totalCount > 0 ? [buys, sells] : [0, 0],
+              backgroundColor: ['#2563eb', '#f59e0b']
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', font: { size: 11 } } } }
+          }
         });
       }
     }
