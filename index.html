@@ -532,6 +532,7 @@
 
         <button type="submit" id="auth-submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 rounded-lg transition">Entrar</button>
         <button type="button" onclick="resetPassword()" class="w-full text-[11px] text-blue-400 hover:text-blue-300 py-1">Esqueci a senha</button>
+        <button type="button" onclick="dismissAuth()" class="w-full text-[11px] text-gray-400 hover:text-gray-300 py-1">Continuar sem entrar (somente este dispositivo)</button>
       </form>
 
       <p class="text-[10px] text-gray-500 text-center border-t border-brand-border pt-3">
@@ -620,10 +621,11 @@
          - anon public  ->  SUPABASE_ANON_KEY
        A anon key é pública (pode ficar no site). NUNCA coloque a service_role aqui.
        Enquanto as duas estiverem vazias, o app funciona 100% local, como antes. */
-    const SUPABASE_URL = '';
-    const SUPABASE_ANON_KEY = '';
+    const SUPABASE_URL = 'https://atlybzarulwijlepngci.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_u-A3EfX-ufsbw0-2aaxFaw_1gXagG-0';
 
     const PENDING_KEY = 'diario_trader_asrv_pending';
+    const AUTH_DISMISS_KEY = 'diario_trader_asrv_auth_dismissed';
 
     let sb = null;
     let cloudUser = null;
@@ -678,6 +680,12 @@
       if (err) err.innerText = '';
     }
 
+    function dismissAuth() {
+      localStorage.setItem(AUTH_DISMISS_KEY, '1');
+      hideAuth();
+      setCloudStatus('local');
+    }
+
     function traduzErroAuth(err) {
       const msg = String((err && err.message) || err || '');
       if (/invalid login credentials/i.test(msg)) return 'E-mail ou senha incorretos.';
@@ -705,6 +713,7 @@
         const { data, error } = await sb.auth.signInWithPassword({ email, password });
         if (error) throw error;
         cloudUser = data.user;
+        localStorage.removeItem(AUTH_DISMISS_KEY);
         document.getElementById('auth-email').value = '';
         hideAuth();
         await bootCloudData();
@@ -737,6 +746,7 @@
       if (!sb) return;
       try { await sb.auth.signOut(); } catch (err) { console.warn(err); }
       cloudUser = null;
+      localStorage.removeItem(AUTH_DISMISS_KEY);
       setCloudStatus('local');
       showAuth();
     }
@@ -948,6 +958,7 @@
         return;
       }
       if (!cloudUser) {
+        localStorage.removeItem(AUTH_DISMISS_KEY);
         showAuth();
         return;
       }
@@ -993,10 +1004,11 @@
         if (error) throw error;
         if (!data || !data.session) {
           setCloudStatus('local');
-          showAuth();
+          if (localStorage.getItem(AUTH_DISMISS_KEY) !== '1') showAuth();
           return;
         }
         cloudUser = data.session.user;
+        localStorage.removeItem(AUTH_DISMISS_KEY);
         hideAuth();
         await bootCloudData();
       } catch (err) {

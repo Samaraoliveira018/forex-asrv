@@ -53,6 +53,7 @@ create index if not exists no_trade_days_user_day_idx on public.no_trade_days (u
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
+set search_path = ''
 as $$
 begin
   new.updated_at = now();
@@ -83,8 +84,8 @@ create policy "trades_own_rows"
   on public.trades
   for all
   to authenticated
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 -- no_trade_days: idem
 drop policy if exists "no_trade_days_own_rows" on public.no_trade_days;
@@ -92,8 +93,8 @@ create policy "no_trade_days_own_rows"
   on public.no_trade_days
   for all
   to authenticated
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 -- settings: idem
 drop policy if exists "settings_own_rows" on public.settings;
@@ -101,8 +102,8 @@ create policy "settings_own_rows"
   on public.settings
   for all
   to authenticated
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 -- ------------------------------------------------------------
 -- 5. DEFESA EM PROFUNDIDADE

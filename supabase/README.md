@@ -19,6 +19,19 @@ index.html  ──(supabase-js via CDN)──►  Supabase (Postgres + Auth + RL
   fica pública no HTML de propósito — sem login ela não acessa nenhuma linha.
 - **Nunca** coloque a `service_role` key no `index.html` nem em nenhum arquivo do repositório.
 
+## Status atual (projeto `atlybzarulwijlepngci`)
+
+| Item | Situação |
+|---|---|
+| Schema (`trades`, `no_trade_days`, `settings`) | aplicado, com RLS |
+| Policies (`user_id = (select auth.uid())`) | aplicadas |
+| Trigger `updated_at` | aplicado (`search_path` fixo) |
+| Usuário `samaraoliveira018@gmail.com` | criado e confirmado |
+| `SUPABASE_URL` / chave publishable no `index.html` | configuradas |
+| Leaked password protection | **pendente** (dashboard) |
+
+Ainda falta apenas: **Authentication → Settings → Password Security → Enable leaked password protection**.
+
 ## Passo a passo (uma vez só)
 
 ### 1. Rodar o schema
@@ -31,7 +44,8 @@ App é de uso individual, então ninguém além de você deve conseguir criar co
 
 1. **Authentication** → **Sign In / Providers** → **Email**
 2. Desligue **Allow new users to sign up**
-3. (Opcional) Em **Authentication** → **Settings**, desligue confirmações que não usar
+3. **Authentication** → **Settings** → **Password Security** → ative **Leaked password protection**
+4. (Opcional) Em **Authentication** → **Settings**, desligue confirmações que não usar
 
 ### 3. Criar o seu usuário
 1. **Authentication** → **Users** → **Add user** → **Create new user**
