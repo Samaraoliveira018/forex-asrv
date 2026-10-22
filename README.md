@@ -99,6 +99,19 @@ Push em `main` dispara o workflow de Pages, que:
 O `index.html` da raiz continua sendo o app estático, mas agora consome os tokens e
 componentes visuais do design system. A migração do React acontece em paralelo em `/app/`.
 
+### Vercel (app React)
+
+O app React também pode ser publicado na Vercel com **Root Directory = raiz do repositório**.
+O `vercel.json` na raiz define o build:
+
+- install: `npm ci` (instala as workspaces);
+- build: `npm run build -w @asrv/frontend`;
+- output: `frontend/dist`.
+
+A Vercel serve o app na raiz (`/`), então o `VITE_BASE` é definido como `/` no `vercel.json`.
+No GitHub Pages o default continua `/forex-asrv/app/`. Não é preciso mudar nada no dashboard
+além de manter o Root Directory na raiz.
+
 ## Release manual
 
 O workflow **Release** (`.github/workflows/release.yml`) é executado manualmente a partir

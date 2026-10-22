@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build -w @asrv/frontend",
+  "outputDirectory": "frontend/dist",
+  "env": {
+    "VITE_BASE": "/"
+  },
+  "rewrites": [
+    { "source": "/forex-asrv/app/:path*", "destination": "/:path*" }
+  ]
+}

@@ -236,6 +236,13 @@ O `index.html` da raiz continua ativo, mas compartilha a paleta e os componentes
 com o app React por meio do CSS do design system. Nenhum caminho absoluto deve ser usado
 no app novo: o Vite resolve o `base`.
 
+### Vercel (app React)
+
+`vercel.json` (raiz do repo) publica o app React na Vercel com Root Directory = raiz:
+`installCommand: npm ci`, `buildCommand: npm run build -w @asrv/frontend` e
+`outputDirectory: frontend/dist`. Como a Vercel serve em `/`, o `VITE_BASE=/` é injetado
+pelo `vercel.json`; o default do Vite permanece `/forex-asrv/app/` para o GitHub Pages.
+
 ### Release (manual)
 
 O workflow `.github/workflows/release.yml` é disparado manualmente **a partir da `main`**.
