@@ -1,0 +1,15 @@
+{
+  "name": "forex-asrv",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present"
+  }
+}

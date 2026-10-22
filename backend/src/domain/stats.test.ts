@@ -1,0 +1,116 @@
+import { describe, expect, it } from 'vitest';
+import { createTrade, type Trade } from './trade';
+import { calculateStats } from './stats';
+
+let sequence = 0;
+
+function trade(overrides: Partial<Parameters<typeof createTrade>[0]> = {}): Trade {
+  sequence += 1;
+  return createTrade({
+    id: `stats-${sequence}`,
+    date: '2026-10-01',
+    asset: 'EURUSD',
+    type: 'Compra',
+    lots: 1,
+    pnl: 0,
+    ...overrides,
+  });
+}
+
+describe('calculateStats', () => {
+  it('zera tudo quando não há operações', () => {
+    const stats = calculateStats({ trades: [], initialBalance: 1000, today: '2026-10-01' });
+
+    expect(stats).toMatchObject({
+      totalTrades: 0,
+      wins: 0,
+      losses: 0,
+      breakEvens: 0,
+      winRate: 0,
+      totalPnl: 0,
+      balance: 1000,
+      returnPct: 0,
+      profitFactor: 0,
+      maxWin: 0,
+      maxLoss: 0,
+      buyCount: 0,
+      sellCount: 0,
+      todayCount: 0,
+    });
+  });
+
+  it('separa vitórias, perdas e empates técnicos', () => {
+    const stats = calculateStats({
+      trades: [
+        trade({ pnl: 100 }),
+        trade({ pnl: 0.3, type: 'Venda' }),
+        trade({ pnl: -0.3 }),
+        trade({ pnl: -50, type: 'Venda' }),
+      ],
+      initialBalance: 1000,
+      today: '2026-10-01',
+    });
+
+    expect(stats.totalTrades).toBe(4);
+    expect(stats.wins).toBe(1);
+    expect(stats.losses).toBe(1);
+    expect(stats.breakEvens).toBe(2);
+    expect(stats.winRate).toBe(25);
+    expect(stats.buyCount).toBe(2);
+    expect(stats.sellCount).toBe(2);
+  });
+
+  it('calcula patrimônio, retorno e fator de lucro', () => {
+    const stats = calculateStats({
+      trades: [
+        trade({ pnl: 150 }),
+        trade({ pnl: -50 }),
+        trade({ pnl: 25 }),
+      ],
+      initialBalance: 1000,
+      today: '2026-10-01',
+    });
+
+    expect(stats.totalPnl).toBe(125);
+    expect(stats.balance).toBe(1125);
+    expect(stats.returnPct).toBe(12.5);
+    expect(stats.profitFactor).toBe(3.5);
+    expect(stats.maxWin).toBe(150);
+    expect(stats.maxLoss).toBe(-50);
+  });
+
+  it('retorna fator de lucro infinito quando só há lucro', () => {
+    const stats = calculateStats({
+      trades: [trade({ pnl: 10 })],
+      initialBalance: 1000,
+      today: '2026-10-01',
+    });
+
+    expect(stats.profitFactor).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  it('conta apenas as operações do dia informado', () => {
+    const stats = calculateStats({
+      trades: [
+        trade({ date: '2026-10-01' }),
+        trade({ date: '2026-10-01' }),
+        trade({ date: '2026-10-02' }),
+      ],
+      initialBalance: 1000,
+      today: '2026-10-01',
+    });
+
+    expect(stats.todayCount).toBe(2);
+  });
+
+  it('não divide por zero quando o capital inicial é zero', () => {
+    const stats = calculateStats({
+      trades: [trade({ pnl: 10 })],
+      initialBalance: 0,
+      today: '2026-10-01',
+    });
+
+    expect(stats.returnPct).toBe(0);
+    expect(stats.balance).toBe(10);
+  });
+});

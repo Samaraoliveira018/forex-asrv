@@ -6,18 +6,21 @@ como cache local. O site é estático (GitHub Pages), então tudo roda no navega
 ## Arquitetura
 
 ```
-index.html  ──(supabase-js via CDN)──►  Supabase (Postgres + Auth + RLS)
-     │                                        │
-     └── localStorage (cache + fila offline) ◄┘
+frontend (React) ─┐
+                  ├── @asrv/backend (BFF) ──► Supabase (Postgres + Auth + RLS)
+mobile (Expo) ────┘          │
+                             └── fila offline (localStorage / AsyncStorage)
 ```
 
 - **Fonte da verdade:** Supabase.
-- **Cache local:** `localStorage`, para o app abrir instantaneamente e continuar
-  funcionando sem internet. Operações feitas offline entram numa fila e são
-  enviadas quando a conexão volta.
-- **Segurança:** RLS em todas as tabelas (`auth.uid() = user_id`). A `anon key`
-  fica pública no HTML de propósito — sem login ela não acessa nenhuma linha.
-- **Nunca** coloque a `service_role` key no `index.html` nem em nenhum arquivo do repositório.
+- **BFF:** `backend/src` encapsula domínio, casos de uso e adaptadores; os apps importam
+  o pacote e nunca falam com o banco diretamente.
+- **Cache/fila local:** o app atual usa `localStorage`; o BFF aceita storage síncrono ou
+  assíncrono (mobile).
+- **Segurança:** RLS em todas as tabelas (`auth.uid() = user_id`). A `anon`/publishable key
+  fica pública de propósito — sem login ela não acessa nenhuma linha.
+- **Nunca** coloque a `service_role` key no `index.html`, no frontend, no mobile ou em
+  qualquer arquivo do repositório.
 
 ## Status atual (projeto `atlybzarulwijlepngci`)
 
@@ -28,6 +31,7 @@ index.html  ──(supabase-js via CDN)──►  Supabase (Postgres + Auth + RL
 | Trigger `updated_at` | aplicado (`search_path` fixo) |
 | Usuário `samaraoliveira018@gmail.com` | criado e confirmado |
 | `SUPABASE_URL` / chave publishable no `index.html` | configuradas |
+| `VITE_SUPABASE_*` no app novo (`frontend/`) | fallback público configurado |
 | Leaked password protection | **pendente** (dashboard) |
 
 Ainda falta apenas: **Authentication → Settings → Password Security → Enable leaked password protection**.
@@ -64,24 +68,33 @@ App é de uso individual, então ninguém além de você deve conseguir criar co
 **Project Settings** → **API**:
 
 - **Project URL** → ex.: `https://abcdefghijk.supabase.co`
-- **anon public** → chave longa começando com `eyJ...`
+- **anon public** → chave longa começando com `eyJ...` (ou publishable key)
 
-Cole no `index.html`, no bloco marcado (procure por `SUPABASE_URL`):
+No **app novo** (`frontend/`), crie `frontend/.env.local` (não versionado):
+
+```
+VITE_SUPABASE_URL=https://abcdefghijk.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
+```
+
+Sem esse arquivo o app usa a chave publishable padrão em `frontend/src/bff.ts`.
+
+No **app atual** (`index.html`), as constantes ficam no bloco marcado (procure por
+`SUPABASE_URL`):
 
 ```js
 const SUPABASE_URL = 'https://abcdefghijk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJ...';
 ```
 
-Enquanto essas duas constantes estiverem vazias, o app funciona **exatamente**
-como hoje (somente `localStorage`) e nenhuma requisição é feita.
-
 ### 6. Publicar
 ```bash
-git add index.html supabase
-git commit -m "feat: integração com Supabase (online-first + cache local)"
+git add backend frontend index.html
+git commit -m "feat: migra backend e frontend para o monorepo"
 git push origin main
 ```
+
+O workflow roda os testes, builda o frontend em `/app/` e mantém o app atual na raiz.
 
 ## Migração dos dados que já estão no navegador
 

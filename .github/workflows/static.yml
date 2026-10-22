@@ -31,13 +31,31 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Test
+        run: npm test
+      - name: Build web app
+        run: npm run build -w @asrv/frontend
+      - name: Prepare site
+        run: |
+          mkdir -p _site/app
+          cp index.html _site/index.html
+          cp -R frontend/dist/. _site/app/
+          cp -R doc _site/doc
+          mkdir -p _site/backend/supabase
+          cp backend/supabase/README.md _site/backend/supabase/README.md
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
-          path: '.'
+          path: '_site'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5

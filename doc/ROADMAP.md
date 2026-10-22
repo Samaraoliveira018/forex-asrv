@@ -1,8 +1,9 @@
 # Roadmap — Diário Trader ASRV
 
-> Última atualização: **22/10/2026** · Referência: commit `2df6687`
-> App: https://samaraoliveira018.github.io/forex-asrv/
-> Documentação técnica: [`../supabase/README.md`](../supabase/README.md)
+> Última atualização: **22/10/2026** · Referência: migração para monorepo
+> App atual: https://samaraoliveira018.github.io/forex-asrv/
+> Novo app (migração): https://samaraoliveira018.github.io/forex-asrv/app/
+> Documentação técnica: [`../backend/supabase/README.md`](../backend/supabase/README.md) · [`ARCHITECTURE.md`](./ARCHITECTURE.md)
 
 ## 1. Visão
 
@@ -43,6 +44,26 @@ esteja você online, offline ou trocando de dispositivo.
 - [ ] Ativar **Leaked password protection** (Authentication → Settings)
 - [ ] Configurar **Site URL / Redirect URLs** no Auth (necessário para "Esqueci a senha")
 - [ ] Confirmar a migração do histórico local no primeiro login em produção
+
+---
+
+## 2.1 Em andamento — monorepo + BFF (M)
+
+O app atual continua no ar em `/` enquanto o novo app React evolui em `/app/`.
+O backend (`backend/`) passa a ser um pacote (`@asrv/backend`) importado por web e mobile.
+
+| ID | Entrega | Status |
+|---|---|---|
+| M-01 | Mover `supabase/` para `backend/supabase/` | ✅ |
+| M-02 | BFF `@asrv/backend` em DDD (domain/application/infrastructure) com TDD | ✅ 83 testes |
+| M-03 | Frontend Vite + React + Tailwind consumindo o BFF | ✅ 10 testes |
+| M-04 | Publicar o novo app em `/app/` sem quebrar a raiz | ✅ |
+| M-05 | App mobile Expo importando `@asrv/backend` | ⏳ |
+| M-06 | Paridade: dashboard, estatísticas, cache offline, importação | ⏳ |
+| M-07 | Aposentar `index.html` e publicar o React na raiz | ⏳ |
+
+**Critério para M-07:** M-06 concluído, uma semana de uso no `/app/` sem perda de dados
+e conferência local × nuvem com contagens iguais.
 
 ---
 
@@ -170,8 +191,9 @@ Objetivo: usar o histórico para melhorar decisão, não só registrar.
 
 ## 12. Próxima ação sugerida
 
-1. **R-01** (5 minutos, manual no dashboard) — fecha o único WARN de segurança.
-2. **R-02** (1 dia) — coloca os testes no CI antes de qualquer feature nova.
-3. **R-05 + R-07** (2 dias) — erros visíveis e fila preservada em sessão expirada.
+1. **M-04** — validar o deploy em `/app/` (login, listar, criar e excluir operação).
+2. **M-05** — subir o app Expo importando o mesmo pacote `@asrv/backend`.
+3. **M-06** — trazer dashboard/estatísticas e cache offline para o app React.
+4. **R-01** (5 minutos, manual no dashboard) — fechar o único WARN de segurança.
 
 Revisão do roadmap: **mensal**, junto com a conferência de dados local × nuvem.

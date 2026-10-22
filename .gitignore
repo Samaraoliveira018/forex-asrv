@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+.expo/
+.expo-shared/
+*.tsbuildinfo
+.DS_Store
+.env
+.env.*
+!.env.example
+*.local
+.vite/
+_site/
