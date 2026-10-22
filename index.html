@@ -559,7 +559,7 @@
   <!-- JAVASCRIPT LOGIC -->
   <script>
     let trades = [];
-    let noTradeDays = []; // Armazena dias de disciplina sem operar
+    let noTradeDays = [];
     let initialBalance = 150;
     let streakDays = 0;
     let currentMarket = 'internacional';
@@ -779,7 +779,10 @@
       }
 
       if (window.innerWidth < 768) document.getElementById('sidebar').classList.add('hidden');
-      if (tabId === 'dashboard') renderAssetChart();
+      if (tabId === 'dashboard') {
+        updateDashboardMetrics();
+        renderAssetChart();
+      }
       if (tabId === 'stats') renderStatsCharts();
     }
 
@@ -844,7 +847,6 @@
       const pnl = parseFloat(document.getElementById('form-pnl').value);
       const notes = document.getElementById('form-notes').value;
 
-      // Remover de noTradeDays se inserir operação nessa data
       if (noTradeDays.includes(date)) {
         noTradeDays = noTradeDays.filter(d => d !== date);
       }
@@ -859,10 +861,8 @@
       }
 
       if (editId) {
-        // Atualizar registo existente
         trades = trades.map(t => t.id.toString() === editId ? { ...t, date, asset, type, lots, pnl, notes } : t);
       } else {
-        // Criar novo registo
         trades.push({ id: Date.now(), date, asset, type, lots, pnl, notes });
       }
 
@@ -877,6 +877,38 @@
         saveData();
         refreshUI();
       }
+    }
+
+    // DASHBOARD METRICS CALCULATOR
+    function updateDashboardMetrics() {
+      const grossProfit = trades.filter(t => t.pnl > 0).reduce((a, b) => a + b.pnl, 0);
+      const grossLoss = Math.abs(trades.filter(t => t.pnl < 0).reduce((a, b) => a + b.pnl, 0));
+
+      let profitFactor = '0.00';
+      if (grossLoss === 0 && grossProfit > 0) {
+        profitFactor = '∞';
+      } else if (grossLoss > 0) {
+        profitFactor = (grossProfit / grossLoss).toFixed(2);
+      }
+
+      const gains = trades.filter(t => t.pnl > 0).map(t => t.pnl);
+      const losses = trades.filter(t => t.pnl < 0).map(t => Math.abs(t.pnl));
+
+      const maxWin = gains.length > 0 ? Math.max(...gains) : 0;
+      const maxLoss = losses.length > 0 ? Math.max(...losses) : 0;
+
+      const formatCurrency = (val, prefix = '') => {
+        if (isValueHidden) return '••••••';
+        return `${prefix}$ ${val.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+      };
+
+      const pfEl = document.getElementById('dash-pf');
+      const maxWinEl = document.getElementById('dash-max-win');
+      const maxLossEl = document.getElementById('dash-max-loss');
+
+      if (pfEl) pfEl.innerText = profitFactor;
+      if (maxWinEl) maxWinEl.innerText = formatCurrency(maxWin, '+ ');
+      if (maxLossEl) maxLossEl.innerText = formatCurrency(maxLoss, '- ');
     }
 
     function refreshUI() {
@@ -920,6 +952,7 @@
       document.getElementById('chart-stat-winrate').innerText = `${winRate}%`;
       document.getElementById('chart-stat-pnl').innerText = formatCurrency(totalPnl);
 
+      updateDashboardMetrics();
       renderJournalGrid();
       renderJournalList();
       renderEquityChart();
