@@ -349,8 +349,8 @@
             <h3 class="text-base font-semibold text-white">Regras de Ouro da Plataforma</h3>
             <div class="p-3 bg-red-950/40 border border-red-800/60 rounded-lg text-xs text-red-300 space-y-2">
               <p>⚡ <strong>Limite estrito:</strong> Máximo de 2 operações por dia.</p>
-              <p>🛑 <strong>Perda Individual Máxima:</strong> Nenhuma operação pode ter um prejuízo superior a 20% do capital inicial.</p>
-              <p>⚖️ <strong>Break Even (0x0):</strong> Posições encerradas no zero a zero preservam o capital e mantêm a disciplina ativa.</p>
+              <p>🛑 <strong>Perda Individual Máxima:</strong> Nenhuma operação pode ter um prejuízo superior a 20% do capital inicial (taxas de spread mínimas são tratadas como Break Even).</p>
+              <p>⚖️ <strong>Break Even (0x0):</strong> Posições encerradas no zero a zero ou com pequenas variações de spread preservam o capital.</p>
               <p>🛡️ <strong>Saber Ficar de Fora:</strong> Registrar dias em que você não operou mantém a sua ofensiva ativa!</p>
               <p>🔥 <strong>Ofensiva & Metas:</strong> Acumule dias de disciplina para alcançar os níveis de 3, 7, 14, 30 e 60 dias.</p>
             </div>
@@ -373,7 +373,7 @@
         </div>
       </section>
 
-      <!-- TAB 4: DADOS ESTATÍSTICOS (COM DETALHAMENTO QUANTIDADE, WIN, LOSS, BREAK EVEN) -->
+      <!-- TAB 4: DADOS ESTATÍSTICOS -->
       <section id="tab-stats" class="tab-content hidden space-y-6">
         <div>
           <h2 class="text-2xl font-bold text-white">Dados Estatísticos Detalhados</h2>
@@ -509,6 +509,11 @@
     let winLossChartInstance = null;
     let typeDoughnutChartInstance = null;
 
+    // Função auxiliares para classificar Break Even (considerando micro-variações de spread entre -0.30 e +0.30)
+    function isBreakEven(pnl) {
+      return pnl >= -0.30 && pnl <= 0.30;
+    }
+
     // LOAD INITIAL DATA FROM LOCALSTORAGE
     function loadInitialData() {
       const savedTrades = localStorage.getItem('diario_trader_asrv_trades') || localStorage.getItem('positionpips_trades');
@@ -605,7 +610,8 @@
         const dayTrades = dailyTrades[date];
         if (dayTrades.length > 2) ruleViolated = true;
         dayTrades.forEach(t => {
-          if (t.pnl < 0 && Math.abs(t.pnl) > maxAllowedSingleLoss) {
+          // Ignora micro-prejuízos de spread/taxas considerados Break Even na regra de 20%
+          if (t.pnl < 0 && !isBreakEven(t.pnl) && Math.abs(t.pnl) > maxAllowedSingleLoss) {
             ruleViolated = true;
           }
         });
@@ -797,7 +803,7 @@
 
       if (tradesOnDate.length >= 2) {
         alert("⚠️ ATENÇÃO: Você já possui 2 operações registradas nesta data! Salvar esta operação irá ZERAR a sua ofensiva!");
-      } else if (pnl < 0 && Math.abs(pnl) > maxSingleLoss) {
+      } else if (pnl < 0 && !isBreakEven(pnl) && Math.abs(pnl) > maxSingleLoss) {
         alert(`⚠️ ATENÇÃO: Esta operação tem um prejuízo de ${Math.abs(pnl).toFixed(2)}, o que ultrapassa o limite máximo individual de 20% do capital inicial (${maxSingleLoss.toFixed(2)}). A sua ofensiva será ZERADA!`);
       }
 
@@ -823,7 +829,7 @@
     // DASHBOARD METRICS CALCULATOR
     function updateDashboardMetrics() {
       const grossProfit = trades.filter(t => t.pnl > 0).reduce((a, b) => a + b.pnl, 0);
-      const grossLoss = Math.abs(trades.filter(t => t.pnl < 0).reduce((a, b) => a + b.pnl, 0));
+      const grossLoss = Math.abs(trades.filter(t => t.pnl < 0 && !isBreakEven(t.pnl)).reduce((a, b) => a + b.pnl, 0));
 
       let profitFactor = '0.00';
       if (grossLoss === 0 && grossProfit > 0) {
@@ -833,7 +839,7 @@
       }
 
       const gains = trades.filter(t => t.pnl > 0).map(t => t.pnl);
-      const losses = trades.filter(t => t.pnl < 0).map(t => Math.abs(t.pnl));
+      const losses = trades.filter(t => t.pnl < 0 && !isBreakEven(t.pnl)).map(t => Math.abs(t.pnl));
 
       const maxWin = gains.length > 0 ? Math.max(...gains) : 0;
       const maxLoss = losses.length > 0 ? Math.max(...losses) : 0;
@@ -878,7 +884,7 @@
 
       const formatCurrency = (val) => {
         if (isValueHidden) return '••••••';
-        if (val === 0) return '$ 0.00';
+        if (isBreakEven(val)) return '$ 0.00';
         return (val > 0 ? '+ ' : '- ') + Math.abs(val).toLocaleString('en-US', { minimumFractionDigits: 2 });
       };
 
@@ -934,9 +940,9 @@
           `;
         }
 
-        const isBE = item.pnl === 0;
+        const isBE = isBreakEven(item.pnl);
         const pnlClass = isBE ? 'text-gray-300' : (item.pnl > 0 ? 'text-emerald-400' : 'text-red-400');
-        const pnlText = isValueHidden ? '••••••' : (isBE ? '$ 0.00' : (item.pnl > 0 ? '+ ' : '- ') + Math.abs(item.pnl).toFixed(2));
+        const pnlText = isValueHidden ? '••••••' : (isBE ? `${item.pnl < 0 ? '-' : '+'} $ ${Math.abs(item.pnl).toFixed(2)} (BE)` : (item.pnl > 0 ? '+ ' : '- ') + Math.abs(item.pnl).toFixed(2));
 
         return `
           <div class="bg-brand-card border border-brand-border rounded-xl p-4 flex flex-col justify-between hover:border-gray-700 transition">
@@ -969,7 +975,7 @@
         return;
       }
       tbody.innerHTML = trades.map((t, idx) => {
-        const isBE = t.pnl === 0;
+        const isBE = isBreakEven(t.pnl);
         const statusBadge = isBE 
           ? `<span class="text-[10px] px-2 py-0.5 rounded bg-gray-800 text-gray-300 font-semibold">BREAK EVEN</span>`
           : `<span class="text-[10px] px-2 py-0.5 rounded bg-gray-800 ${t.pnl > 0 ? 'text-emerald-400' : 'text-red-400'}">${t.pnl > 0 ? 'WIN' : 'LOSS'}</span>`;
@@ -981,7 +987,7 @@
             <td class="p-3 font-bold text-white">${t.asset}</td>
             <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] ${t.type === 'Compra' ? 'bg-emerald-950 text-emerald-400' : 'bg-red-950 text-red-400'}">${t.type}</span></td>
             <td class="p-3">${t.lots}</td>
-            <td class="p-3 font-bold ${isBE ? 'text-gray-300' : (t.pnl > 0 ? 'text-emerald-400' : 'text-red-400')}">${isValueHidden ? '••••••' : (isBE ? '0.00' : (t.pnl > 0 ? '+' : '') + t.pnl.toFixed(2))}</td>
+            <td class="p-3 font-bold ${isBE ? 'text-gray-300' : (t.pnl > 0 ? 'text-emerald-400' : 'text-red-400')}">${isValueHidden ? '••••ّه' : (isBE ? `${t.pnl.toFixed(2)} (BE)` : (t.pnl > 0 ? '+' : '') + t.pnl.toFixed(2))}</td>
             <td class="p-3">${statusBadge}</td>
             <td class="p-3 text-right">
               <button onclick="editTrade(${t.id})" class="text-gray-400 hover:text-blue-400 mr-2"><i class="fa-solid fa-pen-to-square"></i></button>
@@ -1054,12 +1060,11 @@
       });
     }
 
-    // RENDERIZADOR DE ESTATÍSTICAS DETALHADAS (QUANTIDADE, WIN, LOSS, BREAK EVEN)
     function renderStatsCharts() {
       const totalCount = trades.length;
-      const wins = trades.filter(t => t.pnl > 0).length;
-      const losses = trades.filter(t => t.pnl < 0).length;
-      const breakevens = trades.filter(t => t.pnl === 0).length;
+      const wins = trades.filter(t => t.pnl > 0 && !isBreakEven(t.pnl)).length;
+      const losses = trades.filter(t => t.pnl < 0 && !isBreakEven(t.pnl)).length;
+      const breakevens = trades.filter(t => isBreakEven(t.pnl)).length;
 
       const buys = trades.filter(t => t.type === 'Compra').length;
       const sells = trades.filter(t => t.type === 'Venda').length;
@@ -1086,7 +1091,6 @@
       if (beCountEl) beCountEl.innerText = breakevens;
       if (bePctEl) bePctEl.innerText = `${bePct}% do total`;
 
-      // Gráfico de Rosca: Win vs Loss vs Break Even
       const ctx1 = document.getElementById('winLossPieChart')?.getContext('2d');
       if (winLossChartInstance) winLossChartInstance.destroy();
       if (ctx1) {
@@ -1107,7 +1111,6 @@
         });
       }
 
-      // Gráfico de Rosca: Compra vs Venda
       const ctx2 = document.getElementById('typeDoughnutChart')?.getContext('2d');
       if (typeDoughnutChartInstance) typeDoughnutChartInstance.destroy();
       if (ctx2) {
