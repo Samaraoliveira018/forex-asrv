@@ -1,0 +1,9 @@
+body {
+  background: #020617;
+  color: #e2e8f0;
+}
+
+#storybook-root {
+  padding: 24px;
+  min-width: 320px;
+}

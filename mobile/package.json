@@ -1,0 +1,32 @@
+{
+  "name": "@asrv/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.tsx",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo start --ios",
+    "android": "expo start --android",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
+    "typecheck": "tsc --noEmit",
+    "export:ios": "expo export --platform ios --output-dir dist"
+  },
+  "dependencies": {
+    "@asrv/backend": "*",
+    "@asrv/design-system": "*",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "~58.0.17",
+    "expo-status-bar": "~58.0.4",
+    "react": "19.3.0",
+    "react-native": "0.88.0"
+  },
+  "devDependencies": {
+    "@testing-library/react-native": "^14.1.0",
+    "@types/jest": "^30.0.0",
+    "@types/react": "~19.3.0",
+    "jest": "^30.0.0",
+    "jest-expo": "~58.0.12",
+    "typescript": "~6.0.3"
+  }
+}

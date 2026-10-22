@@ -1,0 +1,125 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Tag da release (ex.: v0.1.0). Precisa ser igual à version do package.json com prefixo v.'
+        required: true
+        type: string
+      prerelease:
+        description: 'Marcar como pré-release'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Validate version and tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Versão inválida: '$VERSION'. Use o formato v0.1.0 ou v0.1.0-beta.1." >&2
+            exit 1
+          fi
+
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          if [[ "$VERSION" != "v$PKG_VERSION" ]]; then
+            echo "A tag '$VERSION' não corresponde à version '$PKG_VERSION' do package.json." >&2
+            exit 1
+          fi
+
+          if git ls-remote --tags origin "refs/tags/$VERSION" | grep -q .; then
+            echo "A tag '$VERSION' já existe no repositório. Releases não são sobrescritas." >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Validate mobile bundle
+        run: npm run export:ios -w @asrv/mobile
+
+      - name: Build web app
+        run: npm run build -w @asrv/frontend
+
+      - name: Build Storybook
+        run: npm run build-storybook -w @asrv/design-system
+
+      - name: Package release assets
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p release
+          (cd frontend/dist && zip -qr "$GITHUB_WORKSPACE/release/asrv-web-${VERSION}.zip" .)
+          (cd packages/design-system/storybook-static && zip -qr "$GITHUB_WORKSPACE/release/asrv-storybook-${VERSION}.zip" .)
+          (cd release && sha256sum ./*.zip > SHA256SUMS)
+
+          ls -lh release
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          set -euo pipefail
+
+          flags=(--target "$GITHUB_SHA" --title "Diário Trader ASRV $VERSION" --generate-notes)
+          if [[ "$PRERELEASE" == "true" ]]; then
+            flags+=(--prerelease)
+          fi
+
+          gh release create "$VERSION" \
+            release/asrv-web-*.zip \
+            release/asrv-storybook-*.zip \
+            release/SHA256SUMS \
+            "${flags[@]}"
+
+      - name: Summary
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          {
+            echo "## Release $VERSION publicada"
+            echo
+            echo "- Web: \`asrv-web-${VERSION}.zip\`"
+            echo "- Storybook: \`asrv-storybook-${VERSION}.zip\`"
+            echo "- Checksums: \`SHA256SUMS\`"
+            echo
+            echo "Assets disponíveis na aba Releases do GitHub."
+          } >> "$GITHUB_STEP_SUMMARY"

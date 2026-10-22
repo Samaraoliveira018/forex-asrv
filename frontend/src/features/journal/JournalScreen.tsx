@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import type { JournalSnapshot, TradeType } from '@asrv/backend';
+import { Badge, Button, Card, StatCard } from '@asrv/design-system';
 import { useBff } from '../../BffContext';
 
 type FormState = {
@@ -119,17 +120,11 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
           </div>
           <div className="flex items-center gap-2">
             {snapshot.discipline.streak > 0 ? (
-              <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-sm text-emerald-300">
-                Ofensiva de {snapshot.discipline.streak} dias
-              </span>
+              <Badge tone="success">Ofensiva de {snapshot.discipline.streak} dias</Badge>
             ) : null}
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:border-slate-500"
-            >
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
               Sair
-            </button>
+            </Button>
           </div>
         </header>
 
@@ -148,16 +143,13 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
         ) : null}
 
         <section aria-label="Resumo" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Stat label="Banca" value={money.format(snapshot.stats.balance)} />
-          <Stat label="Resultado" value={formatSigned(snapshot.stats.totalPnl)} />
-          <Stat label="Operações" value={String(snapshot.stats.totalTrades)} />
-          <Stat label="Ofensiva" value={`${snapshot.discipline.streak} dias`} />
+          <StatCard label="Banca" value={money.format(snapshot.stats.balance)} />
+          <StatCard label="Resultado" value={formatSigned(snapshot.stats.totalPnl)} />
+          <StatCard label="Operações" value={String(snapshot.stats.totalTrades)} />
+          <StatCard label="Ofensiva" value={`${snapshot.discipline.streak} dias`} />
         </section>
 
-        <section
-          aria-label="Nova operação"
-          className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5"
-        >
+        <Card ariaLabel="Nova operação">
           <h2 className="text-lg font-semibold">Nova operação</h2>
           <form className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" onSubmit={handleSubmit} noValidate>
             <Field label="Data" htmlFor="date">
@@ -229,29 +221,17 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
             </Field>
 
             <div className="sm:col-span-2 lg:col-span-3">
-              <button
-                type="submit"
-                className="rounded-lg bg-emerald-500 px-4 py-2 font-semibold text-slate-950 transition hover:bg-emerald-400"
-              >
-                Registrar
-              </button>
+              <Button type="submit">Registrar</Button>
             </div>
           </form>
-        </section>
+        </Card>
 
-        <section
-          aria-label="Histórico"
-          className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5"
-        >
+        <Card ariaLabel="Histórico">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold">Histórico</h2>
-            <button
-              type="button"
-              onClick={handleNoTradeDay}
-              className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:border-emerald-500 hover:text-emerald-300"
-            >
+            <Button variant="secondary" size="sm" onClick={handleNoTradeDay}>
               Hoje sem operar
-            </button>
+            </Button>
           </div>
 
           {snapshot.trades.length === 0 ? (
@@ -282,19 +262,19 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
                     {formatSigned(trade.pnl)}
                   </span>
 
-                  <button
-                    type="button"
+                  <Button
+                    variant="danger"
+                    size="sm"
                     aria-label={`Excluir ${trade.asset} de ${formatDate(trade.date)}`}
                     onClick={() => handleDelete(trade.id)}
-                    className="rounded-lg border border-slate-700 px-2 py-1 text-sm text-slate-400 hover:border-red-500 hover:text-red-300"
                   >
                     Excluir
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
           )}
-        </section>
+        </Card>
       </div>
     </main>
   );
@@ -310,15 +290,6 @@ function Field({ label, htmlFor, children }: { label: string; htmlFor: string; c
         {label}
       </label>
       {children}
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3">
-      <p className="text-xs uppercase tracking-wider text-slate-400">{label}</p>
-      <p className="mt-1 text-xl font-bold">{value}</p>
     </div>
   );
 }

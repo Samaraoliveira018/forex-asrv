@@ -58,9 +58,11 @@ O backend (`backend/`) passa a ser um pacote (`@asrv/backend`) importado por web
 | M-02 | BFF `@asrv/backend` em DDD (domain/application/infrastructure) com TDD | ✅ 83 testes |
 | M-03 | Frontend Vite + React + Tailwind consumindo o BFF | ✅ 10 testes |
 | M-04 | Publicar o novo app em `/app/` sem quebrar a raiz | ✅ |
-| M-05 | App mobile Expo importando `@asrv/backend` | ⏳ |
+| M-05 | App mobile Expo importando `@asrv/backend` e design system | ✅ 11 testes |
 | M-06 | Paridade: dashboard, estatísticas, cache offline, importação | ⏳ |
 | M-07 | Aposentar `index.html` e publicar o React na raiz | ⏳ |
+| M-08 | Design system web/native com tokens + Storybook | ✅ 13 testes |
+| M-09 | Release manual no GitHub com web + Storybook + checksums | ✅ |
 
 **Critério para M-07:** M-06 concluído, uma semana de uso no `/app/` sem perda de dados
 e conferência local × nuvem com contagens iguais.
@@ -191,9 +193,9 @@ Objetivo: usar o histórico para melhorar decisão, não só registrar.
 
 ## 12. Próxima ação sugerida
 
-1. **M-04** — validar o deploy em `/app/` (login, listar, criar e excluir operação).
-2. **M-05** — subir o app Expo importando o mesmo pacote `@asrv/backend`.
-3. **M-06** — trazer dashboard/estatísticas e cache offline para o app React.
+1. **M-06** — trazer dashboard/estatísticas e cache offline para web e mobile.
+2. **M-05** — validar o app Expo em um dispositivo físico (login, criar, excluir, offline).
+3. **Release v0.1.0** — disparar o workflow manual a partir da `main` e conferir os assets.
 4. **R-01** (5 minutos, manual no dashboard) — fechar o único WARN de segurança.
 
 Revisão do roadmap: **mensal**, junto com a conferência de dados local × nuvem.

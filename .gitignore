@@ -11,3 +11,4 @@ coverage/
 *.local
 .vite/
 _site/
+storybook-static/

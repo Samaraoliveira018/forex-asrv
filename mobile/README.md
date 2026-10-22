@@ -1,27 +1,18 @@
-# Mobile — Expo (próximo incremento)
+# Mobile — Expo
 
-Status: **planejado**. A migração começou pelo frontend web; o mobile entra depois da
-paridade mínima, reaproveitando o mesmo pacote `@asrv/backend`.
+Status: **implementado** (login, diário, registro, exclusão, dia sem operar e logout),
+consumindo o BFF compartilhado `@asrv/backend` e o design system `@asrv/design-system`.
 
-## Objetivo
-
-App React Native (Expo + TypeScript) com login, diário, registro de operação e fila offline,
-consumindo o BFF compartilhado — sem duplicar regra de negócio.
-
-## Setup previsto
+## Comandos
 
 ```bash
-# criar o app em uma pasta temporária e mover para mobile/ (a pasta já existe)
-npx create-expo-app@latest mobile-tmp --template blank-typescript
+npm run start -w @asrv/mobile      # Expo
+npm run ios -w @asrv/mobile        # simulador iOS
+npm run android -w @asrv/mobile    # emulador Android
+npm test -w @asrv/mobile           # Jest + React Native Testing Library
+npm run typecheck -w @asrv/mobile
+npm run export:ios -w @asrv/mobile # valida o bundle Metro sem Xcode
 ```
-
-Dependências relevantes:
-
-```bash
-npm install @react-native-async-storage/async-storage
-```
-
-O `@asrv/backend` será adicionado como dependência de workspace (`"@asrv/backend": "*"`).
 
 ## Integração com o BFF
 
@@ -35,7 +26,11 @@ import { createBff } from '@asrv/backend';
 export const bff = createBff({
   url: process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'https://atlybzarulwijlepngci.supabase.co',
   anonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '<publishable-key>',
-  storage: AsyncStorage,
+  storage: {
+    getItem: (key) => AsyncStorage.getItem(key),
+    setItem: (key, value) => AsyncStorage.setItem(key, value),
+    removeItem: (key) => AsyncStorage.removeItem(key),
+  },
 });
 ```
 
@@ -47,21 +42,24 @@ Regras que não mudam:
 
 ## Metro + monorepo
 
-Expo SDK recente detecta monorepos automaticamente. Se necessário, ajustar
-`mobile/metro.config.js` com `watchFolders` para a raiz e `nodeModulesPaths` para
-`mobile/node_modules` + `node_modules` da raiz.
+`metro.config.js` inclui a raiz em `watchFolders` e resolve `node_modules` do app e da
+raiz. A condição `react-native` do pacote de design system faz o Metro carregar
+`src/index.native.ts`, enquanto Vite/Storybook carregam `src/index.ts`.
 
-## Testes planejados
+## Testes
 
-- `jest-expo` + `@testing-library/react-native` para telas.
-- Regras de negócio já cobertas pelos 83 testes do backend; o mobile testa apenas
-  integração de tela e navegação.
+- `jest-expo` + React Native Testing Library (API assíncrona do RNTL 14).
+- 11 testes cobrindo login, erros, diário, avisos, exclusão, dia sem operar, logout e
+  roteamento por sessão.
+- Regras de negócio continuam cobertas pelos 83 testes do backend; o mobile testa a
+  integração de tela.
 
 ## Definição de pronto
 
-- [ ] Login e logout funcionando contra o mesmo Supabase.
-- [ ] Listar, criar e excluir operação.
-- [ ] Registrar dia sem operar.
-- [ ] Fila offline drenando ao reconectar.
-- [ ] `npm test` e `npm run typecheck` verdes na workspace `mobile`.
-- [ ] Nenhum segredo além da publishable key.
+- [x] Login e logout funcionando contra o mesmo Supabase.
+- [x] Listar, criar e excluir operação.
+- [x] Registrar dia sem operar.
+- [x] `npm test` e `npm run typecheck` verdes na workspace `mobile`.
+- [x] Bundle Metro validado com `expo export`.
+- [ ] Validar em dispositivo físico e build assinado via EAS.
+- [x] Nenhum segredo além da publishable key.

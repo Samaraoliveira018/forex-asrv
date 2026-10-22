@@ -7,11 +7,12 @@
 O projeto nasceu como um `index.html` único com Tailwind/Chart.js via CDN. Ele continua
 publicado na raiz do GitHub Pages enquanto a versão nova evolui em `/app/`.
 
-A migração introduz um **monorepo** com três partes:
+A migração introduz um **monorepo** com quatro partes:
 
 - `backend/` — pacote `@asrv/backend` (BFF + Supabase). É importado pelos apps.
 - `frontend/` — app web em React + Vite.
-- `mobile/` — app React Native/Expo (próximo incremento).
+- `mobile/` — app React Native/Expo.
+- `packages/design-system/` — tokens e componentes compartilhados, com Storybook.
 
 O BFF **não é um servidor HTTP**. É um pacote TypeScript com os casos de uso, as regras de
 domínio e os adaptadores do Supabase. Isso elimina CORS, deploy de servidor e duplicação de
@@ -36,22 +37,41 @@ forex-asrv/
 │       ├── BffContext.tsx
 │       ├── App.tsx
 │       └── bff.ts             # instancia createBff com localStorage
-├── mobile/                    # Expo (próximo incremento)
+├── mobile/
+│   └── src/
+│       ├── features/          # auth, journal (React Native)
+│       ├── BffContext.tsx
+│       ├── App.tsx
+│       └── bff.ts             # createBff com AsyncStorage
+├── packages/design-system/
+│   ├── src/
+│   │   ├── tokens.ts          # fonte única de cores/espaços/tipografia
+│   │   ├── web/               # Button, Input, Card, Badge, StatCard (DOM)
+│   │   ├── native/            # mesmos componentes em React Native
+│   │   ├── index.ts           # entrada web
+│   │   └── index.native.ts    # entrada native
+│   ├── stories/               # Storybook (tokens + web)
+│   └── .storybook/
 ├── doc/
 ├── index.html                 # app atual (raiz do Pages)
-└── .github/workflows/static.yml
+└── .github/workflows/         # static.yml (Pages) + release.yml (manual)
 ```
 
 ## 3. Camadas e regra de dependência
 
 ```
 frontend / mobile
-        │  importam apenas @asrv/backend
-        ▼
-   bff.ts (composition root)
         │
-        ├── application (casos de uso) ──► domain
-        └── infrastructure (Supabase) ──► application + domain
+        ├── @asrv/backend ──────────────┐
+        │                               ▼
+        │                        bff.ts (composition root)
+        │                               │
+        │                               ├── application ──► domain
+        │                               └── infrastructure ──► application + domain
+        │
+        └── @asrv/design-system
+                ├── tokens (web + native)
+                └── componentes por plataforma
 ```
 
 - **domain**: entidades (`Trade`), validações, break even, limite diário, perda máxima,
@@ -129,15 +149,44 @@ Todo comportamento novo começa por um teste que falha.
 | Aplicação | `backend/src/application/journal.test.ts` | CRUD, avisos, fila, flush, validação de capital |
 | Infra | `backend/src/infrastructure/*.test.ts` | mapeamento Supabase, upsert/delete, storage sync/async |
 | Composição | `backend/src/bff.test.ts` | login, snapshot, save, offline → flush |
-| UI | `frontend/src/**/*.test.tsx` | login, diário, avisos, exclusão, sessão |
+| UI web | `frontend/src/**/*.test.tsx` | login, diário, avisos, exclusão, sessão |
+| Design system | `packages/design-system/src/**/*.test.ts(x)` | tokens, Button, Input, Card, Badge, StatCard (web) |
+| UI mobile | `mobile/src/**/*.test.tsx` | login, diário, avisos, exclusão, sessão, roteamento |
 
-- 83 testes no backend + 10 no frontend.
-- Fakes em memória (`src/test/fakeSupabase.ts`, `frontend/src/test/fakeBff.ts`) evitam rede.
-- `npm test` roda as duas workspaces; o CI bloqueia o deploy se algum falhar.
+- 83 testes no backend + 10 no frontend + 13 no design system + 11 no mobile = 117.
+- Fakes em memória (`src/test/fakeSupabase.ts`, `frontend/src/test/fakeBff.ts`,
+  `mobile/src/test/fakeBff.ts`) evitam rede.
+- `npm test` roda todas as workspaces; o CI bloqueia o deploy se algum falhar.
+- Os componentes native são exercitados pelos testes de tela do mobile (integração real
+  com `jest-expo` + React Native Testing Library).
 
-## 8. Mobile (próximo incremento)
+## 8. Design system
 
-Plano: Expo + TypeScript, com `@asrv/backend` como dependência de workspace.
+`@asrv/design-system` é a fonte de verdade visual dos dois apps. Os **tokens** são
+TypeScript puro e não dependem de plataforma. Cada componente tem duas implementações com
+a mesma API:
+
+| Componente | Web | Mobile |
+|---|---|---|
+| `Button` | `<button>` + CSS | `Pressable` + `Text` |
+| `Input` | `<input>` + label/erro acessível | `TextInput` + `accessibilityLabel` |
+| `Card` | `<section>` | `View` |
+| `Badge` | `<span>` | `Text` |
+| `StatCard` | `Card` + tipografia | `View` + tipografia |
+
+O `package.json` expõe a condição `react-native`; o Metro resolve
+`src/index.native.ts`, enquanto Vite/Storybook resolvem `src/index.ts`. Assim o mesmo
+`import { Button } from '@asrv/design-system'` funciona nos dois ambientes.
+
+O Storybook (`packages/design-system/stories`) documenta tokens, componentes web e
+componentes native. Os native são renderizados no navegador via `react-native-web`
+(alias configurado em `.storybook/main.ts`), então o catálogo cobre as duas plataformas.
+O build estático (`storybook-static/`) é gerado no workflow de release; os componentes
+native também são exercitados pelos testes de tela do Expo.
+
+## 9. Mobile
+
+O app Expo usa o mesmo BFF e o mesmo design system:
 
 ```ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -150,24 +199,38 @@ const bff = createBff({
 });
 ```
 
-O que falta no pacote para o mobile: nenhum adaptador novo — a fila e o storage já aceitam
-API assíncrona desde o incremento atual. O trabalho é de UI e configuração do Metro
-(monorepo).
+- Metro configurado para o monorepo (`watchFolders` + `nodeModulesPaths`).
+- `jest-expo` + React Native Testing Library, com API assíncrona do RNTL 14.
+- `npm run export:ios -w @asrv/mobile` valida o bundle Metro sem exigir Xcode.
+- Build nativo/assinatura continua fora do CI e exige EAS/credenciais próprias.
 
-## 9. Deploy
+## 10. Deploy
 
-O workflow `.github/workflows/static.yml`:
+### Pages (automático)
+
+O workflow `.github/workflows/static.yml` roda em push para `main`:
 
 1. `npm ci`
-2. `npm test` (workspaces)
-3. `npm run build -w @asrv/frontend` (base `/forex-asrv/app/`)
-4. monta `_site/` com `index.html` na raiz, `frontend/dist` em `app/` e `doc/`
-5. publica no GitHub Pages
+2. `npm run typecheck` (todas as workspaces)
+3. `npm test` (todas as workspaces)
+4. `npm run build -w @asrv/frontend` (base `/forex-asrv/app/`)
+5. monta `_site/` com `index.html` na raiz, `frontend/dist` em `app/` e `doc/`
+6. publica no GitHub Pages
 
 Enquanto o app novo não atinge paridade, a raiz continua sendo o `index.html` atual.
 Nenhum caminho absoluto deve ser usado no app novo: o Vite resolve o `base`.
 
-## 10. Limitações atuais
+### Release (manual)
+
+O workflow `.github/workflows/release.yml` é disparado manualmente **a partir da `main`**.
+Ele valida a tag (`vX.Y.Z`), exige correspondência com a `version` do `package.json` e
+recusa tags existentes. Em seguida roda typecheck/testes, builda web + Storybook, gera
+`SHA256SUMS` e cria uma GitHub Release com os zips `asrv-web-*` e `asrv-storybook-*`.
+
+O token do workflow tem apenas `contents: write`; a chave publishable do Supabase não é
+alterada nem exposta pelo processo.
+
+## 11. Limitações atuais
 
 - Sem cache local de leitura: offline, o app novo não lista operações antigas (a fila de
   escrita funciona). O app atual continua sendo a referência para uso diário.
