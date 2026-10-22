@@ -106,15 +106,19 @@ da `main` (`Actions → Release → Run workflow`).
 
 Ele valida que a tag informada segue `vX.Y.Z`, que ela corresponde à `version` do
 `package.json` e que ainda não existe. Depois roda typecheck/testes, builda o app web e o
-Storybook, gera checksums e publica uma GitHub Release com:
+Storybook, gera o APK Android (`expo prebuild` + Gradle), calcula checksums e publica uma
+GitHub Release com:
 
 - `asrv-web-vX.Y.Z.zip`;
 - `asrv-storybook-vX.Y.Z.zip`;
+- `asrv-mobile-vX.Y.Z.apk`;
 - `SHA256SUMS`.
 
 Releases nunca sobrescrevem uma tag existente. Para publicar uma nova versão, atualize a
 `version` do `package.json` na `main` antes de disparar o workflow.
 
-O binário nativo do mobile não é gerado por esse workflow; ele exige credenciais de
-assinatura/EAS. O código mobile e suas configurações entram no source archive automático
-da release.
+O APK é universal (todas as ABIs) e assinado com a debug keystore do Expo/RN, então serve
+para instalação direta e testes em dispositivos/emuladores. Publicação na Play Store exige
+um keystore de produção ou credenciais EAS. O código mobile e as configurações nativas
+(geradas por `expo prebuild` durante o próprio workflow) entram no source archive
+automático da release.

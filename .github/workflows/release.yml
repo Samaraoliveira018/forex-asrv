@@ -24,7 +24,7 @@ jobs:
   release:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 90
 
     steps:
       - name: Checkout
@@ -37,6 +37,12 @@ jobs:
         with:
           node-version: 24
           cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
 
       - name: Validate version and tag
         env:
@@ -78,6 +84,23 @@ jobs:
       - name: Build Storybook
         run: npm run build-storybook -w @asrv/design-system
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;27.1.12297006" "cmake;3.22.1"
+
+      - name: Generate Android project
+        working-directory: mobile
+        run: npx expo prebuild --platform android --no-install --clean
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build Android APK
+        working-directory: mobile/android
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
       - name: Package release assets
         env:
           VERSION: ${{ inputs.version }}
@@ -87,7 +110,15 @@ jobs:
           mkdir -p release
           (cd frontend/dist && zip -qr "$GITHUB_WORKSPACE/release/asrv-web-${VERSION}.zip" .)
           (cd packages/design-system/storybook-static && zip -qr "$GITHUB_WORKSPACE/release/asrv-storybook-${VERSION}.zip" .)
-          (cd release && sha256sum ./*.zip > SHA256SUMS)
+
+          APK_SRC="mobile/android/app/build/outputs/apk/release/app-release.apk"
+          if [[ ! -f "$APK_SRC" ]]; then
+            echo "APK não encontrado em $APK_SRC" >&2
+            exit 1
+          fi
+          cp "$APK_SRC" "release/asrv-mobile-${VERSION}.apk"
+
+          (cd release && sha256sum asrv-web-*.zip asrv-storybook-*.zip asrv-mobile-*.apk > SHA256SUMS)
 
           ls -lh release
 
@@ -107,6 +138,7 @@ jobs:
           gh release create "$VERSION" \
             release/asrv-web-*.zip \
             release/asrv-storybook-*.zip \
+            release/asrv-mobile-*.apk \
             release/SHA256SUMS \
             "${flags[@]}"
 
@@ -119,7 +151,12 @@ jobs:
             echo
             echo "- Web: \`asrv-web-${VERSION}.zip\`"
             echo "- Storybook: \`asrv-storybook-${VERSION}.zip\`"
+            echo "- Mobile (APK Android): \`asrv-mobile-${VERSION}.apk\`"
             echo "- Checksums: \`SHA256SUMS\`"
             echo
             echo "Assets disponíveis na aba Releases do GitHub."
+            echo
+            echo "> O APK é universal, variante release, assinado com a debug keystore do Expo/RN."
+            echo "> Serve para instalação direta e testes; para publicar na Play Store é preciso um"
+            echo "> keystore de produção ou credenciais EAS."
           } >> "$GITHUB_STEP_SUMMARY"

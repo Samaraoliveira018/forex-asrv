@@ -214,7 +214,9 @@ const bff = createBff({
 - Diário com modal de criação/edição, grid/lista, metas de ofensiva, gráficos native,
   dias sem operar, backup por compartilhamento e importação por JSON colado.
 - `npm run export:ios -w @asrv/mobile` valida o bundle Metro sem exigir Xcode.
-- Build nativo/assinatura continua fora do CI e exige EAS/credenciais próprias.
+- O workflow de release gera um APK Android universal com `expo prebuild` + Gradle,
+  assinado com a debug keystore (instalação direta/teste). Assinatura de produção para a
+  Play Store continua fora do CI e exige EAS/credenciais próprias.
 
 ## 10. Deploy
 
@@ -238,16 +240,19 @@ no app novo: o Vite resolve o `base`.
 
 O workflow `.github/workflows/release.yml` é disparado manualmente **a partir da `main`**.
 Ele valida a tag (`vX.Y.Z`), exige correspondência com a `version` do `package.json` e
-recusa tags existentes. Em seguida roda typecheck/testes, builda web + Storybook, gera
-`SHA256SUMS` e cria uma GitHub Release com os zips `asrv-web-*` e `asrv-storybook-*`.
+recusa tags existentes. Em seguida roda typecheck/testes, builda web + Storybook, gera o
+APK Android (`expo prebuild --platform android` + `./gradlew assembleRelease`) e
+`SHA256SUMS`, e cria uma GitHub Release com os zips `asrv-web-*`/`asrv-storybook-*` e o
+`asrv-mobile-*.apk`.
 
-O token do workflow tem apenas `contents: write`; a chave publishable do Supabase não é
-alterada nem exposta pelo processo.
+O APK é universal e assinado com a debug keystore do Expo/RN — adequado para instalação
+direta e testes, não para a Play Store. O token do workflow tem apenas `contents: write`;
+a chave publishable do Supabase não é alterada nem exposta pelo processo.
 
 ## 11. Limitações atuais
 
 - Sem cache local de leitura: offline, o app novo não lista operações antigas (a fila de
   escrita funciona). O app atual continua sendo a referência para uso diário.
 - No mobile, a importação de backup é feita colando o JSON; não há seletor de arquivos
-  nativo nem build assinado no CI.
+  nativo. Existe APK debug-signed gerado no CI, mas ainda não há assinatura de produção.
 - `service_role` nunca entra no repositório nem no bundle.

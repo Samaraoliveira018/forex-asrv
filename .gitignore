@@ -3,6 +3,9 @@ dist/
 coverage/
 .expo/
 .expo-shared/
+# Projetos nativos gerados por `expo prebuild` (CNG). O CI regenera antes do build.
+mobile/android/
+mobile/ios/
 *.tsbuildinfo
 .DS_Store
 .env

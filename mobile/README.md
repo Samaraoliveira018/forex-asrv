@@ -14,6 +14,21 @@ npm run typecheck -w @asrv/mobile
 npm run export:ios -w @asrv/mobile # valida o bundle Metro sem Xcode
 ```
 
+## Build do APK Android
+
+O workflow de release gera o APK. Para reproduzir localmente:
+
+```bash
+cd mobile
+npx expo prebuild --platform android --no-install --clean
+cd android && ./gradlew assembleRelease
+# saída: android/app/build/outputs/apk/release/app-release.apk
+```
+
+Requer JDK 17+ e Android SDK (`platforms;android-37.0`, `build-tools;37.0.0`,
+`ndk;27.1.12297006`, `cmake;3.22.1`). O APK é universal e assinado com a debug keystore do
+Expo/RN — bom para instalação direta e testes, não para a Play Store.
+
 ## Integração com o BFF
 
 A porta de storage aceita API síncrona (`localStorage`) ou assíncrona (`AsyncStorage`),
@@ -49,7 +64,7 @@ raiz. A condição `react-native` do pacote de design system faz o Metro carrega
 ## Testes
 
 - `jest-expo` + React Native Testing Library (API assíncrona do RNTL 14).
-- 11 testes cobrindo login, erros, diário, avisos, exclusão, dia sem operar, logout e
+- 19 testes cobrindo login, erros, diário, avisos, exclusão, dia sem operar, logout e
   roteamento por sessão.
 - Regras de negócio continuam cobertas pelos 83 testes do backend; o mobile testa a
   integração de tela.
@@ -61,5 +76,6 @@ raiz. A condição `react-native` do pacote de design system faz o Metro carrega
 - [x] Registrar dia sem operar.
 - [x] `npm test` e `npm run typecheck` verdes na workspace `mobile`.
 - [x] Bundle Metro validado com `expo export`.
-- [ ] Validar em dispositivo físico e build assinado via EAS.
+- [x] APK Android universal gerado no workflow de release (debug-signed).
+- [ ] Validar em dispositivo físico e assinatura de produção via EAS/keystore.
 - [x] Nenhum segredo além da publishable key.
