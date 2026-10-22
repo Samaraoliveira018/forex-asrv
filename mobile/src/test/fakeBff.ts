@@ -14,8 +14,11 @@ export interface FakeBffOptions {
   snapshot?: JournalSnapshot;
 }
 
-export function emptySnapshot(trades: Trade[] = [], noTradeDays: string[] = []): JournalSnapshot {
-  const initialBalance = 1000;
+export function emptySnapshot(
+  trades: Trade[] = [],
+  noTradeDays: string[] = [],
+  initialBalance = 1000,
+): JournalSnapshot {
   const today = localToday();
 
   return {
@@ -47,7 +50,11 @@ export function createFakeBff(options: FakeBffOptions = {}) {
 
   const saveTrade = jest.fn(async (input: TradeInput) => {
     const trade = createTrade(input);
-    state.snapshot = emptySnapshot([...state.snapshot.trades, trade], state.snapshot.noTradeDays);
+    state.snapshot = emptySnapshot(
+      [...state.snapshot.trades.filter((item) => item.id !== trade.id), trade],
+      state.snapshot.noTradeDays,
+      state.snapshot.initialBalance,
+    );
     return { trade, synced: true, warnings: [] as string[] };
   });
 
@@ -55,12 +62,17 @@ export function createFakeBff(options: FakeBffOptions = {}) {
     state.snapshot = emptySnapshot(
       state.snapshot.trades.filter((trade) => trade.id !== id),
       state.snapshot.noTradeDays,
+      state.snapshot.initialBalance,
     );
     return { synced: true };
   });
 
   const registerNoTradeDay = jest.fn(async (day: string) => {
-    state.snapshot = emptySnapshot(state.snapshot.trades, [...state.snapshot.noTradeDays, day]);
+    state.snapshot = emptySnapshot(
+      state.snapshot.trades,
+      [...new Set([...state.snapshot.noTradeDays, day])],
+      state.snapshot.initialBalance,
+    );
     return { synced: true };
   });
 
@@ -68,15 +80,17 @@ export function createFakeBff(options: FakeBffOptions = {}) {
     state.snapshot = emptySnapshot(
       state.snapshot.trades,
       state.snapshot.noTradeDays.filter((item) => item !== day),
+      state.snapshot.initialBalance,
     );
     return { synced: true };
   });
 
   const saveInitialBalance = jest.fn(async (value: number) => {
-    state.snapshot = {
-      ...emptySnapshot(state.snapshot.trades, state.snapshot.noTradeDays),
-      initialBalance: value,
-    };
+    state.snapshot = emptySnapshot(
+      state.snapshot.trades,
+      state.snapshot.noTradeDays,
+      value,
+    );
     return { synced: true };
   });
 

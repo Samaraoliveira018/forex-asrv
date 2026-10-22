@@ -46,7 +46,7 @@ forex-asrv/
 ├── packages/design-system/
 │   ├── src/
 │   │   ├── tokens.ts          # fonte única de cores/espaços/tipografia
-│   │   ├── web/               # Button, Input, Card, Badge, StatCard (DOM)
+│   │   ├── web/               # componentes DOM + styles.css compartilhado
 │   │   ├── native/            # mesmos componentes em React Native
 │   │   ├── index.ts           # entrada web
 │   │   └── index.native.ts    # entrada native
@@ -150,10 +150,10 @@ Todo comportamento novo começa por um teste que falha.
 | Infra | `backend/src/infrastructure/*.test.ts` | mapeamento Supabase, upsert/delete, storage sync/async |
 | Composição | `backend/src/bff.test.ts` | login, snapshot, save, offline → flush |
 | UI web | `frontend/src/**/*.test.tsx` | login, diário, avisos, exclusão, sessão |
-| Design system | `packages/design-system/src/**/*.test.ts(x)` | tokens, Button, Input, Card, Badge, StatCard (web) |
-| UI mobile | `mobile/src/**/*.test.tsx` | login, diário, avisos, exclusão, sessão, roteamento |
+| Design system | `packages/design-system/src/**/*.test.ts(x)` | tokens, CSS, Button, Input, Select, Textarea, Checkbox, Card, Badge, StatCard, Alert, NavItem, SegmentedControl, ProgressBar, Modal, TradeCard, EmptyState (web) |
+| UI mobile | `mobile/src/**/*.test.tsx` | login, abas, diário, modal, edição, saldo, sync, backup/importação, sessão |
 
-- 83 testes no backend + 10 no frontend + 13 no design system + 11 no mobile = 117.
+- 83 testes no backend + 14 no frontend + 31 no design system + 19 no mobile = 147.
 - Fakes em memória (`src/test/fakeSupabase.ts`, `frontend/src/test/fakeBff.ts`,
   `mobile/src/test/fakeBff.ts`) evitam rede.
 - `npm test` roda todas as workspaces; o CI bloqueia o deploy se algum falhar.
@@ -173,6 +173,15 @@ a mesma API:
 | `Card` | `<section>` | `View` |
 | `Badge` | `<span>` | `Text` |
 | `StatCard` | `Card` + tipografia | `View` + tipografia |
+| `Select` / `Textarea` / `Checkbox` | controles nativos + label | `Textarea` e `Checkbox` native; seleção por `SegmentedControl`/`Input` |
+| `NavItem` / `SegmentedControl` | navegação web acessível | tab bar inferior + `SegmentedControl` native |
+| `ProgressBar` / `Alert` / `EmptyState` | feedback visual e estados | equivalentes native com acessibilidade |
+| `Modal` / `TradeCard` | diálogo e card de operação extraídos do `index.html` | `Modal` native + `TradeCard` native |
+
+O `index.html` da raiz importa `design-system.css`, gerado por
+`packages/design-system/scripts/build-css.mjs` a partir de `src/web/styles.css`. Assim os
+tokens, superfícies, botões, inputs, badges, tabela, modal e cards de operação são os
+mesmos do app React, sem exigir um bundler no app estático.
 
 O `package.json` expõe a condição `react-native`; o Metro resolve
 `src/index.native.ts`, enquanto Vite/Storybook resolvem `src/index.ts`. Assim o mesmo
@@ -201,6 +210,9 @@ const bff = createBff({
 
 - Metro configurado para o monorepo (`watchFolders` + `nodeModulesPaths`).
 - `jest-expo` + React Native Testing Library, com API assíncrona do RNTL 14.
+- Shell com topbar, saldo editável, sincronização e abas Dashboard/Diário/Plano/Estatísticas.
+- Diário com modal de criação/edição, grid/lista, metas de ofensiva, gráficos native,
+  dias sem operar, backup por compartilhamento e importação por JSON colado.
 - `npm run export:ios -w @asrv/mobile` valida o bundle Metro sem exigir Xcode.
 - Build nativo/assinatura continua fora do CI e exige EAS/credenciais próprias.
 
@@ -214,11 +226,13 @@ O workflow `.github/workflows/static.yml` roda em push para `main`:
 2. `npm run typecheck` (todas as workspaces)
 3. `npm test` (todas as workspaces)
 4. `npm run build -w @asrv/frontend` (base `/forex-asrv/app/`)
-5. monta `_site/` com `index.html` na raiz, `frontend/dist` em `app/` e `doc/`
-6. publica no GitHub Pages
+5. `npm run build:css` (gera `design-system.css`)
+6. monta `_site/` com `index.html` + `design-system.css` na raiz, `frontend/dist` em `app/` e `doc/`
+7. publica no GitHub Pages
 
-Enquanto o app novo não atinge paridade, a raiz continua sendo o `index.html` atual.
-Nenhum caminho absoluto deve ser usado no app novo: o Vite resolve o `base`.
+O `index.html` da raiz continua ativo, mas compartilha a paleta e os componentes visuais
+com o app React por meio do CSS do design system. Nenhum caminho absoluto deve ser usado
+no app novo: o Vite resolve o `base`.
 
 ### Release (manual)
 
@@ -234,5 +248,6 @@ alterada nem exposta pelo processo.
 
 - Sem cache local de leitura: offline, o app novo não lista operações antigas (a fila de
   escrita funciona). O app atual continua sendo a referência para uso diário.
-- O React ainda não tem dashboard, gráficos, importação/exportação nem migração assistida.
+- No mobile, a importação de backup é feita colando o JSON; não há seletor de arquivos
+  nativo nem build assinado no CI.
 - `service_role` nunca entra no repositório nem no bundle.

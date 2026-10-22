@@ -29,25 +29,30 @@ function renderJournal() {
 }
 
 describe('JournalScreen', () => {
-  it('mostra o resumo e o histórico', async () => {
+  it('mostra o resumo, o gráfico e o histórico', async () => {
     renderJournal();
 
     expect(await screen.findByText('EURUSD')).toBeInTheDocument();
-    expect(screen.getByText(/1\.100,00/)).toBeInTheDocument();
-    expect(screen.getByText('Ofensiva')).toBeInTheDocument();
+    expect(screen.getAllByText('$ 1,100.00').length).toBeGreaterThan(0);
+    expect(screen.getByText('Operações Registradas')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Progresso da ofensiva' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Evolução do patrimônio' })).toBeInTheDocument();
   });
 
-  it('registra uma nova operação e atualiza a lista', async () => {
+  it('registra uma nova operação pelo modal e atualiza a lista', async () => {
     const fake = renderJournal();
     const user = userEvent.setup();
 
-    fireEvent.change(await screen.findByLabelText('Data'), { target: { value: '2026-10-22' } });
+    await user.click(await screen.findByRole('button', { name: 'Nova operação' }));
+    fireEvent.change(screen.getByLabelText('Data da Operação'), {
+      target: { value: '2026-10-22' },
+    });
     await user.type(screen.getByLabelText('Ativo'), 'gbpusd');
-    await user.selectOptions(screen.getByLabelText('Tipo'), 'Venda');
-    await user.clear(screen.getByLabelText('Lotes'));
-    await user.type(screen.getByLabelText('Lotes'), '0.5');
-    await user.type(screen.getByLabelText('Resultado (US$)'), '-25');
-    await user.click(screen.getByRole('button', { name: 'Registrar' }));
+    await user.selectOptions(screen.getByLabelText('Direção'), 'Venda');
+    await user.clear(screen.getByLabelText('Lotes / Contratos'));
+    await user.type(screen.getByLabelText('Lotes / Contratos'), '0.5');
+    await user.type(screen.getByLabelText('Resultado Financeiro ($ / R$)'), '-25');
+    await user.click(screen.getByRole('button', { name: 'Salvar Operação' }));
 
     expect(fake.mocks.saveTrade).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -61,6 +66,24 @@ describe('JournalScreen', () => {
     expect(await screen.findByText('GBPUSD')).toBeInTheDocument();
   });
 
+  it('edita uma operação existente', async () => {
+    const fake = renderJournal();
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Editar EURUSD de 21/10/2026' }),
+    );
+    expect(screen.getByRole('dialog', { name: 'Editar Operação' })).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText('Resultado Financeiro ($ / R$)'));
+    await user.type(screen.getByLabelText('Resultado Financeiro ($ / R$)'), '120');
+    await user.click(screen.getByRole('button', { name: 'Atualizar Operação' }));
+
+    expect(fake.mocks.saveTrade).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 't1', pnl: 120 }),
+    );
+  });
+
   it('mostra os avisos de disciplina devolvidos pelo BFF', async () => {
     const fake = renderJournal();
     fake.mocks.saveTrade.mockResolvedValueOnce({
@@ -70,10 +93,10 @@ describe('JournalScreen', () => {
     });
     const user = userEvent.setup();
 
-    await screen.findByLabelText('Ativo');
+    await user.click(await screen.findByRole('button', { name: 'Nova operação' }));
     await user.type(screen.getByLabelText('Ativo'), 'EURUSD');
-    await user.type(screen.getByLabelText('Resultado (US$)'), '10');
-    await user.click(screen.getByRole('button', { name: 'Registrar' }));
+    await user.type(screen.getByLabelText('Resultado Financeiro ($ / R$)'), '10');
+    await user.click(screen.getByRole('button', { name: 'Salvar Operação' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent(
       'Limite de 2 operações por dia atingido.',
@@ -83,23 +106,54 @@ describe('JournalScreen', () => {
   it('exclui uma operação pelo histórico', async () => {
     const fake = renderJournal();
     const user = userEvent.setup();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
-    await screen.findByText('EURUSD');
-    await user.click(screen.getByRole('button', { name: /Excluir EURUSD/ }));
+    await user.click(
+      await screen.findByRole('button', { name: 'Excluir EURUSD de 21/10/2026' }),
+    );
 
+    expect(confirm).toHaveBeenCalled();
     expect(fake.mocks.deleteTrade).toHaveBeenCalledWith('t1');
     await waitFor(() => expect(screen.queryByText('EURUSD')).not.toBeInTheDocument());
   });
 
-  it('marca o dia de hoje como sem operação', async () => {
+  it('marca o dia como sem operação', async () => {
     const fake = renderJournal();
     const user = userEvent.setup();
+    vi.spyOn(window, 'prompt').mockReturnValue('2026-10-22');
 
-    await screen.findByText('EURUSD');
-    await user.click(screen.getByRole('button', { name: 'Hoje sem operar' }));
+    await user.click(await screen.findByRole('button', { name: 'Registrar Dia Sem Operar' }));
 
-    expect(fake.mocks.registerNoTradeDay).toHaveBeenCalledWith(
-      expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
-    );
+    expect(fake.mocks.registerNoTradeDay).toHaveBeenCalledWith('2026-10-22');
+  });
+
+  it('navega para o dashboard e para as estatísticas', async () => {
+    renderJournal();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Dashboard' }));
+    expect(screen.getByText('Dashboard Geral')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Dados Estatísticos' }));
+    expect(screen.getByText('Dados Estatísticos Detalhados')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Distribuição de resultados' })).toBeInTheDocument();
+  });
+
+  it('alterna entre grid e lista', async () => {
+    renderJournal();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('tab', { name: 'Lista' }));
+    expect(screen.getByRole('columnheader', { name: 'Ativo' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'EURUSD' })).toBeInTheDocument();
+  });
+
+  it('oculta os valores financeiros', async () => {
+    renderJournal();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Ocultar valores' }));
+    expect(screen.getAllByText('••••••').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Mostrar valores' })).toBeInTheDocument();
   });
 });

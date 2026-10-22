@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { classNames } from './classNames';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'success' | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> {
@@ -12,6 +12,7 @@ export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
   size?: ButtonSize;
   loading?: boolean;
   fullWidth?: boolean;
+  iconOnly?: boolean;
 }
 
 export function Button({
@@ -22,6 +23,7 @@ export function Button({
   size = 'md',
   loading = false,
   fullWidth = false,
+  iconOnly = false,
   disabled = false,
   className,
   type = 'button',
@@ -40,6 +42,7 @@ export function Button({
         `asrv-btn--${variant}`,
         `asrv-btn--${size}`,
         fullWidth && 'asrv-btn--full',
+        iconOnly && 'asrv-btn--icon',
         className,
       )}
       onClick={(event) => {

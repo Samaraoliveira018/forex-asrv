@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { colors, radii, spacing, typography } from '../tokens';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'success' | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 export interface ButtonProps {
@@ -77,6 +77,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'transparent',
     borderRadius: radii.md,
+    minHeight: 34,
   },
   fullWidth: {
     width: '100%',
@@ -89,6 +90,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontWeight: '600',
+    textAlign: 'center',
   },
 });
 
@@ -108,6 +110,7 @@ const variantStyles = StyleSheet.create({
   primary: { backgroundColor: colors.primary },
   secondary: { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
   ghost: { backgroundColor: 'transparent' },
+  success: { backgroundColor: colors.success },
   danger: { backgroundColor: 'transparent', borderColor: colors.danger },
 });
 
@@ -115,5 +118,6 @@ const labelStyles = StyleSheet.create({
   primary: { color: colors.primaryText },
   secondary: { color: colors.text },
   ghost: { color: colors.textMuted },
+  success: { color: '#052e22' },
   danger: { color: colors.dangerText },
 });

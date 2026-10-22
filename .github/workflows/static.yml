@@ -44,10 +44,13 @@ jobs:
         run: npm test
       - name: Build web app
         run: npm run build -w @asrv/frontend
+      - name: Build design system CSS
+        run: npm run build:css
       - name: Prepare site
         run: |
           mkdir -p _site/app
           cp index.html _site/index.html
+          cp design-system.css _site/design-system.css
           cp -R frontend/dist/. _site/app/
           cp -R doc _site/doc
           mkdir -p _site/backend/supabase

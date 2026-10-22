@@ -7,7 +7,15 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Button, Card, Input, colors, spacing, typography } from '@asrv/design-system';
+import {
+  Alert,
+  Button,
+  Card,
+  Input,
+  colors,
+  spacing,
+  typography,
+} from '@asrv/design-system';
 import { useBff } from '../../BffContext';
 
 export function LoginScreen({ onSignedIn }: { onSignedIn: () => void }) {
@@ -15,10 +23,12 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: () => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit() {
     setError('');
+    setInfo('');
 
     if (!email.trim() || !password) {
       setError('Informe e-mail e senha.');
@@ -36,12 +46,17 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: () => void }) {
     }
   }
 
+  function handleForgotPassword() {
+    setInfo('A redefinição de senha é feita no painel do Supabase.');
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.screen}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
@@ -69,16 +84,21 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: () => void }) {
               placeholder="Sua senha"
             />
 
-            {error ? (
-              <Text accessibilityLiveRegion="polite" style={styles.error}>
-                {error}
-              </Text>
-            ) : null}
+            {error ? <Alert tone="danger">{error}</Alert> : null}
+            {info ? <Alert tone="warning">{info}</Alert> : null}
 
             <Button onPress={handleSubmit} loading={loading} fullWidth>
               {loading ? 'Entrando…' : 'Entrar'}
             </Button>
+
+            <Button variant="ghost" size="sm" onPress={handleForgotPassword}>
+              Esqueci a senha
+            </Button>
           </View>
+
+          <Text style={styles.closed}>
+            O cadastro é fechado. Use o usuário criado no painel do Supabase.
+          </Text>
         </Card>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -90,8 +110,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  scroll: {
+    flex: 1,
+    width: '100%',
+  },
   content: {
     flexGrow: 1,
+    width: '100%',
+    maxWidth: 460,
+    alignSelf: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xxl,
@@ -115,15 +142,18 @@ const styles = StyleSheet.create({
   },
   card: {
     padding: spacing.xl,
+    width: '100%',
   },
   form: {
     gap: spacing.md,
   },
-  error: {
-    color: colors.dangerText,
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-    borderRadius: 8,
-    padding: spacing.md,
-    fontSize: typography.body,
+  closed: {
+    marginTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+    color: colors.textMuted,
+    fontSize: typography.caption - 1,
+    textAlign: 'center',
   },
 });

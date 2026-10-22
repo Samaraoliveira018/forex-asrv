@@ -49,4 +49,14 @@ describe('LoginScreen (mobile)', () => {
     expect(fake.mocks.signIn).not.toHaveBeenCalled();
     expect(await screen.findByText('Informe e-mail e senha.')).toBeTruthy();
   });
+
+  it('orienta a redefinição de senha pelo Supabase', async () => {
+    await renderLogin();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Esqueci a senha' }));
+
+    expect(
+      await screen.findByText('A redefinição de senha é feita no painel do Supabase.'),
+    ).toBeTruthy();
+  });
 });

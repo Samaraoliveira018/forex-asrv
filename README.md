@@ -27,11 +27,15 @@ O `backend/` é um pacote TypeScript importado por web e mobile. Não há servid
 próprio: as regras e os casos de uso são compartilhados, e o Supabase aplica RLS por
 `user_id`.
 
-O `@asrv/design-system` é consumido pelos dois apps:
+O `@asrv/design-system` é consumido pelos dois apps e pelo `index.html` da raiz:
 
-- **tokens compartilhados** (`colors`, `spacing`, `radii`, `typography`);
-- **componentes web** (`Button`, `Input`, `Card`, `Badge`, `StatCard`) em React DOM;
+- **tokens compartilhados** (`colors`, `spacing`, `radii`, `typography`, `layout`);
+- **componentes web** (`Button`, `Input`, `Select`, `Textarea`, `Checkbox`, `Card`,
+  `StatCard`, `Badge`, `Alert`, `NavItem`, `SegmentedControl`, `ProgressBar`, `Modal`,
+  `TradeCard`, `EmptyState`) em React DOM;
 - **componentes native** com a mesma API, implementados com React Native;
+- **CSS compartilhado** em `packages/design-system/src/web/styles.css`, gerado para a raiz
+  como `design-system.css` e consumido pelo app estático;
 - **Storybook** para explorar tokens e componentes web e native (native renderizado via `react-native-web`).
 
 ## Requisitos
@@ -48,6 +52,7 @@ npm run typecheck      # TypeScript estrito em todas as workspaces
 
 npm run dev -w @asrv/frontend      # app web em http://localhost:5173
 npm run build -w @asrv/frontend    # build em frontend/dist
+npm run build:css                  # gera design-system.css a partir da fonte do DS
 
 npm run storybook -w @asrv/design-system       # Storybook em http://localhost:6006
 npm run build-storybook -w @asrv/design-system # build estático
@@ -89,9 +94,10 @@ Push em `main` dispara o workflow de Pages, que:
 
 1. instala dependências, roda typecheck e testes;
 2. builda o frontend com base `/forex-asrv/app/`;
-3. publica a raiz (`index.html` atual) + `app/` + `doc/`.
+3. gera `design-system.css` e publica a raiz (`index.html` + CSS compartilhado) + `app/` + `doc/`.
 
-Enquanto o app novo não atinge paridade, a raiz permanece intocada.
+O `index.html` da raiz continua sendo o app estático, mas agora consome os tokens e
+componentes visuais do design system. A migração do React acontece em paralelo em `/app/`.
 
 ## Release manual
 

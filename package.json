@@ -12,7 +12,8 @@
   "scripts": {
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present"
+    "build:css": "node packages/design-system/scripts/build-css.mjs",
+    "build": "npm run build:css && npm run build --workspaces --if-present"
   },
   "overrides": {
     "react": "19.3.0",

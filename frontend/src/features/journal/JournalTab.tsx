@@ -1,0 +1,377 @@
+import type { JournalSnapshot, Trade } from '@asrv/backend';
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  ProgressBar,
+  SegmentedControl,
+  StatCard,
+  TradeCard,
+} from '@asrv/design-system';
+import { EquityChart } from './charts';
+import { formatDate, isBreakEven, money, signedMoney, signedValue } from './format';
+
+export type JournalView = 'grid' | 'list';
+export type Market = 'nacional' | 'internacional';
+
+const milestones = [3, 7, 14, 30, 60] as const;
+
+export function JournalTab({
+  snapshot,
+  hidden,
+  market,
+  view,
+  onMarketChange,
+  onViewChange,
+  onToggleHidden,
+  onNewTrade,
+  onEditTrade,
+  onDeleteTrade,
+  onNoTradeDay,
+  onDeleteNoTradeDay,
+}: {
+  snapshot: JournalSnapshot;
+  hidden: boolean;
+  market: Market;
+  view: JournalView;
+  onMarketChange: (market: Market) => void;
+  onViewChange: (view: JournalView) => void;
+  onToggleHidden: () => void;
+  onNewTrade: () => void;
+  onEditTrade: (trade: Trade) => void;
+  onDeleteTrade: (trade: Trade) => void;
+  onNoTradeDay: () => void;
+  onDeleteNoTradeDay: (day: string) => void;
+}) {
+  const { stats, discipline } = snapshot;
+  const nextMilestone = milestones.find((milestone) => discipline.streak < milestone) ?? 60;
+  const todayCount = stats.todayCount;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <SegmentedControl
+          ariaLabel="Mercado"
+          value={market}
+          onChange={onMarketChange}
+          options={[
+            { value: 'nacional', label: 'Mercado Nacional' },
+            { value: 'internacional', label: 'Mercado Internacional' },
+          ]}
+        />
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge
+            tone={todayCount > 2 ? 'danger' : todayCount === 2 ? 'warning' : 'neutral'}
+            pill
+          >
+            <i className="fa-solid fa-gauge-high mr-1.5" aria-hidden="true" />
+            Hoje: {todayCount}/2 trades
+          </Badge>
+
+          <Button variant="success" size="sm" onClick={onNoTradeDay}>
+            <i className="fa-solid fa-calendar-check" aria-hidden="true" />
+            Registrar Dia Sem Operar
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={hidden ? 'Mostrar valores' : 'Ocultar valores'}
+            onClick={onToggleHidden}
+          >
+            <i className={`fa-solid ${hidden ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden="true" />
+          </Button>
+
+          <Button className="ml-auto" onClick={onNewTrade}>
+            <i className="fa-solid fa-plus text-xs" aria-hidden="true" />
+            Nova operação
+          </Button>
+        </div>
+      </div>
+
+      <section className="asrv-streak space-y-3" aria-label="Metas de ofensiva">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <i className="fa-solid fa-trophy text-amber-400" aria-hidden="true" />
+            <h2 className="asrv-section-title">Metas de Ofensiva (Disciplina Trader)</h2>
+          </div>
+          <span className="text-xs font-semibold text-orange-400">
+            Próxima meta: {nextMilestone} dias ({discipline.streak}/{nextMilestone})
+          </span>
+        </div>
+
+        <ProgressBar
+          label="Progresso da ofensiva"
+          value={Math.min(discipline.streak, nextMilestone)}
+          max={nextMilestone}
+        />
+
+        <div className="asrv-streak__milestones">
+          {milestones.map((milestone, index) => (
+            <div
+              key={milestone}
+              className={`asrv-milestone ${discipline.streak >= milestone ? 'is-reached' : ''}`}
+            >
+              <strong>{milestone} Dias</strong>
+              <span>{['Iniciante', 'Focado', 'Blindado', 'Mestre', 'Lenda'][index]}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div>
+        <h1 className="asrv-page-title">Diário de Trading</h1>
+        <p className="asrv-page-subtitle">
+          Regras: Máx. 2 operações/dia | Nenhuma perda individual &gt; 20% do capital inicial
+        </p>
+      </div>
+
+      <section aria-label="Indicadores" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Patrimônio Total"
+          value={money(stats.balance, hidden)}
+          hint={`${stats.returnPct >= 0 ? '+' : ''}${stats.returnPct.toFixed(2)}% em relação ao inicial`}
+          hintTone={stats.returnPct >= 0 ? 'success' : 'danger'}
+        />
+        <StatCard
+          label="Resultado Acumulado"
+          value={signedMoney(stats.totalPnl, hidden)}
+          tone={stats.totalPnl > 0 ? 'success' : stats.totalPnl < 0 ? 'danger' : 'muted'}
+        />
+        <StatCard label="Win Rate" value={`${stats.winRate.toFixed(0)}%`} />
+        <StatCard label="Operações Registradas" value={String(stats.totalTrades)} />
+      </section>
+
+      <Card ariaLabel="Performance do patrimônio">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="asrv-section-title">
+              <i className="fa-solid fa-chart-line mr-2 text-blue-500" aria-hidden="true" />
+              Performance do Patrimônio
+            </h2>
+            <p className="asrv-page-subtitle">Evolução do saldo com base nas operações</p>
+          </div>
+          <div className="asrv-chart__stats">
+            <span>
+              Trades: <strong>{stats.totalTrades}</strong>
+            </span>
+            <span>
+              Win Rate: <strong>{stats.winRate.toFixed(0)}%</strong>
+            </span>
+            <span>
+              P/L: <strong className="asrv-positive">{signedMoney(stats.totalPnl, hidden)}</strong>
+            </span>
+          </div>
+        </div>
+        <EquityChart initialBalance={snapshot.initialBalance} trades={snapshot.trades} hidden={hidden} />
+      </Card>
+
+      <div className="space-y-4">
+        <SegmentedControl
+          ariaLabel="Formato do diário"
+          value={view}
+          onChange={onViewChange}
+          options={[
+            {
+              value: 'grid',
+              label: (
+                <>
+                  <i className="fa-solid fa-border-all" aria-hidden="true" /> Grid Visual
+                </>
+              ),
+            },
+            {
+              value: 'list',
+              label: (
+                <>
+                  <i className="fa-solid fa-list" aria-hidden="true" /> Lista
+                </>
+              ),
+            },
+          ]}
+        />
+
+        {view === 'grid' ? (
+          <JournalGrid
+            snapshot={snapshot}
+            hidden={hidden}
+            onEditTrade={onEditTrade}
+            onDeleteTrade={onDeleteTrade}
+            onDeleteNoTradeDay={onDeleteNoTradeDay}
+          />
+        ) : (
+          <JournalList
+            snapshot={snapshot}
+            hidden={hidden}
+            onEditTrade={onEditTrade}
+            onDeleteTrade={onDeleteTrade}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function JournalGrid({
+  snapshot,
+  hidden,
+  onEditTrade,
+  onDeleteTrade,
+  onDeleteNoTradeDay,
+}: {
+  snapshot: JournalSnapshot;
+  hidden: boolean;
+  onEditTrade: (trade: Trade) => void;
+  onDeleteTrade: (trade: Trade) => void;
+  onDeleteNoTradeDay: (day: string) => void;
+}) {
+  const items = [
+    ...snapshot.trades.map((trade) => ({ kind: 'trade' as const, date: trade.date, trade })),
+    ...snapshot.noTradeDays.map((day) => ({ kind: 'no-trade' as const, date: day, day })),
+  ].sort((a, b) => b.date.localeCompare(a.date));
+
+  if (items.length === 0) {
+    return <EmptyState>Nenhuma operação ou dia de disciplina registrado ainda.</EmptyState>;
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {items.map((item) =>
+        item.kind === 'no-trade' ? (
+          <article key={`nt-${item.day}`} className="asrv-trade-card asrv-trade-card--discipline">
+            <div className="asrv-trade-card__header">
+              <span className="flex items-center gap-1.5 text-sm font-bold text-emerald-400">
+                <i className="fa-solid fa-shield-halved" aria-hidden="true" /> Preservação de Capital
+              </span>
+              <span className="asrv-trade-card__date">{item.day}</span>
+            </div>
+            <div className="asrv-trade-card__body">
+              <p className="text-xs italic text-slate-400">
+                &quot;Mercado sem padrão claro. Decisão consciente de não operar e proteger o
+                capital.&quot;
+              </p>
+              <p className="mt-2 text-xs font-bold text-emerald-400">+1 dia de Ofensiva 🔥</p>
+            </div>
+            <div className="asrv-trade-card__footer">
+              <button
+                type="button"
+                className="asrv-trade-card__action asrv-trade-card__action--danger"
+                onClick={() => onDeleteNoTradeDay(item.day)}
+              >
+                <i className="fa-solid fa-trash" aria-hidden="true" /> Eliminar
+              </button>
+            </div>
+          </article>
+        ) : (
+          <TradeCard
+            key={item.trade.id}
+            asset={item.trade.asset}
+            date={item.trade.date}
+            type={item.trade.type}
+            lots={item.trade.lots}
+            pnl={item.trade.pnl}
+            notes={item.trade.notes}
+            hidden={hidden}
+            onEdit={() => onEditTrade(item.trade)}
+            onDelete={() => onDeleteTrade(item.trade)}
+            editLabel={`Editar ${item.trade.asset} de ${formatDate(item.trade.date)}`}
+            deleteLabel={`Excluir ${item.trade.asset} de ${formatDate(item.trade.date)}`}
+          />
+        ),
+      )}
+    </div>
+  );
+}
+
+function JournalList({
+  snapshot,
+  hidden,
+  onEditTrade,
+  onDeleteTrade,
+}: {
+  snapshot: JournalSnapshot;
+  hidden: boolean;
+  onEditTrade: (trade: Trade) => void;
+  onDeleteTrade: (trade: Trade) => void;
+}) {
+  if (snapshot.trades.length === 0) {
+    return <EmptyState>Nenhum registro encontrado.</EmptyState>;
+  }
+
+  return (
+    <Card flush>
+      <div className="overflow-x-auto">
+        <table className="asrv-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Data</th>
+              <th>Ativo</th>
+              <th>Tipo</th>
+              <th>Lotes</th>
+              <th>Resultado</th>
+              <th>Status</th>
+              <th className="text-right">Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            {snapshot.trades.map((trade, index) => {
+              const breakEven = isBreakEven(trade.pnl);
+              return (
+                <tr key={trade.id}>
+                  <td className="text-slate-500">{index + 1}</td>
+                  <td className="font-medium">{trade.date}</td>
+                  <td className="font-bold text-white">{trade.asset}</td>
+                  <td>
+                    <Badge tone={trade.type === 'Compra' ? 'success' : 'danger'}>
+                      {trade.type}
+                    </Badge>
+                  </td>
+                  <td>{trade.lots}</td>
+                  <td
+                    className={
+                      breakEven
+                        ? 'font-bold text-slate-300'
+                        : trade.pnl > 0
+                          ? 'font-bold text-emerald-400'
+                          : 'font-bold text-red-400'
+                    }
+                  >
+                    {hidden ? '••••••' : signedValue(trade.pnl)}
+                  </td>
+                  <td>
+                    <Badge
+                      tone={breakEven ? 'neutral' : trade.pnl > 0 ? 'success' : 'danger'}
+                    >
+                      {breakEven ? 'BREAK EVEN' : trade.pnl > 0 ? 'WIN' : 'LOSS'}
+                    </Badge>
+                  </td>
+                  <td className="text-right">
+                    <button
+                      type="button"
+                      className="asrv-trade-card__action mr-2"
+                      aria-label={`Editar ${trade.asset} de ${formatDate(trade.date)}`}
+                      onClick={() => onEditTrade(trade)}
+                    >
+                      <i className="fa-solid fa-pen-to-square" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      className="asrv-trade-card__action asrv-trade-card__action--danger"
+                      aria-label={`Excluir ${trade.asset} de ${formatDate(trade.date)}`}
+                      onClick={() => onDeleteTrade(trade)}
+                    >
+                      <i className="fa-solid fa-trash" aria-hidden="true" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
