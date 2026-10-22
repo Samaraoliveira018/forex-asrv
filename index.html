@@ -188,7 +188,7 @@
               <i class="fa-solid fa-gauge-high"></i> Hoje: <span id="today-trade-count">0</span>/2 trades
             </div>
 
-            <!-- Botão Marcar Dia Sem Operar (Retroativo) -->
+            <!-- Botão Marcar Dia Sem Operar -->
             <button onclick="markNoTradeDay()" class="bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700 font-medium text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
               <i class="fa-solid fa-calendar-check text-emerald-400"></i> Registrar Dia Sem Operar
             </button>
@@ -498,15 +498,17 @@
     </main>
   </div>
 
-  <!-- MODAL: NOVA OPERAÇÃO -->
+  <!-- MODAL: REGISTRAR / EDITAR OPERAÇÃO -->
   <div id="trade-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-brand-card border border-brand-border rounded-xl w-full max-w-md p-6 space-y-4 shadow-2xl">
       <div class="flex items-center justify-between border-b border-brand-border pb-3">
-        <h3 class="text-lg font-bold text-white">Registrar Nova Operação</h3>
+        <h3 class="text-lg font-bold text-white" id="modal-title">Registrar Nova Operação</h3>
         <button onclick="closeModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
       <form id="trade-form" onsubmit="saveTrade(event)" class="space-y-4 text-xs">
+        <input type="hidden" id="form-edit-id" value="">
+
         <div>
           <label class="block text-gray-400 mb-1">Data da Operação</label>
           <input type="date" id="form-date" required class="w-full bg-gray-900 border border-brand-border rounded p-2.5 text-white">
@@ -548,7 +550,7 @@
 
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg">Cancelar</button>
-          <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg">Salvar Operação</button>
+          <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg" id="modal-submit-btn">Salvar Operação</button>
         </div>
       </form>
     </div>
@@ -605,14 +607,13 @@
       calculateStreak();
     }
 
-    // REGISTRAR DIA SEM OPERAR (PERMITE SELECIONAR A DATA FIXA/RETROATIVA)
+    // REGISTRAR DIA SEM OPERAR (RETROATIVO)
     function markNoTradeDay() {
       const today = new Date().toISOString().slice(0, 10);
       const targetDate = prompt("Digite a data em que você não operou (AAAA-MM-DD):", today);
       
-      if (!targetDate) return; // Cancelado pelo usuário
+      if (!targetDate) return;
 
-      // Validar formato AAAA-MM-DD simples
       if (!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
         alert("⚠️ Formato de data inválido! Use o formato AAAA-MM-DD (exemplo: 2026-10-20).");
         return;
@@ -686,7 +687,6 @@
     function updateStreakUI() {
       document.getElementById('streak-count').innerText = streakDays;
 
-      // Atualizar metas do Duolingo
       const milestones = [3, 7, 14, 30, 60];
       let nextMilestone = 60;
       for (let m of milestones) {
@@ -700,7 +700,6 @@
       const pct = Math.min(100, (streakDays / nextMilestone) * 100);
       document.getElementById('streak-progress-bar').style.width = `${pct}%`;
 
-      // Atualizar destaque dos cards de marcos
       milestones.forEach(m => {
         const el = document.getElementById(`milestone-${m}`);
         if (el) {
@@ -805,16 +804,39 @@
     }
 
     function openModal() {
+      document.getElementById('form-edit-id').value = '';
+      document.getElementById('modal-title').innerText = 'Registrar Nova Operação';
+      document.getElementById('modal-submit-btn').innerText = 'Salvar Operação';
       document.getElementById('form-date').value = new Date().toISOString().slice(0, 10);
       document.getElementById('trade-modal').classList.remove('hidden');
     }
+
+    function editTrade(id) {
+      const trade = trades.find(t => t.id === id);
+      if (!trade) return;
+
+      document.getElementById('form-edit-id').value = trade.id;
+      document.getElementById('modal-title').innerText = 'Editar Operação';
+      document.getElementById('modal-submit-btn').innerText = 'Atualizar Operação';
+      document.getElementById('form-date').value = trade.date;
+      document.getElementById('form-asset').value = trade.asset;
+      document.getElementById('form-type').value = trade.type;
+      document.getElementById('form-lots').value = trade.lots;
+      document.getElementById('form-pnl').value = trade.pnl;
+      document.getElementById('form-notes').value = trade.notes || '';
+
+      document.getElementById('trade-modal').classList.remove('hidden');
+    }
+
     function closeModal() {
       document.getElementById('trade-modal').classList.add('hidden');
       document.getElementById('trade-form').reset();
+      document.getElementById('form-edit-id').value = '';
     }
 
     function saveTrade(e) {
       e.preventDefault();
+      const editId = document.getElementById('form-edit-id').value;
       const date = document.getElementById('form-date').value;
       const asset = document.getElementById('form-asset').value.toUpperCase();
       const type = document.getElementById('form-type').value;
@@ -822,30 +844,39 @@
       const pnl = parseFloat(document.getElementById('form-pnl').value);
       const notes = document.getElementById('form-notes').value;
 
-      // Remover da lista de noTradeDays caso insira trade no mesmo dia
+      // Remover de noTradeDays se inserir operação nessa data
       if (noTradeDays.includes(date)) {
         noTradeDays = noTradeDays.filter(d => d !== date);
       }
 
-      const tradesOnDate = trades.filter(t => t.date === date);
+      const tradesOnDate = trades.filter(t => t.date === date && t.id.toString() !== editId);
       const maxSingleLoss = initialBalance * 0.20;
 
       if (tradesOnDate.length >= 2) {
-        alert("⚠️ ATENÇÃO: Você já realizou 2 operações nesta data! Salvar a 3ª operação irá ZERAR a sua ofensiva!");
+        alert("⚠️ ATENÇÃO: Você já possui 2 operações registradas nesta data! Salvar esta operação irá ZERAR a sua ofensiva!");
       } else if (pnl < 0 && Math.abs(pnl) > maxSingleLoss) {
         alert(`⚠️ ATENÇÃO: Esta operação tem um prejuízo de ${Math.abs(pnl).toFixed(2)}, o que ultrapassa o limite máximo individual de 20% do capital inicial (${maxSingleLoss.toFixed(2)}). A sua ofensiva será ZERADA!`);
       }
 
-      trades.push({ id: Date.now(), date, asset, type, lots, pnl, notes });
+      if (editId) {
+        // Atualizar registo existente
+        trades = trades.map(t => t.id.toString() === editId ? { ...t, date, asset, type, lots, pnl, notes } : t);
+      } else {
+        // Criar novo registo
+        trades.push({ id: Date.now(), date, asset, type, lots, pnl, notes });
+      }
+
       saveData();
       closeModal();
       refreshUI();
     }
 
     function deleteTrade(id) {
-      trades = trades.filter(t => t.id !== id);
-      saveData();
-      refreshUI();
+      if (confirm("Tem a certeza de que deseja eliminar esta operação?")) {
+        trades = trades.filter(t => t.id !== id);
+        saveData();
+        refreshUI();
+      }
     }
 
     function refreshUI() {
@@ -856,7 +887,6 @@
       const totalBalance = initialBalance + totalPnl;
       const returnPct = initialBalance > 0 ? ((totalPnl / initialBalance) * 100).toFixed(2) : 0;
 
-      // Today limit check
       const todayStr = new Date().toISOString().slice(0, 10);
       const todayCount = trades.filter(t => t.date === todayStr).length;
       const badgeEl = document.getElementById('today-limit-badge');
@@ -870,7 +900,6 @@
         badgeEl.className = 'px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 bg-gray-900 border-gray-700 text-gray-300';
       }
 
-      // Update Top KPIs
       document.getElementById('kpi-trades').innerText = totalTrades;
       document.getElementById('kpi-winrate').innerText = `${winRate}%`;
 
@@ -949,8 +978,9 @@
               <p class="text-2xl font-black mt-2 ${pnlClass}">${pnlText}</p>
               ${item.notes ? `<p class="text-xs text-gray-400 italic mt-2 bg-gray-900/50 p-2 rounded">${item.notes}</p>` : ''}
             </div>
-            <div class="flex justify-end pt-3 border-t border-brand-border">
-              <button onclick="deleteTrade(${item.id})" class="text-xs text-gray-500 hover:text-red-400"><i class="fa-solid fa-trash"></i> Eliminar</button>
+            <div class="flex items-center justify-end gap-3 pt-3 border-t border-brand-border">
+              <button onclick="editTrade(${item.id})" class="text-xs text-gray-400 hover:text-blue-400 flex items-center gap-1 transition"><i class="fa-solid fa-pen-to-square"></i> Editar</button>
+              <button onclick="deleteTrade(${item.id})" class="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1 transition"><i class="fa-solid fa-trash"></i> Eliminar</button>
             </div>
           </div>
         `;
@@ -978,7 +1008,10 @@
             <td class="p-3">${t.lots}</td>
             <td class="p-3 font-bold ${isBE ? 'text-gray-300' : (t.pnl > 0 ? 'text-emerald-400' : 'text-red-400')}">${isValueHidden ? '••••••' : (isBE ? '0.00' : (t.pnl > 0 ? '+' : '') + t.pnl.toFixed(2))}</td>
             <td class="p-3">${statusBadge}</td>
-            <td class="p-3 text-right"><button onclick="deleteTrade(${t.id})" class="text-gray-500 hover:text-red-400"><i class="fa-solid fa-trash"></i></button></td>
+            <td class="p-3 text-right">
+              <button onclick="editTrade(${t.id})" class="text-gray-400 hover:text-blue-400 mr-2"><i class="fa-solid fa-pen-to-square"></i></button>
+              <button onclick="deleteTrade(${t.id})" class="text-gray-500 hover:text-red-400"><i class="fa-solid fa-trash"></i></button>
+            </td>
           </tr>
         `;
       }).join('');
