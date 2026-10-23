@@ -22,6 +22,19 @@ export interface SettingsRepository {
   setInitialBalance(value: number): Promise<void>;
 }
 
+/**
+ * Armazena os prints das operações no Supabase Storage.
+ * O adaptador é responsável por isolar os objetos por usuário.
+ */
+export interface ScreenshotStorage {
+  /** Sobe a imagem (data URL em base64) e devolve o caminho salvo no bucket. */
+  upload(tradeId: string, dataUrl: string): Promise<string>;
+  /** Gera URLs assinadas (temporárias) para exibir os prints. */
+  signedUrls(paths: readonly string[]): Promise<Record<string, string>>;
+  /** Remove o print de uma operação. */
+  remove(tradeId: string): Promise<void>;
+}
+
 export interface AuthGateway {
   getSession(): Promise<AuthSession | null>;
   signIn(email: string, password: string): Promise<AuthSession>;
@@ -34,7 +47,7 @@ export interface Clock {
 }
 
 export type PendingJob =
-  | { op: 'upsertTrade'; trade: Trade }
+  | { op: 'upsertTrade'; trade: Trade; screenshotDataUrl?: string }
   | { op: 'deleteTrade'; id: string }
   | { op: 'addNoTradeDay'; day: string }
   | { op: 'removeNoTradeDay'; day: string }

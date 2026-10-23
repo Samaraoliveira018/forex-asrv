@@ -1,6 +1,6 @@
 # Roadmap — Diário Trader ASRV
 
-> Última atualização: **22/10/2026** · Referência: migração para monorepo
+> Última atualização: **23/10/2026** · Referência: migração para monorepo
 > App atual: https://samaraoliveira018.github.io/forex-asrv/
 > Novo app (migração): https://samaraoliveira018.github.io/forex-asrv/app/
 > Documentação técnica: [`../backend/supabase/README.md`](../backend/supabase/README.md) · [`ARCHITECTURE.md`](./ARCHITECTURE.md)
@@ -33,7 +33,7 @@ esteja você online, offline ou trocando de dispositivo.
 | App | Diário, dashboard, plano operacional e estatísticas em página estática |
 | Regras de disciplina | Limite de 2 trades/dia, perda máxima de 25% do saldo inicial do dia, break even, ofensiva com metas (3/7/14/30/60 dias) |
 | Dados | Cache em `localStorage` com migração de chaves antigas e sanitização de dados |
-| Nuvem | Supabase (Postgres + Auth + RLS) com login por e-mail/senha |
+| Nuvem | Supabase (Postgres + Auth + RLS) com login por e-mail/senha e Storage privado para os prints (`trade-screenshots`, URL assinada) |
 | Sincronização | Online-first, fila offline, envio ao reconectar, sync manual e migração assistida do histórico local |
 | Segurança | RLS por `user_id`, `anon` sem privilégios, policies otimizadas, trigger com `search_path` fixo |
 | Deploy | GitHub Pages automático em `main` (workflow `static.yml`) |
@@ -55,14 +55,15 @@ O backend (`backend/`) passa a ser um pacote (`@asrv/backend`) importado por web
 | ID | Entrega | Status |
 |---|---|---|
 | M-01 | Mover `supabase/` para `backend/supabase/` | ✅ |
-| M-02 | BFF `@asrv/backend` em DDD (domain/application/infrastructure) com TDD | ✅ 83 testes |
-| M-03 | Frontend Vite + React + Tailwind consumindo o BFF | ✅ 10 testes |
+| M-02 | BFF `@asrv/backend` em DDD (domain/application/infrastructure) com TDD | ✅ 98 testes |
+| M-03 | Frontend Vite + React + Tailwind consumindo o BFF | ✅ 15 testes |
 | M-04 | Publicar o novo app em `/app/` sem quebrar a raiz | ✅ |
-| M-05 | App mobile Expo importando `@asrv/backend` e design system | ✅ 11 testes |
+| M-05 | App mobile Expo importando `@asrv/backend` e design system | ✅ 20 testes |
 | M-06 | Paridade: dashboard, estatísticas, cache offline, importação | ⏳ |
 | M-07 | Aposentar `index.html` e publicar o React na raiz | ⏳ |
-| M-08 | Design system web/native com tokens + Storybook | ✅ 13 testes |
+| M-08 | Design system web/native com tokens + Storybook | ✅ 31 testes |
 | M-09 | Release manual no GitHub com web + Storybook + checksums | ✅ |
+| M-10 | Print da operação (Storage privado + URL assinada) em web, mobile e `index.html` | ✅ |
 
 **Critério para M-07:** M-06 concluído, uma semana de uso no `/app/` sem perda de dados
 e conferência local × nuvem com contagens iguais.

@@ -21,10 +21,15 @@ create table if not exists public.trades (
   lots       numeric     not null default 1,
   pnl        numeric     not null default 0,
   notes      text        not null default '',
+  screenshot_path text   not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   primary key (user_id, id)
 );
+
+-- Garante a coluna do print em bancos já existentes
+alter table public.trades
+  add column if not exists screenshot_path text not null default '';
 
 -- Dias registrados como "não operei"
 create table if not exists public.no_trade_days (
@@ -119,7 +124,30 @@ grant select, insert, update, delete on public.no_trade_days to authenticated;
 grant select, insert, update, delete on public.settings      to authenticated;
 
 -- ------------------------------------------------------------
--- 6. CONFERÊNCIA (deve listar as 3 tabelas com rowsecurity = true)
+-- 6. STORAGE — prints das operações
+-- Bucket privado; cada usuário só acessa a própria pasta
+-- (<user_id>/<trade_id>.jpg). A leitura é feita por URL assinada.
+-- ------------------------------------------------------------
+insert into storage.buckets (id, name, public)
+values ('trade-screenshots', 'trade-screenshots', false)
+on conflict (id) do nothing;
+
+drop policy if exists "trade_screenshots_own" on storage.objects;
+create policy "trade_screenshots_own"
+  on storage.objects
+  for all
+  to authenticated
+  using (
+    bucket_id = 'trade-screenshots'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  )
+  with check (
+    bucket_id = 'trade-screenshots'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+-- ------------------------------------------------------------
+-- 7. CONFERÊNCIA (deve listar as 3 tabelas com rowsecurity = true)
 -- ------------------------------------------------------------
 select tablename, rowsecurity
 from pg_tables

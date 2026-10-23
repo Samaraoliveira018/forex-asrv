@@ -1,4 +1,13 @@
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Image,
+  Linking,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { colors, radii, spacing, typography } from '../tokens';
 import { Badge } from './Badge';
 
@@ -11,6 +20,8 @@ export interface TradeCardProps {
   lots: number;
   pnl: number;
   notes?: string;
+  /** URL assinada do print da operação (opcional). */
+  screenshotUrl?: string;
   hidden?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -26,6 +37,7 @@ export function TradeCard({
   lots,
   pnl,
   notes,
+  screenshotUrl,
   hidden = false,
   onEdit,
   onDelete,
@@ -66,6 +78,18 @@ export function TradeCard({
           {pnlText}
         </Text>
         {notes ? <Text style={styles.notes}>{notes}</Text> : null}
+        {screenshotUrl ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Ver print da operação ${asset} de ${date}`}
+            onPress={() => {
+              void Linking.openURL(screenshotUrl);
+            }}
+            style={({ pressed }) => [styles.shot, pressed && styles.pressed]}
+          >
+            <Image source={{ uri: screenshotUrl }} style={styles.shotImage} resizeMode="cover" />
+          </Pressable>
+        ) : null}
       </View>
 
       {onEdit || onDelete ? (
@@ -153,6 +177,17 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: typography.caption,
     fontStyle: 'italic',
+  },
+  shot: {
+    marginTop: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.sm,
+    overflow: 'hidden',
+  },
+  shotImage: {
+    width: '100%',
+    height: 140,
   },
   footer: {
     flexDirection: 'row',

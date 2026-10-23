@@ -8,6 +8,7 @@ import type {
   NoTradeDayRepository,
   PendingJob,
   PendingJobStorage,
+  ScreenshotStorage,
   SettingsRepository,
   TradeRepository,
 } from './ports';
@@ -80,6 +81,30 @@ class FakeQueue implements PendingJobStorage {
   }
 }
 
+class FakeScreenshotStorage implements ScreenshotStorage {
+  uploads: Array<{ tradeId: string; dataUrl: string }> = [];
+  removed: string[] = [];
+  fail = false;
+
+  async upload(tradeId: string, dataUrl: string): Promise<string> {
+    if (this.fail) throw new Error('offline');
+    this.uploads.push({ tradeId, dataUrl });
+    return `${tradeId}.jpg`;
+  }
+
+  async signedUrls(paths: readonly string[]): Promise<Record<string, string>> {
+    if (this.fail) throw new Error('offline');
+    const map: Record<string, string> = {};
+    for (const path of paths) map[path] = `https://signed/${path}`;
+    return map;
+  }
+
+  async remove(tradeId: string): Promise<void> {
+    if (this.fail) throw new Error('offline');
+    this.removed.push(tradeId);
+  }
+}
+
 class FakeAuth implements AuthGateway {
   session: AuthSession | null = null;
   signedInWith: { email: string; password: string } | null = null;
@@ -107,17 +132,19 @@ function setup() {
   const trades = new FakeTradeRepository();
   const noTradeDays = new FakeNoTradeDayRepository();
   const settings = new FakeSettingsRepository();
+  const screenshots = new FakeScreenshotStorage();
   const pending = new FakeQueue();
 
   const service = createJournalService({
     trades,
     noTradeDays,
     settings,
+    screenshots,
     pending,
     clock: { today: () => '2026-10-22' },
   });
 
-  return { trades, noTradeDays, settings, pending, service };
+  return { trades, noTradeDays, settings, screenshots, pending, service };
 }
 
 function seedTrade(trades: FakeTradeRepository, overrides: Partial<Trade> = {}): Trade {
@@ -244,6 +271,100 @@ describe('createJournalService', () => {
     expect(result.trade.id).toBe('offline');
     expect(await service.pendingCount()).toBe(1);
     expect(pending.jobs[0]).toEqual({ op: 'upsertTrade', trade: result.trade });
+  });
+
+  it('anexa o print ao salvar a operação', async () => {
+    const { trades, screenshots, service } = setup();
+    const dataUrl = 'data:image/jpeg;base64,AAECAwQ=';
+
+    const result = await service.saveTrade(
+      { id: 't1', date: '2026-10-21', asset: 'EURUSD', type: 'Compra', lots: 1, pnl: 10 },
+      dataUrl,
+    );
+
+    expect(result.synced).toBe(true);
+    expect(result.trade.screenshotPath).toBe('t1.jpg');
+    expect(trades.items[0]?.screenshotPath).toBe('t1.jpg');
+    expect(screenshots.uploads).toEqual([{ tradeId: 't1', dataUrl }]);
+  });
+
+  it('remove o print quando recebe null', async () => {
+    const { trades, screenshots, service } = setup();
+    seedTrade(trades, { id: 't1', screenshotPath: 't1.jpg' });
+
+    const result = await service.saveTrade(
+      {
+        id: 't1',
+        date: '2026-10-21',
+        asset: 'EURUSD',
+        type: 'Compra',
+        lots: 1,
+        pnl: 10,
+        screenshotPath: 't1.jpg',
+      },
+      null,
+    );
+
+    expect(result.trade.screenshotPath).toBe('');
+    expect(screenshots.removed).toContain('t1');
+  });
+
+  it('enfileira o print junto com a operação quando está offline', async () => {
+    const { trades, screenshots, pending, service } = setup();
+    trades.fail = true;
+    screenshots.fail = true;
+    const dataUrl = 'data:image/jpeg;base64,AAECAwQ=';
+
+    const result = await service.saveTrade(
+      { id: 'offline-print', date: '2026-10-21', asset: 'EURUSD', type: 'Compra', lots: 1, pnl: 10 },
+      dataUrl,
+    );
+
+    expect(result.synced).toBe(false);
+    expect(result.trade.screenshotPath).toBe('');
+    expect(pending.jobs[0]).toEqual({
+      op: 'upsertTrade',
+      trade: result.trade,
+      screenshotDataUrl: dataUrl,
+    });
+  });
+
+  it('sobe o print pendente ao sincronizar', async () => {
+    const { trades, screenshots, service } = setup();
+    const dataUrl = 'data:image/jpeg;base64,AAECAwQ=';
+    trades.fail = true;
+    screenshots.fail = true;
+
+    await service.saveTrade(
+      { id: 'pendente', date: '2026-10-21', asset: 'EURUSD', type: 'Compra', lots: 1, pnl: 10 },
+      dataUrl,
+    );
+
+    trades.fail = false;
+    screenshots.fail = false;
+
+    expect(await service.flush()).toEqual({ pending: 0, flushed: 1 });
+    expect(trades.items[0]?.screenshotPath).toBe('pendente.jpg');
+    expect(screenshots.uploads).toEqual([{ tradeId: 'pendente', dataUrl }]);
+  });
+
+  it('lista as URLs assinadas dos prints', async () => {
+    const { trades, service } = setup();
+    seedTrade(trades, { id: 'com-print', screenshotPath: 'com-print.jpg' });
+    seedTrade(trades, { id: 'sem-print', date: '2026-10-20' });
+
+    const snapshot = await service.list();
+
+    expect(snapshot.screenshotUrls).toEqual({ 'com-print': 'https://signed/com-print.jpg' });
+  });
+
+  it('exclui o print junto com a operação', async () => {
+    const { trades, screenshots, service } = setup();
+    const trade = seedTrade(trades, { id: 't1', screenshotPath: 't1.jpg' });
+
+    await service.deleteTrade(trade.id);
+
+    expect(screenshots.removed).toContain('t1');
   });
 
   it('enfileira a exclusão quando o repositório está offline', async () => {

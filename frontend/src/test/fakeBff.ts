@@ -25,6 +25,7 @@ export function emptySnapshot(trades: Trade[] = [], noTradeDays: string[] = []):
     initialBalance,
     stats: calculateStats({ trades, initialBalance, today }),
     discipline: evaluateDiscipline({ trades, noTradeDays, initialBalance }),
+    screenshotUrls: {},
   };
 }
 
@@ -46,7 +47,7 @@ export function createFakeBff(options: FakeBffOptions = {}) {
 
   const list = vi.fn(async () => state.snapshot);
 
-  const saveTrade = vi.fn(async (input: TradeInput) => {
+  const saveTrade = vi.fn(async (input: TradeInput, _screenshotDataUrl?: string | null) => {
     const trade = createTrade(input);
     state.snapshot = emptySnapshot([...state.snapshot.trades, trade], state.snapshot.noTradeDays);
     return { trade, synced: true, warnings: [] as string[] };

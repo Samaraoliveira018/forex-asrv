@@ -6,6 +6,7 @@ import { DomainError } from './domain/errors';
 import {
   createSupabaseAuthGateway,
   createSupabaseNoTradeDayRepository,
+  createSupabaseScreenshotStorage,
   createSupabaseSettingsRepository,
   createSupabaseTradeRepository,
 } from './infrastructure/supabaseAdapters';
@@ -58,6 +59,7 @@ export function createBff(config: BffConfig): Bff {
     trades: createSupabaseTradeRepository(client, requireUserId),
     noTradeDays: createSupabaseNoTradeDayRepository(client, requireUserId),
     settings: createSupabaseSettingsRepository(client, requireUserId),
+    screenshots: createSupabaseScreenshotStorage(client, requireUserId),
     pending: createKeyValueQueue(config.storage, config.queueKey),
     clock: config.clock ?? { today: localToday },
   });
@@ -72,7 +74,8 @@ export function createBff(config: BffConfig): Bff {
 
   const journal: JournalService = {
     list: () => withSession(() => base.list()),
-    saveTrade: (input) => withSession(() => base.saveTrade(input)),
+    saveTrade: (input, screenshotDataUrl) =>
+      withSession(() => base.saveTrade(input, screenshotDataUrl)),
     deleteTrade: (id) => withSession(() => base.deleteTrade(id)),
     registerNoTradeDay: (day) => withSession(() => base.registerNoTradeDay(day)),
     removeNoTradeDay: (day) => withSession(() => base.removeNoTradeDay(day)),

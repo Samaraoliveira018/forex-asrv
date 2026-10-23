@@ -62,8 +62,32 @@ describe('JournalScreen', () => {
         lots: 0.5,
         pnl: -25,
       }),
+      undefined,
     );
     expect(await screen.findByText('GBPUSD')).toBeInTheDocument();
+  });
+
+  it('anexa um print à operação', async () => {
+    const fake = renderJournal();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Nova operação' }));
+    await user.type(screen.getByLabelText('Ativo'), 'EURUSD');
+    await user.type(screen.getByLabelText('Resultado Financeiro ($ / R$)'), '10');
+
+    const file = new File(['print'], 'print.png', { type: 'image/png' });
+    fireEvent.change(screen.getByLabelText('Anexar print da operação'), {
+      target: { files: [file] },
+    });
+
+    // Espera a leitura do arquivo (FileReader) refletir no preview.
+    await screen.findByAltText('Pré-visualização do print da operação');
+    await user.click(screen.getByRole('button', { name: 'Salvar Operação' }));
+
+    expect(fake.mocks.saveTrade).toHaveBeenCalledWith(
+      expect.objectContaining({ asset: 'EURUSD' }),
+      expect.stringContaining('data:image/png;base64,'),
+    );
   });
 
   it('edita uma operação existente', async () => {
@@ -81,6 +105,7 @@ describe('JournalScreen', () => {
 
     expect(fake.mocks.saveTrade).toHaveBeenCalledWith(
       expect.objectContaining({ id: 't1', pnl: 120 }),
+      undefined,
     );
   });
 

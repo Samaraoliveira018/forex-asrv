@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import type { Trade, TradeInput, TradeType } from '@asrv/backend';
 import {
   Alert,
@@ -11,6 +12,7 @@ import {
   spacing,
   typography,
   colors,
+  radii,
 } from '@asrv/design-system';
 import { numberFrom, today } from './format';
 
@@ -31,24 +33,59 @@ const typeOptions: ReadonlyArray<{ value: TradeType; label: string }> = [
 export function TradeModal({
   open,
   trade,
+  screenshotUrl,
   onClose,
   onSubmit,
 }: {
   open: boolean;
   trade: Trade | null;
+  screenshotUrl?: string;
   onClose: () => void;
-  onSubmit: (input: TradeInput) => Promise<void>;
+  onSubmit: (input: TradeInput, screenshotDataUrl?: string | null) => Promise<void>;
 }) {
   const [form, setForm] = useState<FormState>(() => formFor(trade));
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  const [photoRemoved, setPhotoRemoved] = useState(false);
+  const [readingPhoto, setReadingPhoto] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const preview = photoDataUrl ?? (photoRemoved ? null : (screenshotUrl ?? null));
 
   useEffect(() => {
     if (!open) return;
     setForm(formFor(trade));
+    setPhotoDataUrl(null);
+    setPhotoRemoved(false);
+    setReadingPhoto(false);
     setError('');
     setSaving(false);
   }, [open, trade]);
+
+  async function handlePhoto() {
+    setError('');
+
+    try {
+      setReadingPhoto(true);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (result.canceled) return;
+      const asset = result.assets?.[0];
+      if (!asset?.base64) return;
+
+      const mime = asset.mimeType ?? 'image/jpeg';
+      setPhotoDataUrl(`data:${mime};base64,${asset.base64}`);
+      setPhotoRemoved(false);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Não foi possível anexar o print.');
+    } finally {
+      setReadingPhoto(false);
+    }
+  }
 
   async function handleSubmit() {
     setError('');
@@ -60,15 +97,20 @@ export function TradeModal({
 
     setSaving(true);
     try {
-      await onSubmit({
-        ...(trade ? { id: trade.id } : {}),
-        date: form.date,
-        asset: form.asset,
-        type: form.type,
-        lots: numberFrom(form.lots),
-        pnl: numberFrom(form.pnl),
-        notes: form.notes,
-      });
+      const screenshot = photoDataUrl !== null ? photoDataUrl : photoRemoved ? null : undefined;
+      await onSubmit(
+        {
+          ...(trade ? { id: trade.id } : {}),
+          date: form.date,
+          asset: form.asset,
+          type: form.type,
+          lots: numberFrom(form.lots),
+          pnl: numberFrom(form.pnl),
+          notes: form.notes,
+          screenshotPath: trade?.screenshotPath ?? '',
+        },
+        screenshot,
+      );
       onClose();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível salvar a operação.');
@@ -150,6 +192,44 @@ export function TradeModal({
         placeholder="Motivo da entrada..."
       />
 
+      <View style={styles.photoField}>
+        <View style={styles.photoHeader}>
+          <Text style={styles.fieldLabel}>Print da Operação</Text>
+          {preview ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onPress={() => {
+                setPhotoDataUrl(null);
+                setPhotoRemoved(true);
+              }}
+            >
+              Remover print
+            </Button>
+          ) : null}
+        </View>
+
+        {preview ? (
+          <Image
+            source={{ uri: preview }}
+            style={styles.photoPreview}
+            resizeMode="cover"
+            accessibilityLabel="Pré-visualização do print da operação"
+          />
+        ) : null}
+
+        <Button
+          variant="secondary"
+          size="sm"
+          fullWidth
+          loading={readingPhoto}
+          testID="attach-screenshot"
+          onPress={handlePhoto}
+        >
+          {preview ? 'Trocar print' : 'Anexar print'}
+        </Button>
+      </View>
+
       {error ? <Alert tone="danger">{error}</Alert> : null}
     </Modal>
   );
@@ -179,5 +259,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
+  },
+  photoField: {
+    gap: spacing.xs,
+  },
+  photoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  photoPreview: {
+    width: '100%',
+    height: 160,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
 });

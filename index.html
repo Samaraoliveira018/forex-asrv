@@ -509,6 +509,21 @@
           <textarea id="form-notes" rows="2" placeholder="Motivo da entrada..." class="asrv-field__textarea"></textarea>
         </div>
 
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="asrv-field__label">Print da Operação</label>
+            <button type="button" id="form-shot-remove" onclick="removeTradeScreenshot()" class="asrv-link hidden">
+              <i class="fa-solid fa-trash"></i> Remover print
+            </button>
+          </div>
+          <img id="form-shot-preview" alt="Pré-visualização do print da operação" class="hidden w-full h-32 object-cover rounded-lg border border-brand-border mb-2">
+          <input type="file" id="form-shot" accept="image/*" class="hidden" onchange="onTradeScreenshotChange(event)">
+          <button type="button" onclick="document.getElementById('form-shot').click()" class="asrv-btn asrv-btn--secondary asrv-btn--sm asrv-btn--full">
+            <i class="fa-solid fa-image"></i> <span id="form-shot-label">Anexar print</span>
+          </button>
+          <p class="text-[11px] text-gray-500 mt-1">Foto ou captura de tela da operação (opcional).</p>
+        </div>
+
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeModal()" class="asrv-btn asrv-btn--secondary asrv-btn--md">Cancelar</button>
           <button type="submit" class="asrv-btn asrv-btn--primary asrv-btn--md" id="modal-submit-btn">Salvar Operação</button>
@@ -608,7 +623,8 @@
             type: t.type === 'Venda' ? 'Venda' : 'Compra',
             lots: Number(t.lots) || 0,
             pnl: Number(t.pnl) || 0,
-            notes: typeof t.notes === 'string' ? t.notes : ''
+            notes: typeof t.notes === 'string' ? t.notes : '',
+            screenshot_path: typeof t.screenshot_path === 'string' ? t.screenshot_path : ''
           };
         });
     }
@@ -641,6 +657,11 @@
     let cloudUser = null;
     let pendingOps = [];
     let flushingPending = false;
+
+    // Prints das operações (Supabase Storage)
+    const SCREENSHOT_BUCKET = 'trade-screenshots';
+    let screenshotUrls = {}; // tradeId -> URL assinada (temporária)
+    let modalShot = { dataUrl: null, removed: false, existingId: '' };
 
     function cloudConfigured() {
       return SUPABASE_URL.trim() !== '' && SUPABASE_ANON_KEY.trim() !== '' && !!window.supabase;
@@ -766,7 +787,7 @@
       if (!cloudEnabled()) return;
 
       const [tradesRes, noTradeRes, settingsRes] = await Promise.all([
-        sb.from('trades').select('id,date,asset,type,lots,pnl,notes').order('date', { ascending: true }),
+        sb.from('trades').select('id,date,asset,type,lots,pnl,notes,screenshot_path').order('date', { ascending: true }),
         sb.from('no_trade_days').select('day'),
         sb.from('settings').select('initial_balance').maybeSingle()
       ]);
@@ -784,6 +805,7 @@
       const balInput = document.getElementById('initial-balance-input');
       if (balInput) balInput.value = initialBalance;
 
+      await refreshScreenshotUrls();
       saveData();
       refreshUI();
     }
@@ -812,14 +834,26 @@
             type: t.type,
             lots: Number(t.lots) || 0,
             pnl: Number(t.pnl) || 0,
-            notes: t.notes || ''
+            notes: t.notes || '',
+            screenshot_path: t.screenshot_path || ''
           }, { onConflict: 'user_id,id' });
+          if (error) throw error;
+          return;
+        }
+        case 'uploadScreenshot': {
+          const { id, dataUrl } = job.payload;
+          const path = await uploadTradeScreenshot(id, dataUrl);
+          const { error } = await sb.from('trades')
+            .update({ screenshot_path: path })
+            .eq('user_id', uid)
+            .eq('id', String(id));
           if (error) throw error;
           return;
         }
         case 'deleteTrade': {
           const { error } = await sb.from('trades').delete().eq('user_id', uid).eq('id', String(job.payload));
           if (error) throw error;
+          await removeTradeScreenshotFile(job.payload);
           return;
         }
         case 'upsertNoTrade': {
@@ -881,6 +915,134 @@
       }
     }
 
+    // ---------- PRINTS (Supabase Storage) ----------
+    function dataUrlToBytes(dataUrl) {
+      const base64 = String(dataUrl).split(',')[1] || '';
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
+
+    function screenshotPathFor(tradeId) {
+      return `${cloudUser.id}/${tradeId}.jpg`;
+    }
+
+    async function uploadTradeScreenshot(tradeId, dataUrl) {
+      const path = screenshotPathFor(tradeId);
+      const match = /^data:([^;,]*)/.exec(String(dataUrl));
+      const contentType = (match && match[1]) || 'image/jpeg';
+      const { error } = await sb.storage
+        .from(SCREENSHOT_BUCKET)
+        .upload(path, dataUrlToBytes(dataUrl), { contentType, upsert: true });
+      if (error) throw error;
+      return path;
+    }
+
+    async function removeTradeScreenshotFile(tradeId) {
+      try {
+        await sb.storage.from(SCREENSHOT_BUCKET).remove([screenshotPathFor(tradeId)]);
+      } catch (err) {
+        console.warn('Não foi possível remover o print:', err);
+      }
+    }
+
+    async function refreshScreenshotUrls() {
+      screenshotUrls = {};
+      if (!cloudEnabled()) return;
+
+      const paths = [...new Set(trades.map(t => t.screenshot_path).filter(Boolean))];
+      if (paths.length === 0) return;
+
+      try {
+        const { data, error } = await sb.storage.from(SCREENSHOT_BUCKET).createSignedUrls(paths, 86400);
+        if (error) throw error;
+        const byPath = {};
+        (data || []).forEach(item => {
+          if (item && item.path && item.signedUrl) byPath[item.path] = item.signedUrl;
+        });
+        trades.forEach(t => {
+          if (t.screenshot_path && byPath[t.screenshot_path]) screenshotUrls[t.id] = byPath[t.screenshot_path];
+        });
+      } catch (err) {
+        console.warn('Não foi possível assinar os prints:', err);
+      }
+    }
+
+    // Lê e comprime a imagem escolhida, devolvendo um data URL JPEG.
+    function readTradeScreenshot(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = String(reader.result || '');
+          const img = new Image();
+          img.onload = () => {
+            try {
+              const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
+              const canvas = document.createElement('canvas');
+              canvas.width = Math.max(1, Math.round(img.width * scale));
+              canvas.height = Math.max(1, Math.round(img.height * scale));
+              const ctx = canvas.getContext('2d');
+              if (!ctx) return resolve(dataUrl);
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              const jpeg = canvas.toDataURL('image/jpeg', 0.72);
+              resolve(jpeg.length < dataUrl.length ? jpeg : dataUrl);
+            } catch (err) {
+              resolve(dataUrl);
+            }
+          };
+          img.onerror = () => resolve(dataUrl);
+          img.src = dataUrl;
+        };
+        reader.onerror = () => reject(new Error('Não foi possível ler a imagem.'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function onTradeScreenshotChange(event) {
+      const file = event.target.files && event.target.files[0];
+      event.target.value = '';
+      if (!file) return;
+
+      try {
+        modalShot.dataUrl = await readTradeScreenshot(file);
+        modalShot.removed = false;
+        renderModalShot();
+      } catch (err) {
+        alert('Não foi possível anexar a imagem.');
+      }
+    }
+
+    function removeTradeScreenshot() {
+      modalShot.dataUrl = null;
+      modalShot.removed = true;
+      renderModalShot();
+    }
+
+    function renderModalShot() {
+      const preview = document.getElementById('form-shot-preview');
+      const removeBtn = document.getElementById('form-shot-remove');
+      const label = document.getElementById('form-shot-label');
+      if (!preview) return;
+
+      const existingUrl = !modalShot.removed && modalShot.existingId
+        ? (screenshotUrls[modalShot.existingId] || '')
+        : '';
+      const src = modalShot.dataUrl || existingUrl;
+
+      if (src) {
+        preview.src = src;
+        preview.classList.remove('hidden');
+        if (removeBtn) removeBtn.classList.remove('hidden');
+        if (label) label.innerText = 'Trocar print';
+      } else {
+        preview.removeAttribute('src');
+        preview.classList.add('hidden');
+        if (removeBtn) removeBtn.classList.add('hidden');
+        if (label) label.innerText = 'Anexar print';
+      }
+    }
+
     // ---------- MIGRAÇÃO / SINCRONIZAÇÃO COMPLETA ----------
     async function replaceCloudWithLocal() {
       if (!cloudEnabled()) return;
@@ -900,7 +1062,8 @@
           type: t.type,
           lots: Number(t.lots) || 0,
           pnl: Number(t.pnl) || 0,
-          notes: t.notes || ''
+          notes: t.notes || '',
+          screenshot_path: t.screenshot_path || ''
         }));
         const { error } = await sb.from('trades').upsert(rows, { onConflict: 'user_id,id' });
         if (error) throw error;
@@ -1320,6 +1483,8 @@
       document.getElementById('modal-title').innerText = 'Registrar Nova Operação';
       document.getElementById('modal-submit-btn').innerText = 'Salvar Operação';
       document.getElementById('form-date').value = getLocalDateStr();
+      modalShot = { dataUrl: null, removed: false, existingId: '' };
+      renderModalShot();
       document.getElementById('trade-modal').classList.remove('hidden');
     }
 
@@ -1337,6 +1502,8 @@
       document.getElementById('form-pnl').value = trade.pnl;
       document.getElementById('form-notes').value = trade.notes || '';
 
+      modalShot = { dataUrl: null, removed: false, existingId: String(trade.id) };
+      renderModalShot();
       document.getElementById('trade-modal').classList.remove('hidden');
     }
 
@@ -1344,10 +1511,22 @@
       document.getElementById('trade-modal').classList.add('hidden');
       document.getElementById('trade-form').reset();
       document.getElementById('form-edit-id').value = '';
+      modalShot = { dataUrl: null, removed: false, existingId: '' };
+      renderModalShot();
     }
+
+    let savingTrade = false;
 
     function saveTrade(e) {
       e.preventDefault();
+      if (savingTrade) return;
+      savingTrade = true;
+      persistTrade()
+        .catch(err => console.error('Falha ao salvar a operação:', err))
+        .finally(() => { savingTrade = false; });
+    }
+
+    async function persistTrade() {
       const editId = document.getElementById('form-edit-id').value;
       const date = document.getElementById('form-date').value;
       const asset = document.getElementById('form-asset').value.toUpperCase();
@@ -1377,17 +1556,36 @@
       if (editId) {
         trades = trades.map(t => {
           if (String(t.id) !== editId) return t;
-          savedTrade = { ...t, date, asset, type, lots, pnl, notes };
+          savedTrade = { ...t, date, asset, type, lots, pnl, notes, screenshot_path: t.screenshot_path || '' };
           return savedTrade;
         });
       } else {
-        savedTrade = { id: newTradeId(), date, asset, type, lots, pnl, notes };
+        savedTrade = { id: newTradeId(), date, asset, type, lots, pnl, notes, screenshot_path: '' };
         trades.push(savedTrade);
       }
 
+      if (modalShot.dataUrl && !cloudEnabled()) {
+        alert('Entre na nuvem (Supabase) para anexar o print. A operação será salva sem a imagem.');
+      }
+
+      let shotDataUrl = null;
+      if (modalShot.dataUrl && cloudEnabled()) {
+        try {
+          savedTrade.screenshot_path = await uploadTradeScreenshot(savedTrade.id, modalShot.dataUrl);
+        } catch (err) {
+          console.warn('Falha ao enviar o print, guardando na fila:', err);
+          shotDataUrl = modalShot.dataUrl;
+        }
+      } else if (modalShot.removed) {
+        savedTrade.screenshot_path = '';
+        if (cloudEnabled()) await removeTradeScreenshotFile(savedTrade.id);
+      }
+
       saveData();
-      queueCloud('upsertTrade', savedTrade);
+      await queueCloud('upsertTrade', savedTrade);
+      if (shotDataUrl) await queueCloud('uploadScreenshot', { id: savedTrade.id, dataUrl: shotDataUrl });
       closeModal();
+      if (cloudEnabled()) await refreshScreenshotUrls();
       refreshUI();
     }
 
@@ -1521,6 +1719,7 @@
         const isBE = isBreakEven(item.pnl);
         const pnlClass = isBE ? 'text-gray-300' : (item.pnl > 0 ? 'asrv-positive' : 'asrv-negative');
         const pnlText = isValueHidden ? '••••••' : (isBE ? `${item.pnl < 0 ? '-' : '+'} $ ${Math.abs(item.pnl).toFixed(2)} (BE)` : (item.pnl > 0 ? '+ ' : '- ') + Math.abs(item.pnl).toFixed(2));
+        const shotUrl = screenshotUrls[item.id] || '';
 
         return `
           <div class="asrv-trade-card">
@@ -1536,6 +1735,7 @@
               <p class="text-xs text-gray-400">Lotes / Contratos: <strong class="text-gray-200">${item.lots}</strong></p>
               <p class="asrv-trade-card__pnl ${pnlClass}">${pnlText}</p>
               ${item.notes ? `<p class="asrv-trade-card__notes">${item.notes}</p>` : ''}
+              ${!isValueHidden && shotUrl ? `<a class="asrv-trade-card__shot" href="${shotUrl}" target="_blank" rel="noopener noreferrer" aria-label="Ver print de ${item.asset}"><img src="${shotUrl}" alt="Print da operação ${item.asset}" loading="lazy"></a>` : ''}
             </div>
             <div class="asrv-trade-card__footer">
               <div class="asrv-trade-card__actions">
@@ -1570,6 +1770,7 @@
             <td class="font-bold ${isBE ? 'text-gray-300' : (t.pnl > 0 ? 'text-emerald-400' : 'text-red-400')}">${isValueHidden ? '••••••' : (isBE ? `${t.pnl.toFixed(2)} (BE)` : (t.pnl > 0 ? '+' : '') + t.pnl.toFixed(2))}</td>
             <td>${statusBadge}</td>
             <td class="text-right">
+              ${!isValueHidden && screenshotUrls[t.id] ? `<a href="${screenshotUrls[t.id]}" target="_blank" rel="noopener noreferrer" class="asrv-trade-card__action mr-2" aria-label="Ver print da operação"><i class="fa-solid fa-image"></i></a>` : ''}
               <button onclick="editTrade('${t.id}')" class="asrv-trade-card__action mr-2" aria-label="Editar operação"><i class="fa-solid fa-pen-to-square"></i></button>
               <button onclick="deleteTrade('${t.id}')" class="asrv-trade-card__action asrv-trade-card__action--danger" aria-label="Eliminar operação"><i class="fa-solid fa-trash"></i></button>
             </td>

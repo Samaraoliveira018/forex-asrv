@@ -28,6 +28,7 @@ mobile (Expo) ────┘          │
 |---|---|
 | Schema (`trades`, `no_trade_days`, `settings`) | aplicado, com RLS |
 | Policies (`user_id = (select auth.uid())`) | aplicadas |
+| Bucket privado `trade-screenshots` + policy `trade_screenshots_own` | aplicado (prints das operações) |
 | Trigger `updated_at` | aplicado (`search_path` fixo) |
 | Usuário `samaraoliveira018@gmail.com` | criado e confirmado |
 | `SUPABASE_URL` / chave publishable no `index.html` | configuradas |
@@ -42,6 +43,9 @@ Ainda falta apenas: **Authentication → Settings → Password Security → Enab
 1. Supabase Dashboard → **SQL Editor** → **New query**
 2. Cole todo o conteúdo de [`schema.sql`](./schema.sql) e clique em **Run**
 3. Confira no resultado final: `trades`, `no_trade_days` e `settings` com `rowsecurity = true`
+
+> O `schema.sql` também cria o bucket privado `trade-screenshots` e a policy
+> `trade_screenshots_own` usados pelos prints das operações.
 
 ### 2. Fechar o cadastro público
 App é de uso individual, então ninguém além de você deve conseguir criar conta.

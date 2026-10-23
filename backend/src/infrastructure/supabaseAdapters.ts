@@ -2,6 +2,7 @@ import type {
   AuthGateway,
   AuthSession,
   NoTradeDayRepository,
+  ScreenshotStorage,
   SettingsRepository,
   TradeRepository,
 } from '../application/ports';
@@ -20,6 +21,7 @@ type TradeRow = {
   lots: number | string;
   pnl: number | string;
   notes: string | null;
+  screenshot_path: string | null;
 };
 
 export function createSupabaseTradeRepository(
@@ -31,7 +33,7 @@ export function createSupabaseTradeRepository(
       return guard('TRADES_READ_FAILED', async () => {
         const { data, error } = await client
           .from('trades')
-          .select('id,date,asset,type,lots,pnl,notes')
+          .select('id,date,asset,type,lots,pnl,notes,screenshot_path')
           .eq('user_id', getUserId())
           .order('date', { ascending: true });
 
@@ -52,6 +54,7 @@ export function createSupabaseTradeRepository(
             lots: trade.lots,
             pnl: trade.pnl,
             notes: trade.notes,
+            screenshot_path: trade.screenshotPath,
           },
           { onConflict: 'user_id,id' },
         );
@@ -148,6 +151,93 @@ export function createSupabaseSettingsRepository(
       });
     },
   };
+}
+
+export const SCREENSHOT_BUCKET = 'trade-screenshots';
+const SCREENSHOT_URL_TTL = 60 * 60 * 24; // 24h
+
+export function createSupabaseScreenshotStorage(
+  client: SupabaseClientLike,
+  getUserId: () => string,
+): ScreenshotStorage {
+  const pathFor = (tradeId: string) => `${getUserId()}/${tradeId}.jpg`;
+
+  return {
+    async upload(tradeId, dataUrl) {
+      return guard('SCREENSHOT_UPLOAD_FAILED', async () => {
+        const { bytes, contentType } = decodeDataUrl(dataUrl);
+        const path = pathFor(tradeId);
+        const { error } = await client.storage
+          .from(SCREENSHOT_BUCKET)
+          .upload(path, bytes, { contentType, upsert: true });
+
+        if (error) throw new BackendError('SCREENSHOT_UPLOAD_FAILED', error.message);
+        return path;
+      });
+    },
+
+    async signedUrls(paths) {
+      const unique = [...new Set(paths.filter((path) => path.length > 0))];
+      if (unique.length === 0) return {};
+
+      return guard('SCREENSHOT_URL_FAILED', async () => {
+        const { data, error } = await client.storage
+          .from(SCREENSHOT_BUCKET)
+          .createSignedUrls(unique, SCREENSHOT_URL_TTL);
+
+        if (error) throw new BackendError('SCREENSHOT_URL_FAILED', error.message);
+
+        const map: Record<string, string> = {};
+        for (const item of (data ?? []) as Array<{ path?: string; signedUrl?: string }>) {
+          if (item.path && item.signedUrl) map[item.path] = item.signedUrl;
+        }
+        return map;
+      });
+    },
+
+    async remove(tradeId) {
+      await guard('SCREENSHOT_DELETE_FAILED', async () => {
+        const { error } = await client.storage.from(SCREENSHOT_BUCKET).remove([pathFor(tradeId)]);
+        if (error) throw new BackendError('SCREENSHOT_DELETE_FAILED', error.message);
+      });
+    },
+  };
+}
+
+function decodeDataUrl(dataUrl: string): { bytes: Uint8Array; contentType: string } {
+  const match = /^data:([^;,]*)(;base64)?,(.*)$/s.exec(dataUrl.trim());
+  if (!match || !match[2]) {
+    throw new BackendError('SCREENSHOT_UPLOAD_FAILED', 'Imagem inválida: esperado um data URL.');
+  }
+
+  return {
+    bytes: base64ToBytes(match[3] ?? ''),
+    contentType: match[1] || 'image/jpeg',
+  };
+}
+
+const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+/** Decodifica base64 sem depender de atob/Buffer (funciona em web, Node e React Native). */
+function base64ToBytes(input: string): Uint8Array {
+  const clean = input.replace(/[^A-Za-z0-9+/=]/g, '');
+  const output: number[] = [];
+  let buffer = 0;
+  let bits = 0;
+
+  for (const char of clean) {
+    if (char === '=') break;
+    const value = BASE64_ALPHABET.indexOf(char);
+    if (value < 0) continue;
+    buffer = (buffer << 6) | value;
+    bits += 6;
+    if (bits >= 8) {
+      bits -= 8;
+      output.push((buffer >> bits) & 0xff);
+    }
+  }
+
+  return Uint8Array.from(output);
 }
 
 export function createSupabaseAuthGateway(
@@ -251,5 +341,6 @@ function toTrade(row: TradeRow): Trade {
     lots,
     pnl,
     notes: row.notes ?? '',
+    screenshotPath: row.screenshot_path ?? '',
   };
 }

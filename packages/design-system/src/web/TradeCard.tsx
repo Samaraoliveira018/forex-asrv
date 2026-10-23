@@ -10,6 +10,8 @@ export interface TradeCardProps {
   lots: number;
   pnl: number;
   notes?: string;
+  /** URL assinada do print da operação (opcional). */
+  screenshotUrl?: string;
   hidden?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -25,6 +27,7 @@ export function TradeCard({
   lots,
   pnl,
   notes,
+  screenshotUrl,
   hidden = false,
   onEdit,
   onDelete,
@@ -65,6 +68,21 @@ export function TradeCard({
           {pnlText}
         </p>
         {notes ? <p className="asrv-trade-card__notes">{notes}</p> : null}
+        {screenshotUrl ? (
+          <a
+            className="asrv-trade-card__shot"
+            href={screenshotUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Ver print da operação ${asset} de ${date}`}
+          >
+            <img
+              src={screenshotUrl}
+              alt={`Print da operação ${asset} de ${date}`}
+              loading="lazy"
+            />
+          </a>
+        ) : null}
       </div>
 
       {onEdit || onDelete ? (

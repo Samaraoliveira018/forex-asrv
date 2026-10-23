@@ -14,6 +14,8 @@ export interface Trade {
   lots: number;
   pnl: number;
   notes: string;
+  /** Caminho do print no bucket do Supabase Storage ('' quando não há print). */
+  screenshotPath: string;
 }
 
 export interface TradeInput {
@@ -24,6 +26,7 @@ export interface TradeInput {
   lots: number;
   pnl: number;
   notes?: string;
+  screenshotPath?: string;
 }
 
 export interface CreateTradeOptions {
@@ -82,7 +85,14 @@ export function createTrade(input: TradeInput, options: CreateTradeOptions = {})
     lots: input.lots,
     pnl: input.pnl,
     notes: input.notes?.trim() ?? '',
+    screenshotPath: normalizeScreenshotPath(input.screenshotPath),
   };
+}
+
+function normalizeScreenshotPath(value: string | undefined): string {
+  const path = value?.trim() ?? '';
+  if (!path || path.includes('..')) return '';
+  return path.replace(/^\/+/, '');
 }
 
 function defaultId(): string {

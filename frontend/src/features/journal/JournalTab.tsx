@@ -273,6 +273,7 @@ function JournalGrid({
             lots={item.trade.lots}
             pnl={item.trade.pnl}
             notes={item.trade.notes}
+            screenshotUrl={snapshot.screenshotUrls[item.trade.id]}
             hidden={hidden}
             onEdit={() => onEditTrade(item.trade)}
             onDelete={() => onDeleteTrade(item.trade)}
@@ -313,6 +314,7 @@ function JournalList({
               <th>Lotes</th>
               <th>Resultado</th>
               <th>Status</th>
+              <th className="text-center">Print</th>
               <th className="text-right">Ação</th>
             </tr>
           </thead>
@@ -347,6 +349,21 @@ function JournalList({
                     >
                       {breakEven ? 'BREAK EVEN' : trade.pnl > 0 ? 'WIN' : 'LOSS'}
                     </Badge>
+                  </td>
+                  <td className="text-center">
+                    {!hidden && snapshot.screenshotUrls[trade.id] ? (
+                      <a
+                        className="asrv-trade-card__action"
+                        href={snapshot.screenshotUrls[trade.id]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Ver print de ${trade.asset} de ${formatDate(trade.date)}`}
+                      >
+                        <i className="fa-solid fa-image" aria-hidden="true" />
+                      </a>
+                    ) : (
+                      <span className="text-slate-600">—</span>
+                    )}
                   </td>
                   <td className="text-right">
                     <button

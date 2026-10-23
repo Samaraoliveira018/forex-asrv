@@ -15,6 +15,7 @@ import type {
   NoTradeDayRepository,
   PendingJob,
   PendingJobStorage,
+  ScreenshotStorage,
   SettingsRepository,
   TradeRepository,
 } from './ports';
@@ -25,6 +26,8 @@ export interface JournalSnapshot {
   initialBalance: number;
   stats: Stats;
   discipline: DisciplineResult;
+  /** URLs assinadas (temporárias) dos prints, indexadas pelo id da operação. */
+  screenshotUrls: Record<string, string>;
 }
 
 export interface SaveTradeResult {
@@ -40,7 +43,13 @@ export interface SyncResult {
 
 export interface JournalService {
   list(): Promise<JournalSnapshot>;
-  saveTrade(input: TradeInput): Promise<SaveTradeResult>;
+  /**
+   * Salva a operação. O segundo argumento controla o print:
+   * - `undefined`: mantém o print atual;
+   * - string (data URL): anexa/substitui o print;
+   * - `null`: remove o print.
+   */
+  saveTrade(input: TradeInput, screenshotDataUrl?: string | null): Promise<SaveTradeResult>;
   deleteTrade(id: string): Promise<{ synced: boolean }>;
   registerNoTradeDay(day: string): Promise<{ synced: boolean }>;
   removeNoTradeDay(day: string): Promise<{ synced: boolean }>;
@@ -53,12 +62,13 @@ export interface JournalDeps {
   trades: TradeRepository;
   noTradeDays: NoTradeDayRepository;
   settings: SettingsRepository;
+  screenshots: ScreenshotStorage;
   pending: PendingJobStorage;
   clock: Clock;
 }
 
 export function createJournalService(deps: JournalDeps): JournalService {
-  const { trades, noTradeDays, settings, pending, clock } = deps;
+  const { trades, noTradeDays, settings, screenshots, pending, clock } = deps;
 
   async function enqueue(job: PendingJob): Promise<void> {
     const jobs = await pending.read();
@@ -68,9 +78,15 @@ export function createJournalService(deps: JournalDeps): JournalService {
 
   async function execute(job: PendingJob): Promise<void> {
     switch (job.op) {
-      case 'upsertTrade':
-        await trades.upsert(job.trade);
+      case 'upsertTrade': {
+        let target = job.trade;
+        if (job.screenshotDataUrl) {
+          const path = await screenshots.upload(target.id, job.screenshotDataUrl);
+          target = { ...target, screenshotPath: path };
+        }
+        await trades.upsert(target);
         break;
+      }
       case 'deleteTrade':
         await trades.remove(job.id);
         break;
@@ -86,6 +102,40 @@ export function createJournalService(deps: JournalDeps): JournalService {
     }
   }
 
+  async function saveWithPendingScreenshot(
+    trade: Trade,
+    screenshotDataUrl: string,
+  ): Promise<SaveTradeResult> {
+    const [existingTrades, knownBalance] = await Promise.all([
+      trades.list().catch(() => [] as Trade[]),
+      settings.getInitialBalance().catch(() => null),
+    ]);
+
+    await enqueue({ op: 'upsertTrade', trade, screenshotDataUrl });
+    return { trade, synced: false, warnings: buildWarnings(trade, existingTrades, knownBalance) };
+  }
+
+  async function signScreenshots(list: readonly Trade[]): Promise<Record<string, string>> {
+    const paths = list
+      .map((trade) => trade.screenshotPath)
+      .filter((path) => path.length > 0);
+    if (paths.length === 0) return {};
+
+    let byPath: Record<string, string>;
+    try {
+      byPath = await screenshots.signedUrls(paths);
+    } catch {
+      return {};
+    }
+
+    const urls: Record<string, string> = {};
+    for (const trade of list) {
+      const url = trade.screenshotPath ? byPath[trade.screenshotPath] : undefined;
+      if (url) urls[trade.id] = url;
+    }
+    return urls;
+  }
+
   return {
     async list() {
       const [tradeList, noTradeDayList, initialBalance] = await Promise.all([
@@ -95,6 +145,8 @@ export function createJournalService(deps: JournalDeps): JournalService {
       ]);
 
       const sortedTrades = [...tradeList].sort((a, b) => a.date.localeCompare(b.date));
+
+      const screenshotUrls = await signScreenshots(sortedTrades);
 
       return {
         trades: sortedTrades,
@@ -110,11 +162,28 @@ export function createJournalService(deps: JournalDeps): JournalService {
           noTradeDays: noTradeDayList,
           initialBalance,
         }),
+        screenshotUrls,
       };
     },
 
-    async saveTrade(input) {
+    async saveTrade(input, screenshotDataUrl) {
       const trade = createTrade(input);
+
+      if (typeof screenshotDataUrl === 'string') {
+        try {
+          trade.screenshotPath = await screenshots.upload(trade.id, screenshotDataUrl);
+        } catch {
+          // Sem conexão: guarda a imagem na fila para subir junto com a operação.
+          return saveWithPendingScreenshot(trade, screenshotDataUrl);
+        }
+      } else if (screenshotDataUrl === null) {
+        trade.screenshotPath = '';
+        try {
+          await screenshots.remove(trade.id);
+        } catch {
+          // A remoção do print é best-effort; a operação continua válida sem ele.
+        }
+      }
 
       const [existingTrades, knownBalance] = await Promise.all([
         trades.list().catch(() => [] as Trade[]),
@@ -135,6 +204,11 @@ export function createJournalService(deps: JournalDeps): JournalService {
     async deleteTrade(id) {
       try {
         await trades.remove(id);
+        try {
+          await screenshots.remove(id);
+        } catch {
+          // Sem print ou sem rede: ignora, o registro já foi removido.
+        }
         return { synced: true };
       } catch {
         await enqueue({ op: 'deleteTrade', id });

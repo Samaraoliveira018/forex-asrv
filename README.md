@@ -2,7 +2,8 @@
 
 Diário de trading com disciplina operacional: no máximo 2 operações por dia, perda
 individual limitada a 25% do saldo inicial do dia, break even técnico e ofensiva de dias.
-Os dados ficam no Supabase (fonte da verdade) e o cliente mantém uma fila offline.
+Cada operação pode levar um **print** (foto ou captura de tela). Os dados ficam no Supabase
+(fonte da verdade) e o cliente mantém uma fila offline.
 
 ## Links
 
@@ -74,6 +75,20 @@ O app mobile usa `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY`, c
 fallback público em `mobile/src/bff.ts`.
 
 **Nunca** use `service_role` no cliente. Ela ignora RLS e não pode ir para o bundle.
+
+## Prints das operações
+
+O print é opcional e vive em um bucket **privado** do Supabase Storage:
+
+- bucket `trade-screenshots`, caminho `{user_id}/{trade_id}.jpg`;
+- a coluna `trades.screenshot_path` guarda apenas o caminho, nunca uma URL pública;
+- a leitura é feita por **URL assinada** (TTL de 24h), e a policy `trade_screenshots_own`
+  restringe o acesso à pasta do próprio usuário (`foldername[1] = auth.uid()`);
+- web (`frontend/`) e app atual (`index.html`) comprimem a imagem para JPEG (máx. 1280px)
+  antes do upload; o mobile usa o `expo-image-picker`;
+- offline, o print entra na fila junto com a operação (`uploadScreenshot`) e sobe ao reconectar.
+
+O schema e a seção de Storage ficam em [`backend/supabase/schema.sql`](backend/supabase/schema.sql).
 
 ## TDD
 

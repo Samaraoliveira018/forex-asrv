@@ -27,6 +27,7 @@ export function emptySnapshot(
     initialBalance,
     stats: calculateStats({ trades, initialBalance, today }),
     discipline: evaluateDiscipline({ trades, noTradeDays, initialBalance }),
+    screenshotUrls: {},
   };
 }
 
@@ -48,7 +49,7 @@ export function createFakeBff(options: FakeBffOptions = {}) {
 
   const list = jest.fn(async () => state.snapshot);
 
-  const saveTrade = jest.fn(async (input: TradeInput) => {
+  const saveTrade = jest.fn(async (input: TradeInput, _screenshotDataUrl?: string | null) => {
     const trade = createTrade(input);
     state.snapshot = emptySnapshot(
       [...state.snapshot.trades.filter((item) => item.id !== trade.id), trade],

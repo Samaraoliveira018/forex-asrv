@@ -79,10 +79,10 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
       .catch(() => setPending(0));
   }, [bff, snapshot]);
 
-  async function handleSaveTrade(input: TradeInput) {
+  async function handleSaveTrade(input: TradeInput, screenshotDataUrl?: string | null) {
     setError('');
     setWarnings([]);
-    const result = await bff.journal.saveTrade(input);
+    const result = await bff.journal.saveTrade(input, screenshotDataUrl);
     const messages = [...result.warnings];
     if (!result.synced) {
       messages.push('Salvo no dispositivo; será enviado ao reconectar.');
@@ -472,6 +472,7 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
       <TradeModal
         open={modalOpen}
         trade={editing}
+        screenshotUrl={editing ? snapshot?.screenshotUrls[editing.id] : undefined}
         onClose={() => {
           setModalOpen(false);
           setEditing(null);

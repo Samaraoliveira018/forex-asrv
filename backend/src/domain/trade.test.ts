@@ -40,7 +40,18 @@ describe('createTrade', () => {
       lots: 1,
       pnl: 10,
       notes: '',
+      screenshotPath: '',
     });
+  });
+
+  it('normaliza o caminho do print e ignora valores inseguros', () => {
+    expect(createTrade({ ...input, screenshotPath: '  user-1/t1.jpg ' }).screenshotPath).toBe(
+      'user-1/t1.jpg',
+    );
+    expect(createTrade({ ...input, screenshotPath: '/user-1/t1.jpg' }).screenshotPath).toBe(
+      'user-1/t1.jpg',
+    );
+    expect(createTrade({ ...input, screenshotPath: '../../etc/passwd' }).screenshotPath).toBe('');
   });
 
   it('gera um id quando nenhum é informado', () => {

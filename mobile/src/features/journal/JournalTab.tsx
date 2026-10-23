@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { JournalSnapshot, Trade } from '@asrv/backend';
 import {
   Badge,
@@ -236,6 +236,7 @@ function JournalGrid({
             lots={item.trade.lots}
             pnl={item.trade.pnl}
             notes={item.trade.notes}
+            screenshotUrl={snapshot.screenshotUrls[item.trade.id]}
             hidden={hidden}
             onEdit={() => onEditTrade(item.trade)}
             onDelete={() => onDeleteTrade(item.trade)}
@@ -291,6 +292,18 @@ function JournalList({
                 {signedValue(trade.pnl, hidden)}
               </Text>
               <View style={styles.listActions}>
+                {!hidden && snapshot.screenshotUrls[trade.id] ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Ver print de ${trade.asset} de ${formatDate(trade.date)}`}
+                    onPress={() => {
+                      void Linking.openURL(snapshot.screenshotUrls[trade.id]);
+                    }}
+                    style={styles.listAction}
+                  >
+                    <Text style={styles.actionText}>Print</Text>
+                  </Pressable>
+                ) : null}
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`Editar ${trade.asset} de ${formatDate(trade.date)}`}

@@ -896,6 +896,28 @@ body.asrv-app {
   font-style: italic;
 }
 
+.asrv-trade-card__shot {
+  display: block;
+  margin-top: 8px;
+  overflow: hidden;
+  border: 1px solid var(--asrv-color-border);
+  border-radius: var(--asrv-radius-sm);
+  background: rgba(17, 24, 39, 0.55);
+  line-height: 0;
+  transition: border-color 0.15s ease;
+}
+
+.asrv-trade-card__shot:hover {
+  border-color: var(--asrv-color-primary);
+}
+
+.asrv-trade-card__shot img {
+  display: block;
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+}
+
 .asrv-trade-card__actions {
   display: flex;
   align-items: center;

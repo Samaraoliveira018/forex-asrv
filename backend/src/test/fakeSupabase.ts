@@ -25,10 +25,47 @@ export class FakeSupabase implements SupabaseClientLike {
   offline = false;
   authListener: ((event: string, session: unknown) => void) | null = null;
 
+  /** Objetos por bucket: { 'trade-screenshots': { 'user-1/t1.jpg': bytes } }. */
+  buckets: Record<string, Record<string, Uint8Array>> = {};
+  storageFail = false;
+
   from(table: string): FakeQuery {
     if (this.offline) throw new Error('offline');
     return new FakeQuery(this, table);
   }
+
+  storage = {
+    from: (bucket: string) => ({
+      upload: async (
+        path: string,
+        file: Uint8Array,
+        _options?: { contentType?: string; upsert?: boolean },
+      ): Promise<QueryResult> => {
+        if (this.storageFail) return { data: null, error: { message: 'offline' } };
+        this.buckets[bucket] = this.buckets[bucket] ?? {};
+        this.buckets[bucket][path] = file;
+        return { data: { path }, error: null };
+      },
+
+      createSignedUrls: async (paths: string[], _expiresIn: number): Promise<QueryResult> => {
+        if (this.storageFail) return { data: null, error: { message: 'offline' } };
+        return {
+          data: paths.map((path) => ({
+            path,
+            signedUrl: `https://storage.test/${bucket}/${path}?token=teste`,
+            error: null,
+          })),
+          error: null,
+        };
+      },
+
+      remove: async (paths: string[]): Promise<QueryResult> => {
+        if (this.storageFail) return { data: null, error: { message: 'offline' } };
+        for (const path of paths) delete this.buckets[bucket]?.[path];
+        return { data: null, error: null };
+      },
+    }),
+  };
 
   auth = {
     getSession: async (): Promise<QueryResult> => {

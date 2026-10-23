@@ -11,6 +11,9 @@ export type BackendErrorCode =
   | 'NO_TRADE_DELETE_FAILED'
   | 'SETTINGS_READ_FAILED'
   | 'SETTINGS_WRITE_FAILED'
+  | 'SCREENSHOT_UPLOAD_FAILED'
+  | 'SCREENSHOT_URL_FAILED'
+  | 'SCREENSHOT_DELETE_FAILED'
   | 'MAPPING_FAILED';
 
 export class BackendError extends Error {

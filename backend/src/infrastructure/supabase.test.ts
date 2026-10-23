@@ -3,6 +3,7 @@ import { FakeSupabase } from '../test/fakeSupabase';
 import {
   createSupabaseAuthGateway,
   createSupabaseNoTradeDayRepository,
+  createSupabaseScreenshotStorage,
   createSupabaseSettingsRepository,
   createSupabaseTradeRepository,
 } from './supabaseAdapters';
@@ -62,6 +63,7 @@ describe('SupabaseTradeRepository', () => {
       lots: 0.5,
       pnl: -10.5,
       notes: '',
+      screenshotPath: '',
     });
   });
 
@@ -76,6 +78,7 @@ describe('SupabaseTradeRepository', () => {
       lots: 1,
       pnl: 10,
       notes: '',
+      screenshotPath: '',
     });
 
     expect(client.tables.trades).toEqual([
@@ -90,6 +93,7 @@ describe('SupabaseTradeRepository', () => {
       lots: 1,
       pnl: 25,
       notes: 'editado',
+      screenshotPath: '',
     });
 
     expect(client.tables.trades).toHaveLength(1);
@@ -197,5 +201,64 @@ describe('SupabaseAuthGateway', () => {
       { userId: 'user-1', email: 'samara@example.com' },
       null,
     ]);
+  });
+});
+
+describe('SupabaseScreenshotStorage', () => {
+  // "AAECAwQ=" decodifica para os bytes [0, 1, 2, 3, 4].
+  const jpegDataUrl = 'data:image/jpeg;base64,AAECAwQ=';
+
+  it('sobe o print no bucket, isolado pela pasta do usuário', async () => {
+    const client = new FakeSupabase();
+    const storage = createSupabaseScreenshotStorage(client, () => 'user-1');
+
+    const path = await storage.upload('t1', jpegDataUrl);
+
+    expect(path).toBe('user-1/t1.jpg');
+    const bytes = client.buckets['trade-screenshots']?.['user-1/t1.jpg'];
+    expect(Array.from(bytes ?? [])).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  it('assina as URLs dos prints informados', async () => {
+    const client = new FakeSupabase();
+    const storage = createSupabaseScreenshotStorage(client, () => 'user-1');
+
+    const urls = await storage.signedUrls(['user-1/t1.jpg', 'user-1/t2.jpg', '']);
+
+    expect(Object.keys(urls)).toEqual(['user-1/t1.jpg', 'user-1/t2.jpg']);
+    expect(urls['user-1/t1.jpg']).toContain('trade-screenshots/user-1/t1.jpg');
+  });
+
+  it('não chama o Storage quando a lista de caminhos está vazia', async () => {
+    const client = new FakeSupabase();
+    const storage = createSupabaseScreenshotStorage(client, () => 'user-1');
+
+    expect(await storage.signedUrls([])).toEqual({});
+  });
+
+  it('remove o print e traduz falhas em BackendError', async () => {
+    const client = new FakeSupabase();
+    const storage = createSupabaseScreenshotStorage(client, () => 'user-1');
+
+    await storage.upload('t1', jpegDataUrl);
+    await storage.remove('t1');
+    expect(client.buckets['trade-screenshots']?.['user-1/t1.jpg']).toBeUndefined();
+
+    client.storageFail = true;
+    await expect(storage.upload('t2', jpegDataUrl)).rejects.toMatchObject({
+      code: 'SCREENSHOT_UPLOAD_FAILED',
+    });
+    await expect(storage.signedUrls(['user-1/t1.jpg'])).rejects.toMatchObject({
+      code: 'SCREENSHOT_URL_FAILED',
+    });
+  });
+
+  it('rejeita um valor que não é data URL', async () => {
+    const client = new FakeSupabase();
+    const storage = createSupabaseScreenshotStorage(client, () => 'user-1');
+
+    await expect(storage.upload('t1', 'nao-e-data-url')).rejects.toMatchObject({
+      code: 'SCREENSHOT_UPLOAD_FAILED',
+    });
   });
 });

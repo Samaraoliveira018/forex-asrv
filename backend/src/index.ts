@@ -36,6 +36,7 @@ export type {
   NoTradeDayRepository,
   PendingJob,
   PendingJobStorage,
+  ScreenshotStorage,
   SettingsRepository,
   TradeRepository,
 } from './application/ports';
@@ -47,8 +48,10 @@ export { BackendError } from './infrastructure/errors';
 export type { BackendErrorCode } from './infrastructure/errors';
 
 export {
+  SCREENSHOT_BUCKET,
   createSupabaseAuthGateway,
   createSupabaseNoTradeDayRepository,
+  createSupabaseScreenshotStorage,
   createSupabaseSettingsRepository,
   createSupabaseTradeRepository,
 } from './infrastructure/supabaseAdapters';

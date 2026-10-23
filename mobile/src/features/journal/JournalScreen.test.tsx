@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { createTrade } from '@asrv/backend';
 import { BffProvider } from '../../BffContext';
 import { createFakeBff, emptySnapshot, localToday } from '../../test/fakeBff';
@@ -83,9 +84,34 @@ describe('JournalScreen (mobile)', () => {
           lots: 0.5,
           pnl: -25,
         }),
+        undefined,
       );
     });
     expect(await screen.findByText('GBPUSD')).toBeTruthy();
+  });
+
+  it('anexa um print à operação', async () => {
+    const { fake } = await renderJournal();
+
+    (ImagePicker.launchImageLibraryAsync as jest.Mock).mockResolvedValueOnce({
+      canceled: false,
+      assets: [{ base64: 'AAECAwQ=', mimeType: 'image/jpeg' }],
+    });
+
+    await openNewTradeModal();
+    await fireEvent.changeText(screen.getByLabelText('Ativo'), 'EURUSD');
+    await fireEvent.changeText(screen.getByLabelText('Resultado'), '10');
+    await fireEvent.press(screen.getByTestId('attach-screenshot'));
+
+    await waitFor(() => expect(screen.getByText('Trocar print')).toBeTruthy());
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar Operação' }));
+
+    await waitFor(() => {
+      expect(fake.mocks.saveTrade).toHaveBeenCalledWith(
+        expect.objectContaining({ asset: 'EURUSD' }),
+        'data:image/jpeg;base64,AAECAwQ=',
+      );
+    });
   });
 
   it('edita uma operação existente mantendo o id', async () => {
@@ -100,6 +126,7 @@ describe('JournalScreen (mobile)', () => {
     await waitFor(() => {
       expect(fake.mocks.saveTrade).toHaveBeenCalledWith(
         expect.objectContaining({ id: 't1', pnl: 150 }),
+        undefined,
       );
     });
     expect((await screen.findAllByText('US$ 1.150,00')).length).toBeGreaterThan(0);
