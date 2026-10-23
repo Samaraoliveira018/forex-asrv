@@ -60,9 +60,9 @@ describe('evaluateDiscipline', () => {
     );
   });
 
-  it('viola quando a perda individual passa de 20% do capital inicial', () => {
+  it('viola quando a perda individual passa de 25% do saldo inicial do dia', () => {
     const result = evaluateDiscipline({
-      trades: [trade({ date: '2026-10-01', pnl: -200.01 })],
+      trades: [trade({ date: '2026-10-01', pnl: -250.01 })],
       noTradeDays: [],
       initialBalance: 1000,
     });
@@ -73,15 +73,46 @@ describe('evaluateDiscipline', () => {
     );
   });
 
-  it('não viola quando a perda é exatamente 20%', () => {
+  it('não viola quando a perda é exatamente 25% do saldo inicial do dia', () => {
     const result = evaluateDiscipline({
-      trades: [trade({ date: '2026-10-01', pnl: -200 })],
+      trades: [trade({ date: '2026-10-01', pnl: -250 })],
       noTradeDays: [],
       initialBalance: 1000,
     });
 
     expect(result.violations).toEqual([]);
     expect(result.streak).toBe(1);
+  });
+
+  it('usa o saldo de abertura do dia como base (resultado dos dias anteriores)', () => {
+    const result = evaluateDiscipline({
+      trades: [
+        trade({ date: '2026-10-01', pnl: 500 }),
+        trade({ date: '2026-10-02', pnl: -300 }),
+      ],
+      noTradeDays: [],
+      initialBalance: 1000,
+    });
+
+    // O dia 02 abre com 1500, então o limite é 375. A perda de 300 está dentro.
+    expect(result.violations).toEqual([]);
+    expect(result.streak).toBe(2);
+  });
+
+  it('viola quando a perda passa de 25% do saldo de abertura do dia', () => {
+    const result = evaluateDiscipline({
+      trades: [
+        trade({ date: '2026-10-01', pnl: 500 }),
+        trade({ date: '2026-10-02', pnl: -375.01 }),
+      ],
+      noTradeDays: [],
+      initialBalance: 1000,
+    });
+
+    expect(result.streak).toBe(0);
+    expect(result.violations).toContainEqual(
+      expect.objectContaining({ kind: 'LOSS_OVER_LIMIT', date: '2026-10-02' }),
+    );
   });
 
   it('não trata perda dentro do empate técnico como violação', () => {

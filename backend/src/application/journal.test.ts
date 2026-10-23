@@ -188,7 +188,7 @@ describe('createJournalService', () => {
     expect(trades.items).toHaveLength(3);
   });
 
-  it('avisa quando a perda individual passa de 20% do capital', async () => {
+  it('avisa quando a perda individual passa de 25% do saldo inicial do dia', async () => {
     const { service } = setup();
 
     const result = await service.saveTrade({
@@ -196,10 +196,35 @@ describe('createJournalService', () => {
       asset: 'EURUSD',
       type: 'Compra',
       lots: 1,
-      pnl: -200.01,
+      pnl: -250.01,
     });
 
-    expect(result.warnings.join(' ')).toContain('20%');
+    expect(result.warnings.join(' ')).toContain('25%');
+  });
+
+  it('usa o saldo de abertura do dia no aviso de perda', async () => {
+    const { service, trades } = setup();
+    trades.items = [
+      createTrade({
+        id: 'gain',
+        date: '2026-10-20',
+        asset: 'EURUSD',
+        type: 'Compra',
+        lots: 1,
+        pnl: 1000,
+      }),
+    ];
+
+    const result = await service.saveTrade({
+      date: '2026-10-21',
+      asset: 'EURUSD',
+      type: 'Compra',
+      lots: 1,
+      pnl: -300,
+    });
+
+    // O dia 21 abre com 2000, então o limite é 500. A perda de 300 não gera aviso.
+    expect(result.warnings.join(' ')).not.toContain('saldo inicial do dia');
   });
 
   it('enfileira a operação quando o repositório está offline', async () => {

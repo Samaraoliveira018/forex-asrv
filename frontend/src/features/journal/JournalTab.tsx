@@ -124,7 +124,7 @@ export function JournalTab({
       <div>
         <h1 className="asrv-page-title">Diário de Trading</h1>
         <p className="asrv-page-subtitle">
-          Regras: Máx. 2 operações/dia | Nenhuma perda individual &gt; 20% do capital inicial
+          Regras: Máx. 2 operações/dia | Nenhuma perda individual &gt; 25% do saldo inicial do dia
         </p>
       </div>
 

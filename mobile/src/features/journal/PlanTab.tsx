@@ -24,8 +24,8 @@ export function PlanTab({
         <View style={styles.rules}>
           <Text style={styles.rule}>⚡ Limite estrito: Máximo de 2 operações por dia.</Text>
           <Text style={styles.rule}>
-            🛑 Perda Individual Máxima: Nenhuma operação pode ter prejuízo superior a 20% do
-            capital inicial.
+            🛑 Perda Individual Máxima: Nenhuma operação pode ter prejuízo superior a 25% do
+            saldo inicial do dia (capital inicial + resultado dos dias anteriores).
           </Text>
           <Text style={styles.rule}>
             ⚖️ Break Even (0x0): Posições encerradas no zero a zero preservam o capital.

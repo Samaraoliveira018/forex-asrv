@@ -1,7 +1,7 @@
 import { DomainError } from './errors';
 
 export const MAX_TRADES_PER_DAY = 2;
-export const MAX_LOSS_RATIO = 0.2;
+export const MAX_LOSS_RATIO = 0.25;
 export const BREAK_EVEN_TOLERANCE = 0.3;
 
 export type TradeType = 'Compra' | 'Venda';

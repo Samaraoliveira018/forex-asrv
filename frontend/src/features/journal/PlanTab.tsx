@@ -27,8 +27,8 @@ export function PlanTab({
             </p>
             <p>
               🛑 <strong>Perda Individual Máxima:</strong> Nenhuma operação pode ter um prejuízo
-              superior a 20% do capital inicial (taxas de spread mínimas são tratadas como Break
-              Even).
+              superior a 25% do saldo inicial do dia — capital inicial mais o resultado acumulado
+              dos dias anteriores (taxas de spread mínimas são tratadas como Break Even).
             </p>
             <p>
               ⚖️ <strong>Break Even (0x0):</strong> Posições encerradas no zero a zero ou com

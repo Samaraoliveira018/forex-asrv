@@ -125,7 +125,7 @@ export function JournalTab({
       <View>
         <Text style={styles.pageTitle}>Diário de Trading</Text>
         <Text style={styles.pageSubtitle}>
-          Máx. 2 operações/dia | Nenhuma perda individual {'>'} 20% do capital inicial
+          Máx. 2 operações/dia | Nenhuma perda individual {'>'} 25% do saldo inicial do dia
         </Text>
       </View>
 

@@ -38,13 +38,14 @@ export function evaluateDiscipline(input: DisciplineInput): DisciplineResult {
       });
     }
 
-    const maxLoss = input.initialBalance * MAX_LOSS_RATIO;
+    const openingBalance = openingBalanceBefore(date, input.trades, input.initialBalance);
+    const maxLoss = openingBalance * MAX_LOSS_RATIO;
     for (const trade of trades) {
       if (trade.pnl < 0 && !isBreakEven(trade.pnl) && Math.abs(trade.pnl) > maxLoss) {
         violations.push({
           kind: 'LOSS_OVER_LIMIT',
           date,
-          message: `Perda de ${formatMoney(trade.pnl)} em ${date} passou de ${formatMoney(maxLoss)} (${MAX_LOSS_RATIO * 100}% do capital inicial).`,
+          message: `Perda de ${formatMoney(trade.pnl)} em ${date} passou de ${formatMoney(maxLoss)} (${MAX_LOSS_RATIO * 100}% do saldo inicial do dia).`,
         });
       }
     }
@@ -87,6 +88,20 @@ function latestDate(byDate: Map<string, Trade[]>): string | undefined {
     if (!latest || date > latest) latest = date;
   }
   return latest;
+}
+
+// Saldo de abertura do dia: capital inicial + resultado acumulado dos dias anteriores.
+// O dia da operação não entra na base (o limite é definido antes de operar).
+function openingBalanceBefore(
+  date: string,
+  trades: readonly Trade[],
+  initialBalance: number,
+): number {
+  const previousPnl = trades
+    .filter((trade) => trade.date < date)
+    .reduce((sum, trade) => sum + trade.pnl, 0);
+
+  return initialBalance + previousPnl;
 }
 
 function formatMoney(value: number): string {

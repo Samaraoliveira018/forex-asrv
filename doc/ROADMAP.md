@@ -8,7 +8,7 @@
 ## 1. Visão
 
 Um diário de trading pessoal que força **disciplina operacional** (máximo 2 trades/dia,
-perda individual ≤ 20% do capital e ofensiva de dias) e que **nunca perde um registro**,
+perda individual ≤ 25% do saldo inicial do dia e ofensiva de dias) e que **nunca perde um registro**,
 esteja você online, offline ou trocando de dispositivo.
 
 ### Objetivos
@@ -31,7 +31,7 @@ esteja você online, offline ou trocando de dispositivo.
 | Área | Entregue |
 |---|---|
 | App | Diário, dashboard, plano operacional e estatísticas em página estática |
-| Regras de disciplina | Limite de 2 trades/dia, perda máxima de 20%, break even, ofensiva com metas (3/7/14/30/60 dias) |
+| Regras de disciplina | Limite de 2 trades/dia, perda máxima de 25% do saldo inicial do dia, break even, ofensiva com metas (3/7/14/30/60 dias) |
 | Dados | Cache em `localStorage` com migração de chaves antigas e sanitização de dados |
 | Nuvem | Supabase (Postgres + Auth + RLS) com login por e-mail/senha |
 | Sincronização | Online-first, fila offline, envio ao reconectar, sync manual e migração assistida do histórico local |

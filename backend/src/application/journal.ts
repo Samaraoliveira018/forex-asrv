@@ -232,12 +232,18 @@ function buildWarnings(
 
   if (initialBalance === null) return warnings;
 
+  const openingBalance =
+    initialBalance +
+    existingTrades
+      .filter((item) => item.date < trade.date)
+      .reduce((sum, item) => sum + item.pnl, 0);
+
   if (
     trade.pnl < 0 &&
     !isBreakEven(trade.pnl) &&
-    Math.abs(trade.pnl) > initialBalance * MAX_LOSS_RATIO
+    Math.abs(trade.pnl) > openingBalance * MAX_LOSS_RATIO
   ) {
-    warnings.push(`Perda acima de ${MAX_LOSS_RATIO * 100}% do capital inicial.`);
+    warnings.push(`Perda acima de ${MAX_LOSS_RATIO * 100}% do saldo inicial do dia.`);
   }
 
   const balance =

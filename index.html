@@ -246,7 +246,7 @@
         <!-- Section Title -->
         <div>
           <h2 class="asrv-page-title">Diário de Trading</h2>
-          <p class="asrv-page-subtitle">Regras: Máx. 2 operações/dia | Nenhuma perda individual &gt; 20% do capital inicial</p>
+          <p class="asrv-page-subtitle">Regras: Máx. 2 operações/dia | Nenhuma perda individual &gt; 25% do saldo inicial do dia</p>
         </div>
 
         <!-- 4 MAIN KPI CARDS -->
@@ -372,7 +372,7 @@
             <h3 class="asrv-section-title">Regras de Ouro da Plataforma</h3>
             <div class="asrv-alert asrv-alert--danger space-y-2 text-xs">
               <p>⚡ <strong>Limite estrito:</strong> Máximo de 2 operações por dia.</p>
-              <p>🛑 <strong>Perda Individual Máxima:</strong> Nenhuma operação pode ter um prejuízo superior a 20% do capital inicial (taxas de spread mínimas são tratadas como Break Even).</p>
+              <p>🛑 <strong>Perda Individual Máxima:</strong> Nenhuma operação pode ter um prejuízo superior a 25% do saldo inicial do dia — capital inicial mais o resultado acumulado dos dias anteriores (taxas de spread mínimas são tratadas como Break Even).</p>
               <p>⚖️ <strong>Break Even (0x0):</strong> Posições encerradas no zero a zero ou com pequenas variações de spread preservam o capital.</p>
               <p>🛡️ <strong>Saber Ficar de Fora:</strong> Registrar dias em que você não operou mantém a sua ofensiva ativa!</p>
               <p>🔥 <strong>Ofensiva & Metas:</strong> Acumule dias de disciplina para alcançar os níveis de 3, 7, 14, 30 e 60 dias.</p>
@@ -1126,14 +1126,18 @@
         dailyTrades[t.date].push(t);
       });
 
-      const maxAllowedSingleLoss = initialBalance * 0.20;
       let ruleViolated = false;
 
       Object.keys(dailyTrades).forEach(date => {
         const dayTrades = dailyTrades[date];
         if (dayTrades.length > 2) ruleViolated = true;
+        // Saldo de abertura do dia: capital inicial + resultado dos dias anteriores.
+        const openingBalance = initialBalance + trades
+          .filter(t => t.date < date)
+          .reduce((sum, t) => sum + t.pnl, 0);
+        const maxAllowedSingleLoss = openingBalance * 0.25;
         dayTrades.forEach(t => {
-          // Ignora micro-prejuízos de spread/taxas considerados Break Even na regra de 20%
+          // Ignora micro-prejuízos de spread/taxas considerados Break Even na regra de 25%
           if (t.pnl < 0 && !isBreakEven(t.pnl) && Math.abs(t.pnl) > maxAllowedSingleLoss) {
             ruleViolated = true;
           }
@@ -1357,12 +1361,16 @@
       }
 
       const tradesOnDate = trades.filter(t => t.date === date && t.id.toString() !== editId);
-      const maxSingleLoss = initialBalance * 0.20;
+      // Limite com base no saldo de abertura do dia: capital inicial + resultado dos dias anteriores.
+      const openingBalance = initialBalance + trades
+        .filter(t => t.date < date)
+        .reduce((sum, t) => sum + t.pnl, 0);
+      const maxSingleLoss = openingBalance * 0.25;
 
       if (tradesOnDate.length >= 2) {
         alert("⚠️ ATENÇÃO: Você já possui 2 operações registradas nesta data! Salvar esta operação irá ZERAR a sua ofensiva!");
       } else if (pnl < 0 && !isBreakEven(pnl) && Math.abs(pnl) > maxSingleLoss) {
-        alert(`⚠️ ATENÇÃO: Esta operação tem um prejuízo de ${Math.abs(pnl).toFixed(2)}, o que ultrapassa o limite máximo individual de 20% do capital inicial (${maxSingleLoss.toFixed(2)}). A sua ofensiva será ZERADA!`);
+        alert(`⚠️ ATENÇÃO: Esta operação tem um prejuízo de ${Math.abs(pnl).toFixed(2)}, o que ultrapassa o limite máximo individual de 25% do saldo inicial do dia (${maxSingleLoss.toFixed(2)}). A sua ofensiva será ZERADA!`);
       }
 
       let savedTrade;

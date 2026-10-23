@@ -1,7 +1,7 @@
 # Diário Trader ASRV
 
 Diário de trading com disciplina operacional: no máximo 2 operações por dia, perda
-individual limitada a 20% do capital inicial, break even técnico e ofensiva de dias.
+individual limitada a 25% do saldo inicial do dia, break even técnico e ofensiva de dias.
 Os dados ficam no Supabase (fonte da verdade) e o cliente mantém uma fila offline.
 
 ## Links

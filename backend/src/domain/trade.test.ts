@@ -129,7 +129,7 @@ describe('isBreakEven', () => {
 describe('regras de disciplina', () => {
   it('mantém os limites usados pelo app atual', () => {
     expect(MAX_TRADES_PER_DAY).toBe(2);
-    expect(MAX_LOSS_RATIO).toBe(0.2);
+    expect(MAX_LOSS_RATIO).toBe(0.25);
     expect(BREAK_EVEN_TOLERANCE).toBe(0.3);
   });
 });
