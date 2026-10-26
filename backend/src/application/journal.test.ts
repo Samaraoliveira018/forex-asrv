@@ -201,6 +201,8 @@ describe('createJournalService', () => {
     const { trades, service } = setup();
     seedTrade(trades, { date: '2026-10-21' });
     seedTrade(trades, { date: '2026-10-21' });
+    seedTrade(trades, { date: '2026-10-21' });
+    seedTrade(trades, { date: '2026-10-21' });
 
     const result = await service.saveTrade({
       date: '2026-10-21',
@@ -212,7 +214,27 @@ describe('createJournalService', () => {
 
     expect(result.synced).toBe(true);
     expect(result.warnings.join(' ').toLowerCase()).toContain('limite');
-    expect(trades.items).toHaveLength(3);
+    expect(trades.items).toHaveLength(5);
+  });
+
+  it('não avisa do limite diário quando a operação é break even', async () => {
+    const { trades, service } = setup();
+    seedTrade(trades, { date: '2026-10-21' });
+    seedTrade(trades, { date: '2026-10-21' });
+    seedTrade(trades, { date: '2026-10-21' });
+    seedTrade(trades, { date: '2026-10-21' });
+
+    const result = await service.saveTrade({
+      date: '2026-10-21',
+      asset: 'EURUSD',
+      type: 'Compra',
+      lots: 1,
+      pnl: 0,
+    });
+
+    expect(result.synced).toBe(true);
+    expect(result.warnings.join(' ').toLowerCase()).not.toContain('limite');
+    expect(trades.items).toHaveLength(5);
   });
 
   it('avisa quando a perda individual passa de 25% do saldo inicial do dia', async () => {

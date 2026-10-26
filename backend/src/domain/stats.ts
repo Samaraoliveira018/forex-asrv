@@ -21,6 +21,8 @@ export interface Stats {
   buyCount: number;
   sellCount: number;
   todayCount: number;
+  /** Operações de hoje que contam para o limite diário (break even não conta). */
+  todayCountedTrades: number;
 }
 
 export function calculateStats(input: StatsInput): Stats {
@@ -37,6 +39,7 @@ export function calculateStats(input: StatsInput): Stats {
   let buyCount = 0;
   let sellCount = 0;
   let todayCount = 0;
+  let todayCountedTrades = 0;
 
   for (const trade of trades) {
     totalPnl += trade.pnl;
@@ -44,7 +47,10 @@ export function calculateStats(input: StatsInput): Stats {
     if (trade.type === 'Compra') buyCount += 1;
     else sellCount += 1;
 
-    if (trade.date === today) todayCount += 1;
+    if (trade.date === today) {
+      todayCount += 1;
+      if (!isBreakEven(trade.pnl)) todayCountedTrades += 1;
+    }
 
     if (isBreakEven(trade.pnl)) {
       breakEvens += 1;
@@ -79,5 +85,6 @@ export function calculateStats(input: StatsInput): Stats {
     buyCount,
     sellCount,
     todayCount,
+    todayCountedTrades,
   };
 }

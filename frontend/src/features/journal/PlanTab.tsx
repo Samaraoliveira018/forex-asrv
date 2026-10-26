@@ -1,8 +1,9 @@
+import { MAX_TRADES_PER_DAY } from '@asrv/backend';
 import { Checkbox, Card } from '@asrv/design-system';
 
 const checklistItems = [
   'Verificar calendário de notícias',
-  'Respeitar o limite de 2 trades diários',
+  `Respeitar o limite de ${MAX_TRADES_PER_DAY} trades diários (break even não conta)`,
   'Mover o Stop para Break Even ao atingir a primeira parcial',
   'Se a oportunidade passou, registrar o dia sem operação',
 ];
@@ -23,7 +24,8 @@ export function PlanTab({
           <h2 className="asrv-section-title mb-3">Regras de Ouro da Plataforma</h2>
           <div className="asrv-alert asrv-alert--danger space-y-2 text-xs leading-relaxed">
             <p>
-              ⚡ <strong>Limite estrito:</strong> Máximo de 2 operações por dia.
+              ⚡ <strong>Limite estrito:</strong> Máximo de {MAX_TRADES_PER_DAY} operações por dia.
+              Break even não conta para o limite.
             </p>
             <p>
               🛑 <strong>Perda Individual Máxima:</strong> Nenhuma operação pode ter um prejuízo
@@ -32,7 +34,7 @@ export function PlanTab({
             </p>
             <p>
               ⚖️ <strong>Break Even (0x0):</strong> Posições encerradas no zero a zero ou com
-              pequenas variações de spread preservam o capital.
+              pequenas variações de spread preservam o capital e não contam no limite diário.
             </p>
             <p>
               🛡️ <strong>Saber Ficar de Fora:</strong> Registrar dias em que você não operou

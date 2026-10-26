@@ -36,6 +36,7 @@ describe('calculateStats', () => {
       buyCount: 0,
       sellCount: 0,
       todayCount: 0,
+      todayCountedTrades: 0,
     });
   });
 
@@ -101,6 +102,23 @@ describe('calculateStats', () => {
     });
 
     expect(stats.todayCount).toBe(2);
+  });
+
+  it('não conta break even nas operações do dia que contam para o limite', () => {
+    const stats = calculateStats({
+      trades: [
+        trade({ date: '2026-10-01', pnl: 10 }),
+        trade({ date: '2026-10-01', pnl: -5 }),
+        trade({ date: '2026-10-01', pnl: 0 }),
+        trade({ date: '2026-10-01', pnl: 0.3 }),
+        trade({ date: '2026-10-02', pnl: 10 }),
+      ],
+      initialBalance: 1000,
+      today: '2026-10-01',
+    });
+
+    expect(stats.todayCount).toBe(4);
+    expect(stats.todayCountedTrades).toBe(2);
   });
 
   it('não divide por zero quando o capital inicial é zero', () => {

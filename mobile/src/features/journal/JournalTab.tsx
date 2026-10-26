@@ -1,5 +1,5 @@
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
-import type { JournalSnapshot, Trade } from '@asrv/backend';
+import { MAX_TRADES_PER_DAY, type JournalSnapshot, type Trade } from '@asrv/backend';
 import {
   Badge,
   Button,
@@ -52,7 +52,7 @@ export function JournalTab({
 }) {
   const { stats, discipline } = snapshot;
   const nextMilestone = milestones.find((milestone) => discipline.streak < milestone) ?? 60;
-  const todayCount = stats.todayCount;
+  const todayCount = stats.todayCountedTrades;
 
   return (
     <View style={styles.screen}>
@@ -71,9 +71,15 @@ export function JournalTab({
       <View style={styles.actions}>
         <Badge
           pill
-          tone={todayCount > 2 ? 'danger' : todayCount === 2 ? 'warning' : 'neutral'}
+          tone={
+            todayCount > MAX_TRADES_PER_DAY
+              ? 'danger'
+              : todayCount === MAX_TRADES_PER_DAY
+                ? 'warning'
+                : 'neutral'
+          }
         >
-          Hoje: {todayCount}/2 trades
+          Hoje: {todayCount}/{MAX_TRADES_PER_DAY} trades
         </Badge>
         <Button variant="success" size="sm" onPress={onNoTradeDay}>
           Dia sem operar
@@ -125,7 +131,8 @@ export function JournalTab({
       <View>
         <Text style={styles.pageTitle}>Diário de Trading</Text>
         <Text style={styles.pageSubtitle}>
-          Máx. 2 operações/dia | Nenhuma perda individual {'>'} 25% do saldo inicial do dia
+          Máx. {MAX_TRADES_PER_DAY} operações/dia (break even não conta) | Nenhuma perda individual{' '}
+          {'>'} 25% do saldo inicial do dia
         </Text>
       </View>
 

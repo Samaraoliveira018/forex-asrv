@@ -30,11 +30,14 @@ export function evaluateDiscipline(input: DisciplineInput): DisciplineResult {
   }
 
   for (const [date, trades] of byDate) {
-    if (trades.length > MAX_TRADES_PER_DAY) {
+    // Break even não conta para o limite diário: só operações com resultado relevante.
+    const countedTrades = trades.filter((trade) => !isBreakEven(trade.pnl));
+
+    if (countedTrades.length > MAX_TRADES_PER_DAY) {
       violations.push({
         kind: 'TOO_MANY_TRADES',
         date,
-        message: `${trades.length} operações em ${date}; o limite é ${MAX_TRADES_PER_DAY} por dia.`,
+        message: `${countedTrades.length} operações em ${date}; o limite é ${MAX_TRADES_PER_DAY} por dia (break even não conta).`,
       });
     }
 

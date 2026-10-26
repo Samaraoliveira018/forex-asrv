@@ -1,4 +1,4 @@
-import type { JournalSnapshot, Trade } from '@asrv/backend';
+import { MAX_TRADES_PER_DAY, type JournalSnapshot, type Trade } from '@asrv/backend';
 import {
   Badge,
   Button,
@@ -46,7 +46,7 @@ export function JournalTab({
 }) {
   const { stats, discipline } = snapshot;
   const nextMilestone = milestones.find((milestone) => discipline.streak < milestone) ?? 60;
-  const todayCount = stats.todayCount;
+  const todayCount = stats.todayCountedTrades;
 
   return (
     <div className="space-y-6">
@@ -62,13 +62,21 @@ export function JournalTab({
         />
 
         <div className="flex flex-wrap items-center gap-2">
-          <Badge
-            tone={todayCount > 2 ? 'danger' : todayCount === 2 ? 'warning' : 'neutral'}
-            pill
-          >
-            <i className="fa-solid fa-gauge-high mr-1.5" aria-hidden="true" />
-            Hoje: {todayCount}/2 trades
-          </Badge>
+          <span title="Break even não conta para o limite diário">
+            <Badge
+              tone={
+                todayCount > MAX_TRADES_PER_DAY
+                  ? 'danger'
+                  : todayCount === MAX_TRADES_PER_DAY
+                    ? 'warning'
+                    : 'neutral'
+              }
+              pill
+            >
+              <i className="fa-solid fa-gauge-high mr-1.5" aria-hidden="true" />
+              Hoje: {todayCount}/{MAX_TRADES_PER_DAY} trades
+            </Badge>
+          </span>
 
           <Button variant="success" size="sm" onClick={onNoTradeDay}>
             <i className="fa-solid fa-calendar-check" aria-hidden="true" />
@@ -124,7 +132,8 @@ export function JournalTab({
       <div>
         <h1 className="asrv-page-title">Diário de Trading</h1>
         <p className="asrv-page-subtitle">
-          Regras: Máx. 2 operações/dia | Nenhuma perda individual &gt; 25% do saldo inicial do dia
+          Regras: Máx. {MAX_TRADES_PER_DAY} operações/dia (break even não conta) | Nenhuma perda
+          individual &gt; 25% do saldo inicial do dia
         </p>
       </div>
 

@@ -1,9 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { MAX_TRADES_PER_DAY } from '@asrv/backend';
 import { Card, Checkbox, colors, spacing, typography } from '@asrv/design-system';
 
 const checklistItems = [
   'Verificar calendário de notícias',
-  'Respeitar o limite de 2 trades diários',
+  `Respeitar o limite de ${MAX_TRADES_PER_DAY} trades diários (break even não conta)`,
   'Mover o Stop para Break Even ao atingir a primeira parcial',
   'Se a oportunidade passou, registrar o dia sem operação',
 ];
@@ -22,13 +23,17 @@ export function PlanTab({
       <Card>
         <Text style={styles.sectionTitle}>Regras de Ouro da Plataforma</Text>
         <View style={styles.rules}>
-          <Text style={styles.rule}>⚡ Limite estrito: Máximo de 2 operações por dia.</Text>
+          <Text style={styles.rule}>
+            ⚡ Limite estrito: Máximo de {MAX_TRADES_PER_DAY} operações por dia. Break even não
+            conta para o limite.
+          </Text>
           <Text style={styles.rule}>
             🛑 Perda Individual Máxima: Nenhuma operação pode ter prejuízo superior a 25% do
             saldo inicial do dia (capital inicial + resultado dos dias anteriores).
           </Text>
           <Text style={styles.rule}>
-            ⚖️ Break Even (0x0): Posições encerradas no zero a zero preservam o capital.
+            ⚖️ Break Even (0x0): Posições encerradas no zero a zero preservam o capital e não
+            contam no limite diário.
           </Text>
           <Text style={styles.rule}>
             🛡️ Saber Ficar de Fora: Registrar dias em que não operou mantém a ofensiva ativa.

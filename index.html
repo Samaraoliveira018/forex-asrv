@@ -149,7 +149,7 @@
         <span class="hidden whitespace-nowrap text-sm font-semibold tracking-wide text-white lg:inline">Diário Trader ASRV</span>
         
         <!-- OFENSIVA STREAK (DUOLINGO STYLE) -->
-        <div class="asrv-topbar__streak" title="Dias seguidos de disciplina (operando com até 2 trades sem estourar limites, ou registrando dia sem operações)">
+        <div class="asrv-topbar__streak" title="Dias seguidos de disciplina (operando com até 4 trades válidos por dia, sem estourar limites, ou registrando dia sem operações; break even não conta)">
           <i class="fa-solid fa-fire text-orange-500 animate-bounce"></i>
           <span id="streak-count">0</span>
           <span class="hidden font-medium text-[11px] text-orange-300 lg:inline">dias de disciplina</span>
@@ -187,8 +187,8 @@
 
           <div class="flex flex-wrap items-center gap-2">
             <!-- Limite Diário Badge -->
-            <div id="today-limit-badge" class="asrv-badge asrv-badge--neutral asrv-badge--pill">
-              <i class="fa-solid fa-gauge-high"></i> Hoje: <span id="today-trade-count">0</span>/2 trades
+            <div id="today-limit-badge" class="asrv-badge asrv-badge--neutral asrv-badge--pill" title="Break even não conta para o limite diário">
+              <i class="fa-solid fa-gauge-high"></i> Hoje: <span id="today-trade-count">0</span>/4 trades
             </div>
 
             <!-- Botão Marcar Dia Sem Operar -->
@@ -246,7 +246,7 @@
         <!-- Section Title -->
         <div>
           <h2 class="asrv-page-title">Diário de Trading</h2>
-          <p class="asrv-page-subtitle">Regras: Máx. 2 operações/dia | Nenhuma perda individual &gt; 25% do saldo inicial do dia</p>
+          <p class="asrv-page-subtitle">Regras: Máx. 4 operações/dia (break even não conta) | Nenhuma perda individual &gt; 25% do saldo inicial do dia</p>
         </div>
 
         <!-- 4 MAIN KPI CARDS -->
@@ -371,9 +371,9 @@
           <div class="asrv-card space-y-3">
             <h3 class="asrv-section-title">Regras de Ouro da Plataforma</h3>
             <div class="asrv-alert asrv-alert--danger space-y-2 text-xs">
-              <p>⚡ <strong>Limite estrito:</strong> Máximo de 2 operações por dia.</p>
+              <p>⚡ <strong>Limite estrito:</strong> Máximo de 4 operações por dia. Break even não conta para o limite.</p>
               <p>🛑 <strong>Perda Individual Máxima:</strong> Nenhuma operação pode ter um prejuízo superior a 25% do saldo inicial do dia — capital inicial mais o resultado acumulado dos dias anteriores (taxas de spread mínimas são tratadas como Break Even).</p>
-              <p>⚖️ <strong>Break Even (0x0):</strong> Posições encerradas no zero a zero ou com pequenas variações de spread preservam o capital.</p>
+              <p>⚖️ <strong>Break Even (0x0):</strong> Posições encerradas no zero a zero ou com pequenas variações de spread preservam o capital e não contam no limite diário.</p>
               <p>🛡️ <strong>Saber Ficar de Fora:</strong> Registrar dias em que você não operou mantém a sua ofensiva ativa!</p>
               <p>🔥 <strong>Ofensiva & Metas:</strong> Acumule dias de disciplina para alcançar os níveis de 3, 7, 14, 30 e 60 dias.</p>
             </div>
@@ -384,7 +384,7 @@
               <input type="checkbox" class="asrv-checkbox"> Verificar calendário de notícias
             </label>
             <label class="asrv-check">
-              <input type="checkbox" class="asrv-checkbox"> Respeitar o limite de 2 trades diários
+              <input type="checkbox" class="asrv-checkbox"> Respeitar o limite de 4 trades diários (break even não conta)
             </label>
             <label class="asrv-check">
               <input type="checkbox" class="asrv-checkbox"> Mover o Stop para Break Even ao atingir a primeira parcial
@@ -1293,7 +1293,9 @@
 
       Object.keys(dailyTrades).forEach(date => {
         const dayTrades = dailyTrades[date];
-        if (dayTrades.length > 2) ruleViolated = true;
+        // Break even não conta para o limite diário.
+        const countedTrades = dayTrades.filter(t => !isBreakEven(t.pnl));
+        if (countedTrades.length > 4) ruleViolated = true;
         // Saldo de abertura do dia: capital inicial + resultado dos dias anteriores.
         const openingBalance = initialBalance + trades
           .filter(t => t.date < date)
@@ -1540,14 +1542,16 @@
       }
 
       const tradesOnDate = trades.filter(t => t.date === date && t.id.toString() !== editId);
+      // Break even não conta para o limite diário.
+      const countedTradesOnDate = tradesOnDate.filter(t => !isBreakEven(t.pnl));
       // Limite com base no saldo de abertura do dia: capital inicial + resultado dos dias anteriores.
       const openingBalance = initialBalance + trades
         .filter(t => t.date < date)
         .reduce((sum, t) => sum + t.pnl, 0);
       const maxSingleLoss = openingBalance * 0.25;
 
-      if (tradesOnDate.length >= 2) {
-        alert("⚠️ ATENÇÃO: Você já possui 2 operações registradas nesta data! Salvar esta operação irá ZERAR a sua ofensiva!");
+      if (!isBreakEven(pnl) && countedTradesOnDate.length >= 4) {
+        alert("⚠️ ATENÇÃO: Você já possui 4 operações válidas registradas nesta data (break even não conta)! Salvar esta operação irá ZERAR a sua ofensiva!");
       } else if (pnl < 0 && !isBreakEven(pnl) && Math.abs(pnl) > maxSingleLoss) {
         alert(`⚠️ ATENÇÃO: Esta operação tem um prejuízo de ${Math.abs(pnl).toFixed(2)}, o que ultrapassa o limite máximo individual de 25% do saldo inicial do dia (${maxSingleLoss.toFixed(2)}). A sua ofensiva será ZERADA!`);
       }
@@ -1639,13 +1643,14 @@
       const returnPct = initialBalance > 0 ? ((totalPnl / initialBalance) * 100).toFixed(2) : 0;
 
       const todayStr = getLocalDateStr();
-      const todayCount = trades.filter(t => t.date === todayStr).length;
+      // O badge mostra só operações que contam para o limite (break even não conta).
+      const todayCount = trades.filter(t => t.date === todayStr && !isBreakEven(t.pnl)).length;
       const badgeEl = document.getElementById('today-limit-badge');
       document.getElementById('today-trade-count').innerText = todayCount;
 
-      if (todayCount > 2) {
+      if (todayCount > 4) {
         badgeEl.className = 'asrv-badge asrv-badge--danger asrv-badge--pill animate-pulse';
-      } else if (todayCount === 2) {
+      } else if (todayCount === 4) {
         badgeEl.className = 'asrv-badge asrv-badge--warning asrv-badge--pill';
       } else {
         badgeEl.className = 'asrv-badge asrv-badge--neutral asrv-badge--pill';

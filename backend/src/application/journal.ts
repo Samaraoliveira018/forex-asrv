@@ -299,9 +299,14 @@ function buildWarnings(
 ): string[] {
   const warnings: string[] = [];
 
-  const sameDay = existingTrades.filter((item) => item.date === trade.date);
-  if (sameDay.length >= MAX_TRADES_PER_DAY) {
-    warnings.push(`Limite de ${MAX_TRADES_PER_DAY} operações por dia atingido.`);
+  // Break even não conta para o limite diário; a própria operação (edição) fica de fora.
+  const sameDay = existingTrades.filter(
+    (item) => item.date === trade.date && item.id !== trade.id && !isBreakEven(item.pnl),
+  );
+  if (!isBreakEven(trade.pnl) && sameDay.length >= MAX_TRADES_PER_DAY) {
+    warnings.push(
+      `Limite de ${MAX_TRADES_PER_DAY} operações por dia atingido (break even não conta).`,
+    );
   }
 
   if (initialBalance === null) return warnings;

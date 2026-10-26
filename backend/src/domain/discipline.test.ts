@@ -43,9 +43,11 @@ describe('evaluateDiscipline', () => {
     expect(result.streak).toBe(2);
   });
 
-  it('viola ao passar de dois trades no mesmo dia e zera a ofensiva', () => {
+  it('viola ao passar de quatro trades válidos no mesmo dia e zera a ofensiva', () => {
     const result = evaluateDiscipline({
       trades: [
+        trade({ date: '2026-10-01' }),
+        trade({ date: '2026-10-01' }),
         trade({ date: '2026-10-01' }),
         trade({ date: '2026-10-01' }),
         trade({ date: '2026-10-01' }),
@@ -58,6 +60,25 @@ describe('evaluateDiscipline', () => {
     expect(result.violations).toContainEqual(
       expect.objectContaining({ kind: 'TOO_MANY_TRADES', date: '2026-10-01' }),
     );
+  });
+
+  it('não conta operações break even no limite diário', () => {
+    const result = evaluateDiscipline({
+      trades: [
+        trade({ date: '2026-10-01' }),
+        trade({ date: '2026-10-01' }),
+        trade({ date: '2026-10-01' }),
+        trade({ date: '2026-10-01' }),
+        trade({ date: '2026-10-01', pnl: 0 }),
+        trade({ date: '2026-10-01', pnl: 0.2 }),
+        trade({ date: '2026-10-01', pnl: -0.3 }),
+      ],
+      noTradeDays: [],
+      initialBalance: 1000,
+    });
+
+    expect(result.violations).toEqual([]);
+    expect(result.streak).toBe(1);
   });
 
   it('viola quando a perda individual passa de 25% do saldo inicial do dia', () => {

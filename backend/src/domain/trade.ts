@@ -1,6 +1,10 @@
 import { DomainError } from './errors';
 
-export const MAX_TRADES_PER_DAY = 2;
+/**
+ * Máximo de operações por dia que contam para a disciplina.
+ * Break even não entra na contagem (ver `isBreakEven`).
+ */
+export const MAX_TRADES_PER_DAY = 4;
 export const MAX_LOSS_RATIO = 0.25;
 export const BREAK_EVEN_TOLERANCE = 0.3;
 

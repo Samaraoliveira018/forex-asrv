@@ -7,9 +7,9 @@
 
 ## 1. Visão
 
-Um diário de trading pessoal que força **disciplina operacional** (máximo 2 trades/dia,
-perda individual ≤ 25% do saldo inicial do dia e ofensiva de dias) e que **nunca perde um registro**,
-esteja você online, offline ou trocando de dispositivo.
+Um diário de trading pessoal que força **disciplina operacional** (máximo 4 trades válidos/dia —
+break even não conta —, perda individual ≤ 25% do saldo inicial do dia e ofensiva de dias) e que
+**nunca perde um registro**, esteja você online, offline ou trocando de dispositivo.
 
 ### Objetivos
 
@@ -31,7 +31,7 @@ esteja você online, offline ou trocando de dispositivo.
 | Área | Entregue |
 |---|---|
 | App | Diário, dashboard, plano operacional e estatísticas em página estática |
-| Regras de disciplina | Limite de 2 trades/dia, perda máxima de 25% do saldo inicial do dia, break even, ofensiva com metas (3/7/14/30/60 dias) |
+| Regras de disciplina | Limite de 4 trades/dia (break even não conta), perda máxima de 25% do saldo inicial do dia, break even, ofensiva com metas (3/7/14/30/60 dias) |
 | Dados | Cache em `localStorage` com migração de chaves antigas e sanitização de dados |
 | Nuvem | Supabase (Postgres + Auth + RLS) com login por e-mail/senha e Storage privado para os prints (`trade-screenshots`, URL assinada) |
 | Sincronização | Online-first, fila offline, envio ao reconectar, sync manual e migração assistida do histórico local |
@@ -124,7 +124,7 @@ Objetivo: usar o histórico para melhorar decisão, não só registrar.
 | R-17 | Análise por sessão/horário/dia | Revela quando o trader realmente tem vantagem | M | Gráficos e tabela com P/L e win rate por recorte |
 | R-18 | Calendário heatmap | Mostra consistência e sequências de perda | P | Mês navegável com cor por resultado diário |
 | R-19 | Relatório mensal | Fechamento do mês sem montar planilha | M | Página imprimível/PDF com resumo, gráficos e violações de regra |
-| R-20 | Alertas de violação em tempo real | Disciplina no momento da decisão | P | Aviso imediato ao ultrapassar 2 trades ou a perda máxima, com registro no histórico |
+| R-20 | Alertas de violação em tempo real | Disciplina no momento da decisão | P | Aviso imediato ao ultrapassar 4 trades válidos (break even não conta) ou a perda máxima, com registro no histórico |
 | R-21 | Checklist e plano editáveis | O plano hoje é estático | P | Itens do checklist persistem e o plano aceita edição |
 
 ---
