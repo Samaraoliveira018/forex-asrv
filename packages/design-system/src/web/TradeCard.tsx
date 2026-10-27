@@ -42,6 +42,7 @@ export function TradeCard({
     : breakEven
       ? `${pnl < 0 ? '-' : '+'} $ ${Math.abs(pnl).toFixed(2)} (BE)`
       : `${pnl > 0 ? '+ ' : '- '}${Math.abs(pnl).toFixed(2)}`;
+  const displayDate = shortDate(date);
 
   return (
     <article className={classNames('asrv-trade-card', className)}>
@@ -51,7 +52,7 @@ export function TradeCard({
           <Badge tone={type === 'Compra' ? 'success' : 'danger'}>{type}</Badge>
           {breakEven ? <Badge tone="neutral">BREAK EVEN</Badge> : null}
         </div>
-        <span className="asrv-trade-card__date">{date}</span>
+        <span className="asrv-trade-card__date">{displayDate}</span>
       </div>
 
       <div className="asrv-trade-card__body">
@@ -74,11 +75,11 @@ export function TradeCard({
             href={screenshotUrl}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={`Ver print da operação ${asset} de ${date}`}
+            aria-label={`Ver print da operação ${asset} de ${displayDate}`}
           >
             <img
               src={screenshotUrl}
-              alt={`Print da operação ${asset} de ${date}`}
+              alt={`Print da operação ${asset} de ${displayDate}`}
               loading="lazy"
             />
           </a>
@@ -113,4 +114,9 @@ export function TradeCard({
       ) : null}
     </article>
   );
+}
+
+function shortDate(value: string): string {
+  const [year, month, day] = value.split('-');
+  return year && month && day ? `${day}/${month}/${year.slice(-2)}` : value;
 }

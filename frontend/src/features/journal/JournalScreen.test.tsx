@@ -45,7 +45,7 @@ describe('JournalScreen', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Nova operação' }));
     fireEvent.change(screen.getByLabelText('Data da Operação'), {
-      target: { value: '2026-10-22' },
+      target: { value: '22/10/26' },
     });
     await user.type(screen.getByLabelText('Ativo'), 'gbpusd');
     await user.selectOptions(screen.getByLabelText('Direção'), 'Venda');
@@ -95,7 +95,7 @@ describe('JournalScreen', () => {
     const user = userEvent.setup();
 
     await user.click(
-      await screen.findByRole('button', { name: 'Editar EURUSD de 21/10/2026' }),
+      await screen.findByRole('button', { name: 'Editar EURUSD de 21/10/26' }),
     );
     expect(screen.getByRole('dialog', { name: 'Editar Operação' })).toBeInTheDocument();
 
@@ -134,7 +134,7 @@ describe('JournalScreen', () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     await user.click(
-      await screen.findByRole('button', { name: 'Excluir EURUSD de 21/10/2026' }),
+      await screen.findByRole('button', { name: 'Excluir EURUSD de 21/10/26' }),
     );
 
     expect(confirm).toHaveBeenCalled();
@@ -145,7 +145,7 @@ describe('JournalScreen', () => {
   it('marca o dia como sem operação', async () => {
     const fake = renderJournal();
     const user = userEvent.setup();
-    vi.spyOn(window, 'prompt').mockReturnValue('2026-10-22');
+    vi.spyOn(window, 'prompt').mockReturnValue('22/10/26');
 
     await user.click(await screen.findByRole('button', { name: 'Registrar Dia Sem Operar' }));
 

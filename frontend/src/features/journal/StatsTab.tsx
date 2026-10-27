@@ -73,8 +73,8 @@ export function StatsTab({ snapshot }: { snapshot: JournalSnapshot }) {
           <DonutChart
             ariaLabel="Proporção por direção"
             segments={[
-              { label: 'Compra (Long)', value: stats.buyCount, color: '#2563eb' },
-              { label: 'Venda (Short)', value: stats.sellCount, color: '#f59e0b' },
+              { label: 'Compra (Long)', value: stats.buyCount, color: '#ffffff' },
+              { label: 'Venda (Short)', value: stats.sellCount, color: '#ef4444' },
             ]}
           />
         </Card>

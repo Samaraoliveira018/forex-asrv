@@ -119,6 +119,40 @@ describe('calculateStats', () => {
 
     expect(stats.todayCount).toBe(4);
     expect(stats.todayCountedTrades).toBe(2);
+    expect(stats.todayStops).toBe(1);
+  });
+
+  it('calcula resultado diário, semanal e mensal com % de perda', () => {
+    const stats = calculateStats({
+      trades: [
+        trade({ date: '2026-09-30', pnl: 100 }),
+        trade({ date: '2026-10-05', pnl: 50 }),
+        trade({ date: '2026-10-19', pnl: -20 }),
+        trade({ date: '2026-10-21', pnl: 10 }),
+      ],
+      initialBalance: 1000,
+      today: '2026-10-21',
+    });
+
+    expect(stats.periods.daily.pnl).toBe(10);
+    expect(stats.periods.daily.openingBalance).toBe(1130);
+    expect(stats.periods.daily.pct).toBeCloseTo(0.885, 2);
+    expect(stats.periods.daily.lossPct).toBe(0);
+    expect(stats.periods.daily.trades).toBe(1);
+
+    expect(stats.periods.weekly.pnl).toBe(-10);
+    expect(stats.periods.weekly.openingBalance).toBe(1150);
+    expect(stats.periods.weekly.pct).toBeCloseTo(-0.87, 2);
+    expect(stats.periods.weekly.lossPct).toBeCloseTo(0.87, 2);
+    expect(stats.periods.weekly.trades).toBe(2);
+    expect(stats.periods.weekly.stops).toBe(1);
+
+    expect(stats.periods.monthly.pnl).toBe(40);
+    expect(stats.periods.monthly.openingBalance).toBe(1100);
+    expect(stats.periods.monthly.pct).toBeCloseTo(3.636, 2);
+    expect(stats.periods.monthly.lossPct).toBe(0);
+    expect(stats.periods.monthly.trades).toBe(3);
+    expect(stats.periods.monthly.stops).toBe(1);
   });
 
   it('não divide por zero quando o capital inicial é zero', () => {

@@ -81,6 +81,40 @@ describe('evaluateDiscipline', () => {
     expect(result.streak).toBe(1);
   });
 
+  it('viola ao passar de dois stops no mesmo dia', () => {
+    const result = evaluateDiscipline({
+      trades: [
+        trade({ date: '2026-10-01', pnl: -10 }),
+        trade({ date: '2026-10-01', pnl: -15 }),
+        trade({ date: '2026-10-01', pnl: -5 }),
+      ],
+      noTradeDays: [],
+      initialBalance: 1000,
+    });
+
+    expect(result.streak).toBe(0);
+    expect(result.violations).toContainEqual(
+      expect.objectContaining({ kind: 'TOO_MANY_STOPS', date: '2026-10-01' }),
+    );
+  });
+
+  it('não conta break even como stop', () => {
+    const result = evaluateDiscipline({
+      trades: [
+        trade({ date: '2026-10-01', pnl: -10 }),
+        trade({ date: '2026-10-01', pnl: -15 }),
+        trade({ date: '2026-10-01', pnl: 0 }),
+        trade({ date: '2026-10-01', pnl: 0.3 }),
+        trade({ date: '2026-10-01', pnl: 40 }),
+      ],
+      noTradeDays: [],
+      initialBalance: 1000,
+    });
+
+    expect(result.violations).toEqual([]);
+    expect(result.streak).toBe(1);
+  });
+
   it('viola quando a perda individual passa de 25% do saldo inicial do dia', () => {
     const result = evaluateDiscipline({
       trades: [trade({ date: '2026-10-01', pnl: -250.01 })],

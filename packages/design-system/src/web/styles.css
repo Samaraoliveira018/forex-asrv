@@ -470,6 +470,8 @@ body.asrv-app {
   margin: 6px 0 0;
   color: var(--asrv-color-text-muted);
   font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-line;
 }
 
 .asrv-stat__hint--success {
@@ -864,8 +866,10 @@ body.asrv-app {
 
 .asrv-trade-card__asset {
   color: #ffffff;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .asrv-trade-card__date {

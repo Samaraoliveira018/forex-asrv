@@ -52,6 +52,7 @@ export function TradeCard({
     : breakEven
       ? `${pnl < 0 ? '-' : '+'} US$ ${Math.abs(pnl).toFixed(2)} (BE)`
       : `${pnl > 0 ? '+ ' : '- '}${Math.abs(pnl).toFixed(2)}`;
+  const displayDate = shortDate(date);
 
   return (
     <View style={[styles.card, style]}>
@@ -61,7 +62,7 @@ export function TradeCard({
           <Badge tone={type === 'Compra' ? 'success' : 'danger'}>{type}</Badge>
           {breakEven ? <Badge tone="neutral">BREAK EVEN</Badge> : null}
         </View>
-        <Text style={styles.date}>{date}</Text>
+        <Text style={styles.date}>{displayDate}</Text>
       </View>
 
       <View style={styles.body}>
@@ -81,7 +82,7 @@ export function TradeCard({
         {screenshotUrl ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Ver print da operação ${asset} de ${date}`}
+            accessibilityLabel={`Ver print da operação ${asset} de ${displayDate}`}
             onPress={() => {
               void Linking.openURL(screenshotUrl);
             }}
@@ -144,7 +145,7 @@ const styles = StyleSheet.create({
   },
   asset: {
     color: colors.text,
-    fontSize: typography.body,
+    fontSize: typography.caption + 1,
     fontWeight: '700',
   },
   date: {
@@ -213,3 +214,8 @@ const styles = StyleSheet.create({
     color: colors.dangerText,
   },
 });
+
+function shortDate(value: string): string {
+  const [year, month, day] = value.split('-');
+  return year && month && day ? `${day}/${month}/${year.slice(-2)}` : value;
+}

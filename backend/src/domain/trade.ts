@@ -5,6 +5,12 @@ import { DomainError } from './errors';
  * Break even não entra na contagem (ver `isBreakEven`).
  */
 export const MAX_TRADES_PER_DAY = 4;
+
+/**
+ * Máximo de stops (operações com perda real) por dia.
+ * Ao atingir o limite, o correto é parar de operar para preservar a ofensiva.
+ */
+export const MAX_STOPS_PER_DAY = 2;
 export const MAX_LOSS_RATIO = 0.25;
 export const BREAK_EVEN_TOLERANCE = 0.3;
 
@@ -55,6 +61,11 @@ export function isIsoDate(value: string): boolean {
 
 export function isBreakEven(pnl: number): boolean {
   return Number.isFinite(pnl) && Math.abs(pnl) <= BREAK_EVEN_TOLERANCE;
+}
+
+/** Stop = perda real (fora da tolerância de break even). */
+export function isStop(pnl: number): boolean {
+  return Number.isFinite(pnl) && pnl < 0 && !isBreakEven(pnl);
 }
 
 export function createTrade(input: TradeInput, options: CreateTradeOptions = {}): Trade {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import type { Trade, TradeInput, TradeType } from '@asrv/backend';
 import {
   Alert,
@@ -14,7 +15,7 @@ import {
   colors,
   radii,
 } from '@asrv/design-system';
-import { numberFrom, today } from './format';
+import { formatDate, maskDateInput, numberFrom, parseDateInput, today } from './format';
 
 type FormState = {
   date: string;
@@ -75,8 +76,41 @@ export function TradeModal({
 
       if (result.canceled) return;
       const asset = result.assets?.[0];
-      if (!asset?.base64) return;
+      if (!asset?.uri) return;
 
+      // Converte para WebP e limita o maior lado a 1280px antes do upload.
+      try {
+        const maxSide = 1280;
+        const scale =
+          asset.width && asset.height
+            ? Math.min(1, maxSide / Math.max(asset.width, asset.height))
+            : 1;
+        const actions =
+          scale < 1 && asset.width && asset.height
+            ? [
+                {
+                  resize: {
+                    width: Math.round(asset.width * scale),
+                    height: Math.round(asset.height * scale),
+                  },
+                },
+              ]
+            : [];
+        const webp = await manipulateAsync(asset.uri, actions, {
+          compress: 0.8,
+          format: SaveFormat.WEBP,
+          base64: true,
+        });
+        if (webp.base64) {
+          setPhotoDataUrl(`data:image/webp;base64,${webp.base64}`);
+          setPhotoRemoved(false);
+          return;
+        }
+      } catch {
+        // Sem manipulação disponível: usa o arquivo original do picker.
+      }
+
+      if (!asset.base64) return;
       const mime = asset.mimeType ?? 'image/jpeg';
       setPhotoDataUrl(`data:${mime};base64,${asset.base64}`);
       setPhotoRemoved(false);
@@ -95,13 +129,19 @@ export function TradeModal({
       return;
     }
 
+    const isoDate = parseDateInput(form.date);
+    if (!isoDate) {
+      setError('Informe a data no formato dd/mm/aa.');
+      return;
+    }
+
     setSaving(true);
     try {
       const screenshot = photoDataUrl !== null ? photoDataUrl : photoRemoved ? null : undefined;
       await onSubmit(
         {
           ...(trade ? { id: trade.id } : {}),
-          date: form.date,
+          date: isoDate,
           asset: form.asset,
           type: form.type,
           lots: numberFrom(form.lots),
@@ -138,8 +178,9 @@ export function TradeModal({
       <Input
         label="Data da Operação"
         value={form.date}
-        onChangeText={(date) => setForm((current) => ({ ...current, date }))}
-        placeholder="AAAA-MM-DD"
+        onChangeText={(date) => setForm((current) => ({ ...current, date: maskDateInput(date) }))}
+        placeholder="dd/mm/aa"
+        keyboardType="numeric"
       />
 
       <Input
@@ -237,7 +278,7 @@ export function TradeModal({
 
 function formFor(trade: Trade | null): FormState {
   return {
-    date: trade?.date ?? today(),
+    date: formatDate(trade?.date ?? today()),
     asset: trade?.asset ?? '',
     type: trade?.type ?? 'Compra',
     lots: trade ? String(trade.lots) : '1',

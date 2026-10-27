@@ -1,10 +1,12 @@
 import { DomainError } from '../domain/errors';
 import {
   MAX_LOSS_RATIO,
+  MAX_STOPS_PER_DAY,
   MAX_TRADES_PER_DAY,
   createTrade,
   isBreakEven,
   isIsoDate,
+  isStop,
   type Trade,
   type TradeInput,
 } from '../domain/trade';
@@ -306,6 +308,23 @@ function buildWarnings(
   if (!isBreakEven(trade.pnl) && sameDay.length >= MAX_TRADES_PER_DAY) {
     warnings.push(
       `Limite de ${MAX_TRADES_PER_DAY} operações por dia atingido (break even não conta).`,
+    );
+  }
+
+  const sameDayStops = existingTrades.filter(
+    (item) => item.date === trade.date && item.id !== trade.id && isStop(item.pnl),
+  );
+  if (isStop(trade.pnl) && sameDayStops.length === MAX_STOPS_PER_DAY - 1) {
+    warnings.push(
+      `Este é o ${MAX_STOPS_PER_DAY}º stop do dia. Pare de operar após esta operação para preservar a ofensiva.`,
+    );
+  } else if (isStop(trade.pnl) && sameDayStops.length >= MAX_STOPS_PER_DAY) {
+    warnings.push(
+      `Limite de ${MAX_STOPS_PER_DAY} stops por dia atingido. Pare de operar para não zerar a ofensiva.`,
+    );
+  } else if (!isBreakEven(trade.pnl) && sameDayStops.length >= MAX_STOPS_PER_DAY) {
+    warnings.push(
+      `Você já tem ${MAX_STOPS_PER_DAY} stops hoje. O ideal é parar de operar para preservar a ofensiva.`,
     );
   }
 

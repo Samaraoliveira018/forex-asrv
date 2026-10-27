@@ -191,6 +191,11 @@
               <i class="fa-solid fa-gauge-high"></i> Hoje: <span id="today-trade-count">0</span>/4 trades
             </div>
 
+            <!-- Stops do dia -->
+            <div id="today-stops-badge" class="asrv-badge asrv-badge--neutral asrv-badge--pill" title="Máximo de 2 stops por dia: ao atingir, pare de operar">
+              <i class="fa-solid fa-hand"></i> Stops: <span id="today-stop-count">0</span>/2
+            </div>
+
             <!-- Botão Marcar Dia Sem Operar -->
             <button onclick="markNoTradeDay()" class="asrv-btn asrv-btn--success asrv-btn--sm">
               <i class="fa-solid fa-calendar-check text-emerald-400"></i> Registrar Dia Sem Operar
@@ -270,6 +275,27 @@
           <div class="asrv-card">
             <p class="asrv-stat__label">Operações Registradas</p>
             <h3 class="asrv-stat__value" id="kpi-trades">0</h3>
+          </div>
+        </div>
+
+        <!-- RESULTADO DIÁRIO / SEMANAL / MENSAL -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="asrv-card">
+            <p class="asrv-stat__label">Resultado Diário</p>
+            <h3 class="asrv-stat__value" id="period-daily-pnl">+ $ 0.00</h3>
+            <span class="asrv-stat__hint" id="period-daily-pct">Resultado: +0.00% · Perda: 0.00%</span>
+          </div>
+
+          <div class="asrv-card">
+            <p class="asrv-stat__label">Resultado Semanal</p>
+            <h3 class="asrv-stat__value" id="period-weekly-pnl">+ $ 0.00</h3>
+            <span class="asrv-stat__hint" id="period-weekly-pct">Resultado: +0.00% · Perda: 0.00%</span>
+          </div>
+
+          <div class="asrv-card">
+            <p class="asrv-stat__label">Resultado Mensal</p>
+            <h3 class="asrv-stat__value" id="period-monthly-pnl">+ $ 0.00</h3>
+            <span class="asrv-stat__hint" id="period-monthly-pct">Resultado: +0.00% · Perda: 0.00%</span>
           </div>
         </div>
 
@@ -372,6 +398,7 @@
             <h3 class="asrv-section-title">Regras de Ouro da Plataforma</h3>
             <div class="asrv-alert asrv-alert--danger space-y-2 text-xs">
               <p>⚡ <strong>Limite estrito:</strong> Máximo de 4 operações por dia. Break even não conta para o limite.</p>
+              <p>🛑 <strong>Stops:</strong> Máximo de 2 stops por dia. Ao atingir 2, pare de operar para não perder a ofensiva.</p>
               <p>🛑 <strong>Perda Individual Máxima:</strong> Nenhuma operação pode ter um prejuízo superior a 25% do saldo inicial do dia — capital inicial mais o resultado acumulado dos dias anteriores (taxas de spread mínimas são tratadas como Break Even).</p>
               <p>⚖️ <strong>Break Even (0x0):</strong> Posições encerradas no zero a zero ou com pequenas variações de spread preservam o capital e não contam no limite diário.</p>
               <p>🛡️ <strong>Saber Ficar de Fora:</strong> Registrar dias em que você não operou mantém a sua ofensiva ativa!</p>
@@ -385,6 +412,9 @@
             </label>
             <label class="asrv-check">
               <input type="checkbox" class="asrv-checkbox"> Respeitar o limite de 4 trades diários (break even não conta)
+            </label>
+            <label class="flex items-center gap-2 text-gray-300">
+              <input type="checkbox" class="asrv-checkbox"> Parar de operar após 2 stops no dia
             </label>
             <label class="asrv-check">
               <input type="checkbox" class="asrv-checkbox"> Mover o Stop para Break Even ao atingir a primeira parcial
@@ -472,7 +502,8 @@
 
         <div>
           <label class="asrv-field__label block mb-1">Data da Operação</label>
-          <input type="date" id="form-date" required class="asrv-field__input">
+          <input type="text" id="form-date" required inputmode="numeric" maxlength="8" placeholder="dd/mm/aa"
+            oninput="this.value = maskDateInput(this.value)" class="asrv-field__input">
         </div>
 
         <div>
@@ -587,12 +618,43 @@
       return pnl >= -0.30 && pnl <= 0.30;
     }
 
+    // Stop = perda real (fora da tolerância de break even).
+    function isStop(pnl) {
+      return Number.isFinite(pnl) && pnl < 0 && !isBreakEven(pnl);
+    }
+
     // Data no fuso LOCAL (evita o deslocamento de UTC, que no Brasil adianta o dia após as 21h)
     function getLocalDateStr(date = new Date()) {
       const y = date.getFullYear();
       const m = String(date.getMonth() + 1).padStart(2, '0');
       const d = String(date.getDate()).padStart(2, '0');
       return `${y}-${m}-${d}`;
+    }
+
+    // Exibe a data ISO como dd/mm/aa.
+    function formatShortDate(isoDate) {
+      const [year, month, day] = String(isoDate || '').split('-');
+      return year && month && day ? `${day}/${month}/${year.slice(-2)}` : String(isoDate || '');
+    }
+
+    // Máscara de digitação: 271026 -> 27/10/26.
+    function maskDateInput(value) {
+      const digits = String(value || '').replace(/\D/g, '').slice(0, 6);
+      return [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 6)].filter(Boolean).join('/');
+    }
+
+    // Converte dd/mm/aa em ISO YYYY-MM-DD (null quando inválida).
+    function parseDateInput(value) {
+      const match = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(String(value || '').trim());
+      if (!match) return null;
+      const day = Number(match[1]);
+      const month = Number(match[2]);
+      const year = 2000 + Number(match[3]);
+      const date = new Date(Date.UTC(year, month - 1, day));
+      if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+        return null;
+      }
+      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     }
 
     // IDs seguros (somente letras, números, "_" e "-") para uso dentro de atributos HTML
@@ -924,14 +986,15 @@
       return bytes;
     }
 
-    function screenshotPathFor(tradeId) {
-      return `${cloudUser.id}/${tradeId}.jpg`;
+    function screenshotPathFor(tradeId, contentType = 'image/jpeg') {
+      const extension = contentType === 'image/webp' ? 'webp' : 'jpg';
+      return `${cloudUser.id}/${tradeId}.${extension}`;
     }
 
     async function uploadTradeScreenshot(tradeId, dataUrl) {
-      const path = screenshotPathFor(tradeId);
       const match = /^data:([^;,]*)/.exec(String(dataUrl));
       const contentType = (match && match[1]) || 'image/jpeg';
+      const path = screenshotPathFor(tradeId, contentType);
       const { error } = await sb.storage
         .from(SCREENSHOT_BUCKET)
         .upload(path, dataUrlToBytes(dataUrl), { contentType, upsert: true });
@@ -941,7 +1004,11 @@
 
     async function removeTradeScreenshotFile(tradeId) {
       try {
-        await sb.storage.from(SCREENSHOT_BUCKET).remove([screenshotPathFor(tradeId)]);
+        // Remove as duas extensões possíveis (prints antigos em .jpg e novos em .webp).
+        await sb.storage.from(SCREENSHOT_BUCKET).remove([
+          screenshotPathFor(tradeId, 'image/jpeg'),
+          screenshotPathFor(tradeId, 'image/webp'),
+        ]);
       } catch (err) {
         console.warn('Não foi possível remover o print:', err);
       }
@@ -985,8 +1052,12 @@
               const ctx = canvas.getContext('2d');
               if (!ctx) return resolve(dataUrl);
               ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-              const jpeg = canvas.toDataURL('image/jpeg', 0.72);
-              resolve(jpeg.length < dataUrl.length ? jpeg : dataUrl);
+              // Preferência por WebP; cai para JPEG se o navegador não suportar.
+              const webp = canvas.toDataURL('image/webp', 0.8);
+              const encoded = webp.startsWith('data:image/webp')
+                ? webp
+                : canvas.toDataURL('image/jpeg', 0.72);
+              resolve(encoded.length < dataUrl.length ? encoded : dataUrl);
             } catch (err) {
               resolve(dataUrl);
             }
@@ -1239,24 +1310,28 @@
     // REGISTRAR DIA SEM OPERAR (RETROATIVO)
     function markNoTradeDay() {
       const today = getLocalDateStr();
-      const targetDate = prompt("Digite a data em que você não operou (AAAA-MM-DD):", today);
-      
-      if (!targetDate) return;
+      const input = prompt(
+        "Digite a data em que você não operou (dd/mm/aa):",
+        formatShortDate(today),
+      );
 
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
-        alert("⚠️ Formato de data inválido! Use o formato AAAA-MM-DD (exemplo: 2026-10-20).");
+      if (!input) return;
+
+      const targetDate = parseDateInput(input);
+      if (!targetDate) {
+        alert("⚠️ Formato de data inválido! Use dd/mm/aa (exemplo: 20/10/26).");
         return;
       }
 
       const tradesToday = trades.filter(t => t.date === targetDate).length;
 
       if (tradesToday > 0) {
-        alert(`⚠️ Você já possui operações registradas na data ${targetDate}! O registro de 'Não Operei' é exclusivo para dias sem trades.`);
+        alert(`⚠️ Você já possui operações registradas na data ${formatShortDate(targetDate)}! O registro de 'Não Operei' é exclusivo para dias sem trades.`);
         return;
       }
 
       if (noTradeDays.includes(targetDate)) {
-        alert(`🛡️ A data ${targetDate} já está registrada como um dia de disciplina consciente!`);
+        alert(`🛡️ A data ${formatShortDate(targetDate)} já está registrada como um dia de disciplina consciente!`);
         return;
       }
 
@@ -1264,7 +1339,7 @@
       saveData();
       queueCloud('upsertNoTrade', targetDate);
       refreshUI();
-      alert(`🛡️ Excelente disciplina! O dia ${targetDate} foi registrado com sucesso e sua ofensiva foi mantida!`);
+      alert(`🛡️ Excelente disciplina! O dia ${formatShortDate(targetDate)} foi registrado com sucesso e sua ofensiva foi mantida!`);
     }
 
     function setBreakEvenInput() {
@@ -1296,6 +1371,9 @@
         // Break even não conta para o limite diário.
         const countedTrades = dayTrades.filter(t => !isBreakEven(t.pnl));
         if (countedTrades.length > 4) ruleViolated = true;
+        // Máximo de 2 stops por dia.
+        const dayStops = dayTrades.filter(t => isStop(t.pnl));
+        if (dayStops.length > 2) ruleViolated = true;
         // Saldo de abertura do dia: capital inicial + resultado dos dias anteriores.
         const openingBalance = initialBalance + trades
           .filter(t => t.date < date)
@@ -1484,7 +1562,7 @@
       document.getElementById('form-edit-id').value = '';
       document.getElementById('modal-title').innerText = 'Registrar Nova Operação';
       document.getElementById('modal-submit-btn').innerText = 'Salvar Operação';
-      document.getElementById('form-date').value = getLocalDateStr();
+      document.getElementById('form-date').value = formatShortDate(getLocalDateStr());
       modalShot = { dataUrl: null, removed: false, existingId: '' };
       renderModalShot();
       document.getElementById('trade-modal').classList.remove('hidden');
@@ -1497,7 +1575,7 @@
       document.getElementById('form-edit-id').value = trade.id;
       document.getElementById('modal-title').innerText = 'Editar Operação';
       document.getElementById('modal-submit-btn').innerText = 'Atualizar Operação';
-      document.getElementById('form-date').value = trade.date;
+      document.getElementById('form-date').value = formatShortDate(trade.date);
       document.getElementById('form-asset').value = trade.asset;
       document.getElementById('form-type').value = trade.type;
       document.getElementById('form-lots').value = trade.lots;
@@ -1530,7 +1608,11 @@
 
     async function persistTrade() {
       const editId = document.getElementById('form-edit-id').value;
-      const date = document.getElementById('form-date').value;
+      const date = parseDateInput(document.getElementById('form-date').value);
+      if (!date) {
+        alert('Informe a data no formato dd/mm/aa.');
+        return;
+      }
       const asset = document.getElementById('form-asset').value.toUpperCase();
       const type = document.getElementById('form-type').value;
       const lots = parseFloat(document.getElementById('form-lots').value);
@@ -1544,13 +1626,21 @@
       const tradesOnDate = trades.filter(t => t.date === date && t.id.toString() !== editId);
       // Break even não conta para o limite diário.
       const countedTradesOnDate = tradesOnDate.filter(t => !isBreakEven(t.pnl));
+      // Stop = perda real. Após 2 stops no dia, o correto é parar de operar.
+      const stopsOnDate = tradesOnDate.filter(t => isStop(t.pnl));
       // Limite com base no saldo de abertura do dia: capital inicial + resultado dos dias anteriores.
       const openingBalance = initialBalance + trades
         .filter(t => t.date < date)
         .reduce((sum, t) => sum + t.pnl, 0);
       const maxSingleLoss = openingBalance * 0.25;
 
-      if (!isBreakEven(pnl) && countedTradesOnDate.length >= 4) {
+      if (isStop(pnl) && stopsOnDate.length === 1) {
+        alert("⚠️ Este é o 2º stop do dia. Após ele, pare de operar para não perder a ofensiva.");
+      } else if (isStop(pnl) && stopsOnDate.length >= 2) {
+        alert("⚠️ ATENÇÃO: Você já possui 2 stops registrados nesta data! Salvar este stop irá ZERAR a sua ofensiva. Pare de operar.");
+      } else if (!isBreakEven(pnl) && stopsOnDate.length >= 2) {
+        alert("⚠️ Você já tem 2 stops hoje. O ideal é parar de operar para preservar a ofensiva.");
+      } else if (!isBreakEven(pnl) && countedTradesOnDate.length >= 4) {
         alert("⚠️ ATENÇÃO: Você já possui 4 operações válidas registradas nesta data (break even não conta)! Salvar esta operação irá ZERAR a sua ofensiva!");
       } else if (pnl < 0 && !isBreakEven(pnl) && Math.abs(pnl) > maxSingleLoss) {
         alert(`⚠️ ATENÇÃO: Esta operação tem um prejuízo de ${Math.abs(pnl).toFixed(2)}, o que ultrapassa o limite máximo individual de 25% do saldo inicial do dia (${maxSingleLoss.toFixed(2)}). A sua ofensiva será ZERADA!`);
@@ -1600,6 +1690,54 @@
         queueCloud('deleteTrade', id);
         refreshUI();
       }
+    }
+
+    function startOfWeekIso(iso) {
+      const [year, month, day] = iso.split('-').map(Number);
+      const date = new Date(Date.UTC(year, month - 1, day));
+      const offset = (date.getUTCDay() + 6) % 7;
+      date.setUTCDate(date.getUTCDate() - offset);
+      return date.toISOString().slice(0, 10);
+    }
+
+    function periodSnapshot(start, end) {
+      const inPeriod = trades.filter(t => t.date >= start && t.date <= end);
+      const pnl = inPeriod.reduce((sum, t) => sum + t.pnl, 0);
+      const previousPnl = trades.filter(t => t.date < start).reduce((sum, t) => sum + t.pnl, 0);
+      const openingBalance = initialBalance + previousPnl;
+      const pct = openingBalance > 0 ? (pnl / openingBalance) * 100 : 0;
+      const lossPct = pnl < 0 && openingBalance > 0
+        ? Math.min(100, (Math.abs(pnl) / openingBalance) * 100)
+        : 0;
+      return { pnl, pct, lossPct };
+    }
+
+    function updatePeriodResults(todayStr) {
+      const periods = [
+        ['daily', todayStr, todayStr],
+        ['weekly', startOfWeekIso(todayStr), todayStr],
+        ['monthly', `${todayStr.slice(0, 7)}-01`, todayStr],
+      ];
+
+      periods.forEach(([key, start, end]) => {
+        const period = periodSnapshot(start, end);
+        const pnlEl = document.getElementById(`period-${key}-pnl`);
+        const pctEl = document.getElementById(`period-${key}-pct`);
+        if (!pnlEl || !pctEl) return;
+
+        if (isValueHidden) {
+          pnlEl.innerText = '••••••';
+          pctEl.innerText = '••••••';
+        } else {
+          pnlEl.innerText = isBreakEven(period.pnl)
+            ? '$ 0.00'
+            : (period.pnl > 0 ? '+ ' : '- ') + Math.abs(period.pnl).toLocaleString('en-US', { minimumFractionDigits: 2 });
+          pctEl.innerText = `Resultado: ${period.pct > 0 ? '+' : ''}${period.pct.toFixed(2)}%\nPerda: ${period.lossPct.toFixed(2)}%`;
+        }
+
+        pnlEl.className = `asrv-stat__value ${period.pnl > 0 ? 'asrv-stat__value--success' : period.pnl < 0 ? 'asrv-stat__value--danger' : 'asrv-stat__value--muted'}`;
+        pctEl.className = `asrv-stat__hint ${period.pnl > 0 ? 'asrv-stat__hint--success' : period.pnl < 0 ? 'asrv-stat__hint--danger' : ''}`;
+      });
     }
 
     // DASHBOARD METRICS CALCULATOR
@@ -1656,6 +1794,19 @@
         badgeEl.className = 'asrv-badge asrv-badge--neutral asrv-badge--pill';
       }
 
+      const todayStops = trades.filter(t => t.date === todayStr && isStop(t.pnl)).length;
+      const stopsBadgeEl = document.getElementById('today-stops-badge');
+      document.getElementById('today-stop-count').innerText = todayStops;
+      if (todayStops >= 2) {
+        stopsBadgeEl.className = 'asrv-badge asrv-badge--danger asrv-badge--pill animate-pulse';
+      } else if (todayStops === 1) {
+        stopsBadgeEl.className = 'asrv-badge asrv-badge--warning asrv-badge--pill';
+      } else {
+        stopsBadgeEl.className = 'asrv-badge asrv-badge--neutral asrv-badge--pill';
+      }
+
+      updatePeriodResults(todayStr);
+
       document.getElementById('kpi-trades').innerText = totalTrades;
       document.getElementById('kpi-winrate').innerText = `${winRate}%`;
 
@@ -1708,7 +1859,7 @@
                 <div class="flex items-center gap-2">
                   <span class="font-bold text-emerald-400 text-sm flex items-center gap-1.5"><i class="fa-solid fa-shield-halved"></i> Preservação de Capital</span>
                 </div>
-                <span class="asrv-trade-card__date">${item.date}</span>
+                <span class="asrv-trade-card__date">${formatShortDate(item.date)}</span>
               </div>
               <div class="asrv-trade-card__body">
                 <p class="text-xs text-gray-400 italic">"Mercado sem padrão claro. Decisão consciente de não operar e proteger o capital."</p>
@@ -1734,7 +1885,7 @@
                 <span class="asrv-badge ${item.type === 'Compra' ? 'asrv-badge--success' : 'asrv-badge--danger'}">${item.type}</span>
                 ${isBE ? `<span class="asrv-badge asrv-badge--neutral">BREAK EVEN</span>` : ''}
               </div>
-              <span class="asrv-trade-card__date">${item.date}</span>
+              <span class="asrv-trade-card__date">${formatShortDate(item.date)}</span>
             </div>
             <div class="asrv-trade-card__body">
               <p class="text-xs text-gray-400">Lotes / Contratos: <strong class="text-gray-200">${item.lots}</strong></p>
@@ -1768,7 +1919,7 @@
         return `
           <tr>
             <td class="text-gray-500">${idx + 1}</td>
-            <td class="font-medium">${t.date}</td>
+            <td class="font-medium">${formatShortDate(t.date)}</td>
             <td class="font-bold text-white">${t.asset}</td>
             <td><span class="asrv-badge ${t.type === 'Compra' ? 'asrv-badge--success' : 'asrv-badge--danger'}">${t.type}</span></td>
             <td>${t.lots}</td>
@@ -1906,7 +2057,7 @@
             labels: ['Compra (Long)', 'Venda (Short)'],
             datasets: [{
               data: totalCount > 0 ? [buys, sells] : [0, 0],
-              backgroundColor: ['#2563eb', '#f59e0b']
+              backgroundColor: ['#ffffff', '#ef4444']
             }]
           },
           options: {

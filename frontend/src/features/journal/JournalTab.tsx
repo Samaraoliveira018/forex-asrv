@@ -1,4 +1,4 @@
-import { MAX_TRADES_PER_DAY, type JournalSnapshot, type Trade } from '@asrv/backend';
+import { MAX_STOPS_PER_DAY, MAX_TRADES_PER_DAY, type JournalSnapshot, type Trade } from '@asrv/backend';
 import {
   Badge,
   Button,
@@ -10,7 +10,7 @@ import {
   TradeCard,
 } from '@asrv/design-system';
 import { EquityChart } from './charts';
-import { formatDate, isBreakEven, money, signedMoney, signedValue } from './format';
+import { formatDate, isBreakEven, money, signedMoney, signedPercent, signedValue } from './format';
 
 export type JournalView = 'grid' | 'list';
 export type Market = 'nacional' | 'internacional';
@@ -47,6 +47,9 @@ export function JournalTab({
   const { stats, discipline } = snapshot;
   const nextMilestone = milestones.find((milestone) => discipline.streak < milestone) ?? 60;
   const todayCount = stats.todayCountedTrades;
+  const periodTone = (pnl: number) => (pnl > 0 ? 'success' : pnl < 0 ? 'danger' : 'muted');
+  const periodHint = (period: (typeof stats.periods)['daily']) =>
+    `Resultado: ${signedPercent(period.pct)}\nPerda: ${period.lossPct.toFixed(2)}%`;
 
   return (
     <div className="space-y-6">
@@ -75,6 +78,22 @@ export function JournalTab({
             >
               <i className="fa-solid fa-gauge-high mr-1.5" aria-hidden="true" />
               Hoje: {todayCount}/{MAX_TRADES_PER_DAY} trades
+            </Badge>
+          </span>
+
+          <span title="Máximo de 2 stops por dia: ao atingir, pare de operar">
+            <Badge
+              tone={
+                stats.todayStops >= MAX_STOPS_PER_DAY
+                  ? 'danger'
+                  : stats.todayStops === 1
+                    ? 'warning'
+                    : 'neutral'
+              }
+              pill
+            >
+              <i className="fa-solid fa-hand mr-1.5" aria-hidden="true" />
+              Stops: {stats.todayStops}/{MAX_STOPS_PER_DAY}
             </Badge>
           </span>
 
@@ -151,6 +170,36 @@ export function JournalTab({
         />
         <StatCard label="Win Rate" value={`${stats.winRate.toFixed(0)}%`} />
         <StatCard label="Operações Registradas" value={String(stats.totalTrades)} />
+      </section>
+
+      <section
+        aria-label="Resultados por período"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-3"
+      >
+        <StatCard
+          label="Resultado Diário"
+          value={signedMoney(stats.periods.daily.pnl, hidden)}
+          tone={periodTone(stats.periods.daily.pnl)}
+          hint={periodHint(stats.periods.daily)}
+          hintTone={stats.periods.daily.pnl >= 0 ? 'success' : 'danger'}
+          icon={<i className="fa-solid fa-sun" aria-hidden="true" />}
+        />
+        <StatCard
+          label="Resultado Semanal"
+          value={signedMoney(stats.periods.weekly.pnl, hidden)}
+          tone={periodTone(stats.periods.weekly.pnl)}
+          hint={periodHint(stats.periods.weekly)}
+          hintTone={stats.periods.weekly.pnl >= 0 ? 'success' : 'danger'}
+          icon={<i className="fa-solid fa-calendar-week" aria-hidden="true" />}
+        />
+        <StatCard
+          label="Resultado Mensal"
+          value={signedMoney(stats.periods.monthly.pnl, hidden)}
+          tone={periodTone(stats.periods.monthly.pnl)}
+          hint={periodHint(stats.periods.monthly)}
+          hintTone={stats.periods.monthly.pnl >= 0 ? 'success' : 'danger'}
+          icon={<i className="fa-solid fa-calendar" aria-hidden="true" />}
+        />
       </section>
 
       <Card ariaLabel="Performance do patrimônio">
@@ -254,7 +303,7 @@ function JournalGrid({
               <span className="flex items-center gap-1.5 text-sm font-bold text-emerald-400">
                 <i className="fa-solid fa-shield-halved" aria-hidden="true" /> Preservação de Capital
               </span>
-              <span className="asrv-trade-card__date">{item.day}</span>
+              <span className="asrv-trade-card__date">{formatDate(item.day)}</span>
             </div>
             <div className="asrv-trade-card__body">
               <p className="text-xs italic text-slate-400">

@@ -1,9 +1,27 @@
-import { isBreakEven, type Trade } from './trade';
+import { isBreakEven, isStop, type Trade } from './trade';
 
 export interface StatsInput {
   trades: readonly Trade[];
   initialBalance: number;
   today: string;
+}
+
+/** Resultado de um período (dia, semana ou mês) com % sobre o saldo de abertura. */
+export interface PeriodResult {
+  pnl: number;
+  openingBalance: number;
+  /** Resultado do período em % do saldo de abertura (pode ser negativo). */
+  pct: number;
+  /** Percentual perdido no período (0 quando o período não fechou negativo). */
+  lossPct: number;
+  trades: number;
+  stops: number;
+}
+
+export interface PeriodResults {
+  daily: PeriodResult;
+  weekly: PeriodResult;
+  monthly: PeriodResult;
 }
 
 export interface Stats {
@@ -23,6 +41,10 @@ export interface Stats {
   todayCount: number;
   /** Operações de hoje que contam para o limite diário (break even não conta). */
   todayCountedTrades: number;
+  /** Stops de hoje (perdas reais). */
+  todayStops: number;
+  /** Resultado diário, semanal (desde segunda) e mensal. */
+  periods: PeriodResults;
 }
 
 export function calculateStats(input: StatsInput): Stats {
@@ -40,6 +62,7 @@ export function calculateStats(input: StatsInput): Stats {
   let sellCount = 0;
   let todayCount = 0;
   let todayCountedTrades = 0;
+  let todayStops = 0;
 
   for (const trade of trades) {
     totalPnl += trade.pnl;
@@ -50,6 +73,7 @@ export function calculateStats(input: StatsInput): Stats {
     if (trade.date === today) {
       todayCount += 1;
       if (!isBreakEven(trade.pnl)) todayCountedTrades += 1;
+      if (isStop(trade.pnl)) todayStops += 1;
     }
 
     if (isBreakEven(trade.pnl)) {
@@ -86,5 +110,56 @@ export function calculateStats(input: StatsInput): Stats {
     sellCount,
     todayCount,
     todayCountedTrades,
+    todayStops,
+    periods: calculatePeriodResults(trades, initialBalance, today),
   };
+}
+
+export function calculatePeriodResults(
+  trades: readonly Trade[],
+  initialBalance: number,
+  today: string,
+): PeriodResults {
+  return {
+    daily: periodResult(trades, initialBalance, today, today),
+    weekly: periodResult(trades, initialBalance, startOfWeek(today), today),
+    monthly: periodResult(trades, initialBalance, `${today.slice(0, 7)}-01`, today),
+  };
+}
+
+function periodResult(
+  trades: readonly Trade[],
+  initialBalance: number,
+  start: string,
+  end: string,
+): PeriodResult {
+  const inPeriod = trades.filter((trade) => trade.date >= start && trade.date <= end);
+  const pnl = inPeriod.reduce((sum, trade) => sum + trade.pnl, 0);
+  const previousPnl = trades
+    .filter((trade) => trade.date < start)
+    .reduce((sum, trade) => sum + trade.pnl, 0);
+  const openingBalance = initialBalance + previousPnl;
+  const pct = openingBalance > 0 ? (pnl / openingBalance) * 100 : 0;
+  const lossPct =
+    pnl < 0 && openingBalance > 0
+      ? Math.min(100, (Math.abs(pnl) / openingBalance) * 100)
+      : 0;
+
+  return {
+    pnl,
+    openingBalance,
+    pct,
+    lossPct,
+    trades: inPeriod.length,
+    stops: inPeriod.filter((trade) => isStop(trade.pnl)).length,
+  };
+}
+
+/** Segunda-feira da semana que contém a data informada (ISO YYYY-MM-DD). */
+function startOfWeek(iso: string): string {
+  const [year = 1970, month = 1, day = 1] = iso.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  const offset = (date.getUTCDay() + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - offset);
+  return date.toISOString().slice(0, 10);
 }

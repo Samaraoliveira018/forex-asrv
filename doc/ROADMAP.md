@@ -1,6 +1,6 @@
 # Roadmap — Diário Trader ASRV
 
-> Última atualização: **23/10/2026** · Referência: migração para monorepo
+> Última atualização: **27/10/2026** · Referência: regras de stops + experiência de uso
 > App atual: https://samaraoliveira018.github.io/forex-asrv/
 > Novo app (migração): https://samaraoliveira018.github.io/forex-asrv/app/
 > Documentação técnica: [`../backend/supabase/README.md`](../backend/supabase/README.md) · [`ARCHITECTURE.md`](./ARCHITECTURE.md)
@@ -8,8 +8,9 @@
 ## 1. Visão
 
 Um diário de trading pessoal que força **disciplina operacional** (máximo 4 trades válidos/dia —
-break even não conta —, perda individual ≤ 25% do saldo inicial do dia e ofensiva de dias) e que
-**nunca perde um registro**, esteja você online, offline ou trocando de dispositivo.
+break even não conta —, no máximo 2 stops/dia, perda individual ≤ 25% do saldo inicial do dia e
+ofensiva de dias) e que **nunca perde um registro**, esteja você online, offline ou trocando de
+dispositivo.
 
 ### Objetivos
 
@@ -31,7 +32,7 @@ break even não conta —, perda individual ≤ 25% do saldo inicial do dia e of
 | Área | Entregue |
 |---|---|
 | App | Diário, dashboard, plano operacional e estatísticas em página estática |
-| Regras de disciplina | Limite de 4 trades/dia (break even não conta), perda máxima de 25% do saldo inicial do dia, break even, ofensiva com metas (3/7/14/30/60 dias) |
+| Regras de disciplina | Limite de 4 trades/dia (break even não conta), limite de 2 stops/dia (ao atingir 2, parar de operar), perda máxima de 25% do saldo inicial do dia, break even, ofensiva com metas (3/7/14/30/60 dias) |
 | Dados | Cache em `localStorage` com migração de chaves antigas e sanitização de dados |
 | Nuvem | Supabase (Postgres + Auth + RLS) com login por e-mail/senha e Storage privado para os prints (`trade-screenshots`, URL assinada) |
 | Sincronização | Online-first, fila offline, envio ao reconectar, sync manual e migração assistida do histórico local |
@@ -64,9 +65,32 @@ O backend (`backend/`) passa a ser um pacote (`@asrv/backend`) importado por web
 | M-08 | Design system web/native com tokens + Storybook | ✅ 31 testes |
 | M-09 | Release manual no GitHub com web + Storybook + checksums | ✅ |
 | M-10 | Print da operação (Storage privado + URL assinada) em web, mobile e `index.html` | ✅ |
+| M-11 | Stop loss diário: máximo de 2 stops (break even não conta); 3º stop zera a ofensiva | ✅ |
+| M-12 | Datas curtas (`dd/mm/aa`) nos modais, cartões e listas | ✅ |
+| M-13 | Painel de resultado diário/semanal/mensal com % de resultado e % de perda | ✅ |
+| M-14 | Fonte do ativo reduzida para não quebrar o cabeçalho do cartão | ✅ |
+| M-15 | Prints convertidos para WebP (web, mobile e `index.html`) | ✅ |
+| M-16 | Estatísticas: Compra branco e Venda vermelho | ✅ |
 
 **Critério para M-07:** M-06 concluído, uma semana de uso no `/app/` sem perda de dados
 e conferência local × nuvem com contagens iguais.
+
+### 2.2 Regras e experiência — entrega atual (v0.1.3)
+
+Objetivo: refletir a rotina real de operação (parar após 2 stops), deixar as datas mais curtas e
+dar leitura imediata de resultado/perda por período.
+
+| ID | Entrega | Regra / comportamento | Critério de aceite |
+|---|---|---|---|
+| M-11 | Stop loss diário | Máximo de **2 stops** por dia. O 3º stop é violação e zera a ofensiva. Ao salvar com 2 stops no dia, o app avisa para parar de operar. Break even não conta como stop. | `MAX_STOPS_PER_DAY = 2`, violação `TOO_MANY_STOPS`, aviso no BFF, badge `Stops: X/2` em web/mobile/`index.html` |
+| M-12 | Datas curtas | Modais, cartões e listas exibem `27/10/26` (dd/mm/aa); o banco continua em ISO `YYYY-MM-DD`. | Entrada com máscara `dd/mm/aa`, conversão para ISO ao salvar e exibição curta em todas as telas |
+| M-13 | Resultado por período | Bloco “Resultado Diário / Semanal / Mensal” com valor, % do saldo de abertura e **% de perda** do período. | `calculateStats().periods` com `daily`, `weekly`, `monthly` (segunda-feira como início da semana) |
+| M-14 | Fonte do ativo | Ativo menor e sem quebra no cabeçalho do cartão. | `asrv-trade-card__asset` 14px + `nowrap`; cartão nativo idem |
+| M-15 | Prints em WebP | Toda imagem anexada é convertida para WebP (fallback JPEG) antes do upload. | Data URL `image/webp` na web/`index.html`; `expo-image-manipulator` no mobile; extensão e `content-type` coerentes no Storage |
+| M-16 | Cores por direção | Nas estatísticas, **Compra = branco** e **Venda = vermelho**. | Donuts de web/mobile/`index.html` com as novas cores |
+
+**Fora de escopo desta entrega:** migrar prints antigos `.jpg` para `.webp` (os antigos continuam
+válidos por URL assinada; a remoção apaga as duas extensões).
 
 ---
 
@@ -124,7 +148,7 @@ Objetivo: usar o histórico para melhorar decisão, não só registrar.
 | R-17 | Análise por sessão/horário/dia | Revela quando o trader realmente tem vantagem | M | Gráficos e tabela com P/L e win rate por recorte |
 | R-18 | Calendário heatmap | Mostra consistência e sequências de perda | P | Mês navegável com cor por resultado diário |
 | R-19 | Relatório mensal | Fechamento do mês sem montar planilha | M | Página imprimível/PDF com resumo, gráficos e violações de regra |
-| R-20 | Alertas de violação em tempo real | Disciplina no momento da decisão | P | Aviso imediato ao ultrapassar 4 trades válidos (break even não conta) ou a perda máxima, com registro no histórico |
+| R-20 | Alertas de violação em tempo real | Disciplina no momento da decisão | P | Aviso imediato ao ultrapassar 4 trades válidos (break even não conta), 2 stops ou a perda máxima, com registro no histórico |
 | R-21 | Checklist e plano editáveis | O plano hoje é estático | P | Itens do checklist persistem e o plano aceita edição |
 
 ---

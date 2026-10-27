@@ -1,5 +1,5 @@
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
-import { MAX_TRADES_PER_DAY, type JournalSnapshot, type Trade } from '@asrv/backend';
+import { MAX_STOPS_PER_DAY, MAX_TRADES_PER_DAY, type JournalSnapshot, type Trade } from '@asrv/backend';
 import {
   Badge,
   Button,
@@ -15,7 +15,7 @@ import {
   typography,
 } from '@asrv/design-system';
 import { EquityChart } from './charts';
-import { formatDate, money, signedMoney, signedValue } from './format';
+import { formatDate, money, signedMoney, signedPercent, signedValue } from './format';
 
 export type JournalView = 'grid' | 'list';
 export type Market = 'nacional' | 'internacional';
@@ -53,6 +53,9 @@ export function JournalTab({
   const { stats, discipline } = snapshot;
   const nextMilestone = milestones.find((milestone) => discipline.streak < milestone) ?? 60;
   const todayCount = stats.todayCountedTrades;
+  const periodTone = (pnl: number) => (pnl > 0 ? 'success' : pnl < 0 ? 'danger' : 'muted');
+  const periodHint = (period: (typeof stats.periods)['daily']) =>
+    `Resultado: ${signedPercent(period.pct)}\nPerda: ${period.lossPct.toFixed(2)}%`;
 
   return (
     <View style={styles.screen}>
@@ -80,6 +83,18 @@ export function JournalTab({
           }
         >
           Hoje: {todayCount}/{MAX_TRADES_PER_DAY} trades
+        </Badge>
+        <Badge
+          pill
+          tone={
+            stats.todayStops >= MAX_STOPS_PER_DAY
+              ? 'danger'
+              : stats.todayStops === 1
+                ? 'warning'
+                : 'neutral'
+          }
+        >
+          Stops: {stats.todayStops}/{MAX_STOPS_PER_DAY}
         </Badge>
         <Button variant="success" size="sm" onPress={onNoTradeDay}>
           Dia sem operar
@@ -150,6 +165,30 @@ export function JournalTab({
         />
         <StatCard label="Win Rate" value={`${stats.winRate.toFixed(0)}%`} />
         <StatCard label="Operações Registradas" value={String(stats.totalTrades)} />
+      </View>
+
+      <View style={styles.periodGrid}>
+        <StatCard
+          label="Resultado Diário"
+          value={signedMoney(stats.periods.daily.pnl, hidden)}
+          tone={periodTone(stats.periods.daily.pnl)}
+          hint={periodHint(stats.periods.daily)}
+          hintTone={stats.periods.daily.pnl >= 0 ? 'success' : 'danger'}
+        />
+        <StatCard
+          label="Resultado Semanal"
+          value={signedMoney(stats.periods.weekly.pnl, hidden)}
+          tone={periodTone(stats.periods.weekly.pnl)}
+          hint={periodHint(stats.periods.weekly)}
+          hintTone={stats.periods.weekly.pnl >= 0 ? 'success' : 'danger'}
+        />
+        <StatCard
+          label="Resultado Mensal"
+          value={signedMoney(stats.periods.monthly.pnl, hidden)}
+          tone={periodTone(stats.periods.monthly.pnl)}
+          hint={periodHint(stats.periods.monthly)}
+          hintTone={stats.periods.monthly.pnl >= 0 ? 'success' : 'danger'}
+        />
       </View>
 
       <Card>
@@ -341,7 +380,7 @@ function NoTradeCard({ day, onDelete }: { day: string; onDelete: () => void }) {
     <View style={[styles.noTradeCard, styles.gridItem]}>
       <View style={styles.noTradeHeader}>
         <Text style={styles.noTradeTitle}>🛡️ Preservação de Capital</Text>
-        <Text style={styles.meta}>{day}</Text>
+        <Text style={styles.meta}>{formatDate(day)}</Text>
       </View>
       <Text style={styles.noTradeText}>
         &quot;Mercado sem padrão claro. Decisão consciente de não operar e proteger o
@@ -351,7 +390,7 @@ function NoTradeCard({ day, onDelete }: { day: string; onDelete: () => void }) {
       <Button
         variant="danger"
         size="sm"
-        accessibilityLabel={`Excluir dia sem operar ${day}`}
+        accessibilityLabel={`Excluir dia sem operar ${formatDate(day)}`}
         onPress={onDelete}
       >
         Eliminar
@@ -384,6 +423,11 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  periodGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,

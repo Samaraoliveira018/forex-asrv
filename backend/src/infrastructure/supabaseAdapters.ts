@@ -160,13 +160,14 @@ export function createSupabaseScreenshotStorage(
   client: SupabaseClientLike,
   getUserId: () => string,
 ): ScreenshotStorage {
-  const pathFor = (tradeId: string) => `${getUserId()}/${tradeId}.jpg`;
+  const pathFor = (tradeId: string, contentType = 'image/jpeg') =>
+    `${getUserId()}/${tradeId}.${extensionFor(contentType)}`;
 
   return {
     async upload(tradeId, dataUrl) {
       return guard('SCREENSHOT_UPLOAD_FAILED', async () => {
         const { bytes, contentType } = decodeDataUrl(dataUrl);
-        const path = pathFor(tradeId);
+        const path = pathFor(tradeId, contentType);
         const { error } = await client.storage
           .from(SCREENSHOT_BUCKET)
           .upload(path, bytes, { contentType, upsert: true });
@@ -197,11 +198,18 @@ export function createSupabaseScreenshotStorage(
 
     async remove(tradeId) {
       await guard('SCREENSHOT_DELETE_FAILED', async () => {
-        const { error } = await client.storage.from(SCREENSHOT_BUCKET).remove([pathFor(tradeId)]);
+        // Apaga as duas extensões possíveis (prints antigos em .jpg e novos em .webp).
+        const { error } = await client.storage
+          .from(SCREENSHOT_BUCKET)
+          .remove([pathFor(tradeId, 'image/jpeg'), pathFor(tradeId, 'image/webp')]);
         if (error) throw new BackendError('SCREENSHOT_DELETE_FAILED', error.message);
       });
     },
   };
+}
+
+function extensionFor(contentType: string): string {
+  return contentType === 'image/webp' ? 'webp' : 'jpg';
 }
 
 function decodeDataUrl(dataUrl: string): { bytes: Uint8Array; contentType: string } {

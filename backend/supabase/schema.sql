@@ -126,7 +126,7 @@ grant select, insert, update, delete on public.settings      to authenticated;
 -- ------------------------------------------------------------
 -- 6. STORAGE — prints das operações
 -- Bucket privado; cada usuário só acessa a própria pasta
--- (<user_id>/<trade_id>.jpg). A leitura é feita por URL assinada.
+-- (<user_id>/<trade_id>.webp ou .jpg). A leitura é feita por URL assinada.
 -- ------------------------------------------------------------
 insert into storage.buckets (id, name, public)
 values ('trade-screenshots', 'trade-screenshots', false)

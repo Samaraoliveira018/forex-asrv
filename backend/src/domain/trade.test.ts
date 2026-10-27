@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   BREAK_EVEN_TOLERANCE,
   MAX_LOSS_RATIO,
+  MAX_STOPS_PER_DAY,
   MAX_TRADES_PER_DAY,
   createTrade,
   isBreakEven,
   isIsoDate,
+  isStop,
 } from './trade';
 import { DomainError } from './errors';
 
@@ -137,9 +139,21 @@ describe('isBreakEven', () => {
   });
 });
 
+describe('isStop', () => {
+  it('considera stop apenas perda real fora da tolerância', () => {
+    expect(isStop(-10)).toBe(true);
+    expect(isStop(-0.31)).toBe(true);
+    expect(isStop(-0.3)).toBe(false);
+    expect(isStop(0)).toBe(false);
+    expect(isStop(10)).toBe(false);
+    expect(isStop(Number.NaN)).toBe(false);
+  });
+});
+
 describe('regras de disciplina', () => {
   it('mantém os limites usados pelo app atual', () => {
     expect(MAX_TRADES_PER_DAY).toBe(4);
+    expect(MAX_STOPS_PER_DAY).toBe(2);
     expect(MAX_LOSS_RATIO).toBe(0.25);
     expect(BREAK_EVEN_TOLERANCE).toBe(0.3);
   });

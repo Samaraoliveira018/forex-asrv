@@ -219,6 +219,17 @@ describe('SupabaseScreenshotStorage', () => {
     expect(Array.from(bytes ?? [])).toEqual([0, 1, 2, 3, 4]);
   });
 
+  it('usa a extensão .webp quando a imagem é WebP', async () => {
+    const client = new FakeSupabase();
+    const storage = createSupabaseScreenshotStorage(client, () => 'user-1');
+
+    const path = await storage.upload('t2', 'data:image/webp;base64,AAECAwQ=');
+
+    expect(path).toBe('user-1/t2.webp');
+    const bytes = client.buckets['trade-screenshots']?.['user-1/t2.webp'];
+    expect(Array.from(bytes ?? [])).toEqual([0, 1, 2, 3, 4]);
+  });
+
   it('assina as URLs dos prints informados', async () => {
     const client = new FakeSupabase();
     const storage = createSupabaseScreenshotStorage(client, () => 'user-1');

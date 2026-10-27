@@ -81,12 +81,12 @@ fallback público em `mobile/src/bff.ts`.
 
 O print é opcional e vive em um bucket **privado** do Supabase Storage:
 
-- bucket `trade-screenshots`, caminho `{user_id}/{trade_id}.jpg`;
+- bucket `trade-screenshots`, caminho `{user_id}/{trade_id}.webp` (ou `.jpg` em navegadores sem WebP);
 - a coluna `trades.screenshot_path` guarda apenas o caminho, nunca uma URL pública;
 - a leitura é feita por **URL assinada** (TTL de 24h), e a policy `trade_screenshots_own`
   restringe o acesso à pasta do próprio usuário (`foldername[1] = auth.uid()`);
-- web (`frontend/`) e app atual (`index.html`) comprimem a imagem para JPEG (máx. 1280px)
-  antes do upload; o mobile usa o `expo-image-picker`;
+- web (`frontend/`) e app atual (`index.html`) convertem a imagem para WebP (máx. 1280px,
+  fallback JPEG) antes do upload; o mobile usa `expo-image-picker` + `expo-image-manipulator`;
 - offline, o print entra na fila junto com a operação (`uploadScreenshot`) e sobe ao reconectar.
 
 O schema e a seção de Storage ficam em [`backend/supabase/schema.sql`](backend/supabase/schema.sql).

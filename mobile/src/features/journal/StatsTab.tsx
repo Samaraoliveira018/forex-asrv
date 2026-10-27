@@ -66,8 +66,8 @@ export function StatsTab({ snapshot }: { snapshot: JournalSnapshot }) {
         <DistributionBar
           label="Proporção por direção"
           segments={[
-            { label: 'Compra (Long)', value: stats.buyCount, color: colors.primary },
-            { label: 'Venda (Short)', value: stats.sellCount, color: colors.warning },
+            { label: 'Compra (Long)', value: stats.buyCount, color: colors.white },
+            { label: 'Venda (Short)', value: stats.sellCount, color: colors.danger },
           ]}
         />
       </Card>

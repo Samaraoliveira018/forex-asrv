@@ -28,7 +28,7 @@ import { JournalTab, type JournalView, type Market } from './JournalTab';
 import { PlanTab } from './PlanTab';
 import { StatsTab } from './StatsTab';
 import { TradeModal } from './TradeModal';
-import { money, today } from './format';
+import { formatDate, maskDateInput, money, parseDateInput, today } from './format';
 
 type Tab = 'dashboard' | 'journal' | 'plan' | 'stats';
 
@@ -55,11 +55,11 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
   const [balanceDraft, setBalanceDraft] = useState('0');
   const [balanceError, setBalanceError] = useState('');
   const [noTradeOpen, setNoTradeOpen] = useState(false);
-  const [noTradeDate, setNoTradeDate] = useState(today());
+  const [noTradeDate, setNoTradeDate] = useState(formatDate(today()));
   const [noTradeError, setNoTradeError] = useState('');
   const [pending, setPending] = useState(0);
   const [syncing, setSyncing] = useState(false);
-  const [checklist, setChecklist] = useState<boolean[]>(() => [false, false, false, false]);
+  const [checklist, setChecklist] = useState<boolean[]>(() => [false, false, false, false, false]);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importDraft, setImportDraft] = useState('');
@@ -142,7 +142,7 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
   }
 
   function openNoTradeDay() {
-    setNoTradeDate(today());
+    setNoTradeDate(formatDate(today()));
     setNoTradeError('');
     setNoTradeOpen(true);
   }
@@ -150,13 +150,14 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
   async function submitNoTradeDay() {
     setNoTradeError('');
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(noTradeDate)) {
-      setNoTradeError('Formato de data inválido. Use AAAA-MM-DD.');
+    const target = parseDateInput(noTradeDate);
+    if (!target) {
+      setNoTradeError('Formato de data inválido. Use dd/mm/aa.');
       return;
     }
 
     try {
-      await bff.journal.registerNoTradeDay(noTradeDate);
+      await bff.journal.registerNoTradeDay(target);
       setNoTradeOpen(false);
       await load();
     } catch (cause) {
@@ -510,8 +511,9 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
         <Input
           label="Data sem operação"
           value={noTradeDate}
-          onChangeText={setNoTradeDate}
-          placeholder="AAAA-MM-DD"
+          onChangeText={(value) => setNoTradeDate(maskDateInput(value))}
+          placeholder="dd/mm/aa"
+          keyboardType="numeric"
         />
         {noTradeError ? <Alert tone="danger">{noTradeError}</Alert> : null}
       </Modal>

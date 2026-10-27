@@ -18,7 +18,7 @@ import { JournalTab, type JournalView, type Market } from './JournalTab';
 import { PlanTab } from './PlanTab';
 import { StatsTab } from './StatsTab';
 import { TradeModal } from './TradeModal';
-import { money, today } from './format';
+import { formatDate, money, parseDateInput, today } from './format';
 
 type Tab = 'dashboard' | 'journal' | 'plan' | 'stats';
 
@@ -45,7 +45,7 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
   const [balanceDraft, setBalanceDraft] = useState('150');
   const [pending, setPending] = useState(0);
   const [syncing, setSyncing] = useState(false);
-  const [checklist, setChecklist] = useState<boolean[]>(() => [false, false, false, false]);
+  const [checklist, setChecklist] = useState<boolean[]>(() => [false, false, false, false, false]);
 
   const load = useCallback(async () => {
     const next = await bff.journal.list();
@@ -103,11 +103,15 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
   }
 
   async function handleNoTradeDay() {
-    const target = window.prompt('Digite a data em que você não operou (AAAA-MM-DD):', today());
-    if (!target) return;
+    const input = window.prompt(
+      'Digite a data em que você não operou (dd/mm/aa):',
+      formatDate(today()),
+    );
+    if (!input) return;
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(target)) {
-      setError('Formato de data inválido. Use AAAA-MM-DD.');
+    const target = parseDateInput(input);
+    if (!target) {
+      setError('Formato de data inválido. Use dd/mm/aa.');
       return;
     }
 

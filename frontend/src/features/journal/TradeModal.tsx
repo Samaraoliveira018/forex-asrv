@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'r
 import type { Trade, TradeInput, TradeType } from '@asrv/backend';
 import { Button, Input, Modal, Select, Textarea } from '@asrv/design-system';
 import { fileToScreenshotDataUrl } from './image';
+import { formatDate, maskDateInput, parseDateInput } from './format';
 
 type FormState = {
   date: string;
@@ -76,13 +77,19 @@ export function TradeModal({
       return;
     }
 
+    const isoDate = parseDateInput(form.date);
+    if (!isoDate) {
+      setError('Informe a data no formato dd/mm/aa.');
+      return;
+    }
+
     setSaving(true);
     try {
       const screenshot = photoDataUrl !== null ? photoDataUrl : photoRemoved ? null : undefined;
       await onSubmit(
         {
           ...(trade ? { id: trade.id } : {}),
-          date: form.date,
+          date: isoDate,
           asset: form.asset,
           type: form.type,
           lots: numberFrom(form.lots),
@@ -105,10 +112,12 @@ export function TradeModal({
       <form className="mt-4 space-y-4 text-xs" onSubmit={handleSubmit} noValidate>
         <Input
           label="Data da Operação"
-          type="date"
+          type="text"
+          inputMode="numeric"
+          placeholder="dd/mm/aa"
           value={form.date}
           required
-          onChangeText={(date) => setForm((current) => ({ ...current, date }))}
+          onChangeText={(date) => setForm((current) => ({ ...current, date: maskDateInput(date) }))}
         />
 
         <Input
@@ -237,7 +246,7 @@ export function TradeModal({
 
 function formFor(trade: Trade | null): FormState {
   return {
-    date: trade?.date ?? today(),
+    date: formatDate(trade?.date ?? today()),
     asset: trade?.asset ?? '',
     type: trade?.type ?? 'Compra',
     lots: trade ? String(trade.lots) : '1',

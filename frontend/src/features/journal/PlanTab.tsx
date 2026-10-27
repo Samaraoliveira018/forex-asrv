@@ -4,6 +4,7 @@ import { Checkbox, Card } from '@asrv/design-system';
 const checklistItems = [
   'Verificar calendário de notícias',
   `Respeitar o limite de ${MAX_TRADES_PER_DAY} trades diários (break even não conta)`,
+  'Parar de operar após 2 stops no dia',
   'Mover o Stop para Break Even ao atingir a primeira parcial',
   'Se a oportunidade passou, registrar o dia sem operação',
 ];
@@ -26,6 +27,10 @@ export function PlanTab({
             <p>
               ⚡ <strong>Limite estrito:</strong> Máximo de {MAX_TRADES_PER_DAY} operações por dia.
               Break even não conta para o limite.
+            </p>
+            <p>
+              🛑 <strong>Stops:</strong> Máximo de 2 stops por dia. Ao atingir 2, pare de operar
+              para não perder a ofensiva.
             </p>
             <p>
               🛑 <strong>Perda Individual Máxima:</strong> Nenhuma operação pode ter um prejuízo

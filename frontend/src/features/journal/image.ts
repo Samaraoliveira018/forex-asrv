@@ -1,5 +1,5 @@
 /**
- * Lê a imagem escolhida pelo usuário e a devolve como data URL JPEG,
+ * Lê a imagem escolhida pelo usuário e a devolve como data URL WebP,
  * reduzida para caber no Storage sem pesar no upload.
  */
 export async function fileToScreenshotDataUrl(file: File): Promise<string> {
@@ -38,8 +38,12 @@ async function compress(dataUrl: string, maxSize = 1280, quality = 0.72): Promis
   canvas.height = height;
   context.drawImage(image, 0, 0, width, height);
 
-  const jpeg = canvas.toDataURL('image/jpeg', quality);
-  return jpeg.length < dataUrl.length ? jpeg : dataUrl;
+  // Preferência por WebP; cai para JPEG se o navegador não suportar.
+  const webp = canvas.toDataURL('image/webp', 0.8);
+  const encoded = webp.startsWith('data:image/webp')
+    ? webp
+    : canvas.toDataURL('image/jpeg', quality);
+  return encoded.length < dataUrl.length ? encoded : dataUrl;
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {

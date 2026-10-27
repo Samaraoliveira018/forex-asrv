@@ -1,6 +1,17 @@
-import { MAX_LOSS_RATIO, MAX_TRADES_PER_DAY, isBreakEven, type Trade } from './trade';
+import {
+  MAX_LOSS_RATIO,
+  MAX_STOPS_PER_DAY,
+  MAX_TRADES_PER_DAY,
+  isBreakEven,
+  isStop,
+  type Trade,
+} from './trade';
 
-export type ViolationKind = 'TOO_MANY_TRADES' | 'LOSS_OVER_LIMIT' | 'BALANCE_DEPLETED';
+export type ViolationKind =
+  | 'TOO_MANY_TRADES'
+  | 'TOO_MANY_STOPS'
+  | 'LOSS_OVER_LIMIT'
+  | 'BALANCE_DEPLETED';
 
 export interface Violation {
   kind: ViolationKind;
@@ -38,6 +49,16 @@ export function evaluateDiscipline(input: DisciplineInput): DisciplineResult {
         kind: 'TOO_MANY_TRADES',
         date,
         message: `${countedTrades.length} operações em ${date}; o limite é ${MAX_TRADES_PER_DAY} por dia (break even não conta).`,
+      });
+    }
+
+    // Stop = perda real. Ao passar de 2 stops no dia, a disciplina foi quebrada.
+    const stops = trades.filter((trade) => isStop(trade.pnl));
+    if (stops.length > MAX_STOPS_PER_DAY) {
+      violations.push({
+        kind: 'TOO_MANY_STOPS',
+        date,
+        message: `${stops.length} stops em ${date}; o limite é ${MAX_STOPS_PER_DAY} por dia. Após 2 stops, pare de operar.`,
       });
     }
 

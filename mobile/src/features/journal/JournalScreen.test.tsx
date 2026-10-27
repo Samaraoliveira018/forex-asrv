@@ -95,7 +95,15 @@ describe('JournalScreen (mobile)', () => {
 
     (ImagePicker.launchImageLibraryAsync as jest.Mock).mockResolvedValueOnce({
       canceled: false,
-      assets: [{ base64: 'AAECAwQ=', mimeType: 'image/jpeg' }],
+      assets: [
+        {
+          uri: 'file://print.jpg',
+          width: 800,
+          height: 600,
+          base64: 'AAECAwQ=',
+          mimeType: 'image/jpeg',
+        },
+      ],
     });
 
     await openNewTradeModal();
@@ -109,7 +117,7 @@ describe('JournalScreen (mobile)', () => {
     await waitFor(() => {
       expect(fake.mocks.saveTrade).toHaveBeenCalledWith(
         expect.objectContaining({ asset: 'EURUSD' }),
-        'data:image/jpeg;base64,AAECAwQ=',
+        'data:image/webp;base64,AAECAwQ=',
       );
     });
   });
@@ -118,7 +126,7 @@ describe('JournalScreen (mobile)', () => {
     const { fake } = await renderJournal();
 
     await screen.findByText('EURUSD');
-    await fireEvent.press(screen.getByLabelText('Editar EURUSD de 21/10/2026'));
+    await fireEvent.press(screen.getByLabelText('Editar EURUSD de 21/10/26'));
     expect(await screen.findByText('Editar Operação')).toBeTruthy();
     await fireEvent.changeText(screen.getByLabelText('Resultado'), '150');
     await fireEvent.press(screen.getByRole('button', { name: 'Atualizar Operação' }));
@@ -152,7 +160,7 @@ describe('JournalScreen (mobile)', () => {
     const { fake } = await renderJournal();
 
     await screen.findByText('EURUSD');
-    await fireEvent.press(screen.getByLabelText('Excluir EURUSD de 21/10/2026'));
+    await fireEvent.press(screen.getByLabelText('Excluir EURUSD de 21/10/26'));
 
     await waitFor(() => expect(fake.mocks.deleteTrade).toHaveBeenCalledWith('t1'));
     await waitFor(() => expect(screen.queryByText('EURUSD')).toBeNull());
@@ -164,7 +172,7 @@ describe('JournalScreen (mobile)', () => {
     await screen.findByText('EURUSD');
     await fireEvent.press(screen.getByRole('button', { name: 'Dia sem operar' }));
     expect(await screen.findByText('Registrar Dia Sem Operar')).toBeTruthy();
-    await fireEvent.changeText(screen.getByLabelText('Data sem operação'), '2026-10-20');
+    await fireEvent.changeText(screen.getByLabelText('Data sem operação'), '20/10/26');
     await fireEvent.press(screen.getByRole('button', { name: 'Registrar' }));
 
     await waitFor(() =>
@@ -172,7 +180,7 @@ describe('JournalScreen (mobile)', () => {
     );
     expect(await screen.findByText(/Preservação de Capital/)).toBeTruthy();
 
-    await fireEvent.press(screen.getByLabelText('Excluir dia sem operar 2026-10-20'));
+    await fireEvent.press(screen.getByLabelText('Excluir dia sem operar 20/10/26'));
     await waitFor(() =>
       expect(fake.mocks.removeNoTradeDay).toHaveBeenCalledWith('2026-10-20'),
     );

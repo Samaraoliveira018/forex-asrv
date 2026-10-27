@@ -237,6 +237,55 @@ describe('createJournalService', () => {
     expect(trades.items).toHaveLength(5);
   });
 
+  it('avisa que o segundo stop é o último antes de parar de operar', async () => {
+    const { trades, service } = setup();
+    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
+
+    const result = await service.saveTrade({
+      date: '2026-10-21',
+      asset: 'EURUSD',
+      type: 'Compra',
+      lots: 1,
+      pnl: -5,
+    });
+
+    expect(result.warnings.join(' ').toLowerCase()).toContain('2º stop');
+  });
+
+  it('avisa ao atingir o limite de dois stops no dia', async () => {
+    const { trades, service } = setup();
+    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
+    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
+
+    const result = await service.saveTrade({
+      date: '2026-10-21',
+      asset: 'EURUSD',
+      type: 'Compra',
+      lots: 1,
+      pnl: -5,
+    });
+
+    expect(result.synced).toBe(true);
+    expect(result.warnings.join(' ').toLowerCase()).toContain('stop');
+    expect(trades.items).toHaveLength(3);
+  });
+
+  it('avisa para parar de operar após dois stops mesmo em uma operação vencedora', async () => {
+    const { trades, service } = setup();
+    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
+    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
+
+    const result = await service.saveTrade({
+      date: '2026-10-21',
+      asset: 'EURUSD',
+      type: 'Compra',
+      lots: 1,
+      pnl: 30,
+    });
+
+    expect(result.warnings.join(' ').toLowerCase()).toContain('parar de operar');
+  });
+
   it('avisa quando a perda individual passa de 25% do saldo inicial do dia', async () => {
     const { service } = setup();
 
