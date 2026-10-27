@@ -115,6 +115,10 @@ Push em `main` dispara o workflow de Pages, que:
 O `index.html` da raiz continua sendo o app estático, mas agora consome os tokens e
 componentes visuais do design system. A migração do React acontece em paralelo em `/app/`.
 
+A origem do Pages deve estar em **GitHub Actions**. Se estiver em “Deploy from a branch”,
+o build automático da branch (`pages-build-deployment`) concorre com o `static.yml` e um
+dos deployments falha com `due to in progress deployment`.
+
 ### Vercel (app React)
 
 O app React também pode ser publicado na Vercel com **Root Directory = raiz do repositório**.

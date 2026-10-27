@@ -238,6 +238,11 @@ O `index.html` da raiz continua ativo, mas compartilha a paleta e os componentes
 com o app React por meio do CSS do design system. Nenhum caminho absoluto deve ser usado
 no app novo: o Vite resolve o `base`.
 
+A origem do Pages precisa estar em **GitHub Actions** (`build_type: workflow`), não em
+“Deploy from a branch”. Com a origem por branch, o workflow automático
+`pages-build-deployment` disputa o mesmo deployment com o `static.yml` e um dos dois falha
+com `Deployment request failed ... due to in progress deployment`.
+
 ### Vercel (app React)
 
 `vercel.json` (raiz do repo) publica o app React na Vercel com Root Directory = raiz:
