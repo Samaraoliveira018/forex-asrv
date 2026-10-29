@@ -18,6 +18,7 @@ create table if not exists public.trades (
   "date"     date        not null,
   asset      text        not null,
   type       text        not null check (type in ('Compra', 'Venda')),
+  session    text        not null default 'day' check (session in ('day', 'night')),
   lots       numeric     not null default 1,
   pnl        numeric     not null default 0,
   notes      text        not null default '',
@@ -30,6 +31,21 @@ create table if not exists public.trades (
 -- Garante a coluna do print em bancos já existentes
 alter table public.trades
   add column if not exists screenshot_path text not null default '';
+
+-- Garante a sessão (dia/noite) em bancos já existentes.
+-- Operações antigas passam a contar como sessão do dia.
+alter table public.trades
+  add column if not exists session text not null default 'day';
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'trades_session_check'
+  ) then
+    alter table public.trades
+      add constraint trades_session_check check (session in ('day', 'night'));
+  end if;
+end $$;
 
 -- Dias registrados como "não operei"
 create table if not exists public.no_trade_days (

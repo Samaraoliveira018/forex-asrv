@@ -1,12 +1,13 @@
 import { DomainError } from '../domain/errors';
 import {
   MAX_LOSS_RATIO,
-  MAX_STOPS_PER_DAY,
-  MAX_TRADES_PER_DAY,
+  MAX_STOPS_PER_SESSION,
+  MAX_TRADES_PER_SESSION,
   createTrade,
   isBreakEven,
   isIsoDate,
   isStop,
+  sessionLabel,
   type Trade,
   type TradeInput,
 } from '../domain/trade';
@@ -301,30 +302,36 @@ function buildWarnings(
 ): string[] {
   const warnings: string[] = [];
 
-  // Break even não conta para o limite diário; a própria operação (edição) fica de fora.
-  const sameDay = existingTrades.filter(
-    (item) => item.date === trade.date && item.id !== trade.id && !isBreakEven(item.pnl),
+  // Break even não conta para o limite da sessão; a própria operação (edição) fica de fora.
+  const sameSession = existingTrades.filter(
+    (item) =>
+      item.date === trade.date &&
+      item.session === trade.session &&
+      item.id !== trade.id &&
+      !isBreakEven(item.pnl),
   );
-  if (!isBreakEven(trade.pnl) && sameDay.length >= MAX_TRADES_PER_DAY) {
+  const session = sessionLabel(trade.session);
+  if (!isBreakEven(trade.pnl) && sameSession.length >= MAX_TRADES_PER_SESSION) {
     warnings.push(
-      `Limite de ${MAX_TRADES_PER_DAY} operações por dia atingido (break even não conta).`,
+      `Limite de ${MAX_TRADES_PER_SESSION} operações na sessão ${session} atingido (break even não conta).`,
     );
   }
 
-  const sameDayStops = existingTrades.filter(
-    (item) => item.date === trade.date && item.id !== trade.id && isStop(item.pnl),
+  const sameSessionStops = existingTrades.filter(
+    (item) =>
+      item.date === trade.date && item.session === trade.session && item.id !== trade.id && isStop(item.pnl),
   );
-  if (isStop(trade.pnl) && sameDayStops.length === MAX_STOPS_PER_DAY - 1) {
+  if (isStop(trade.pnl) && sameSessionStops.length === MAX_STOPS_PER_SESSION - 1) {
     warnings.push(
-      `Este é o ${MAX_STOPS_PER_DAY}º stop do dia. Pare de operar após esta operação para preservar a ofensiva.`,
+      `Este é o ${MAX_STOPS_PER_SESSION}º stop da sessão ${session}. Pare de operar nessa sessão após esta operação para preservar a ofensiva.`,
     );
-  } else if (isStop(trade.pnl) && sameDayStops.length >= MAX_STOPS_PER_DAY) {
+  } else if (isStop(trade.pnl) && sameSessionStops.length >= MAX_STOPS_PER_SESSION) {
     warnings.push(
-      `Limite de ${MAX_STOPS_PER_DAY} stops por dia atingido. Pare de operar para não zerar a ofensiva.`,
+      `Limite de ${MAX_STOPS_PER_SESSION} stops na sessão ${session} atingido. Pare de operar nessa sessão para não zerar a ofensiva.`,
     );
-  } else if (!isBreakEven(trade.pnl) && sameDayStops.length >= MAX_STOPS_PER_DAY) {
+  } else if (!isBreakEven(trade.pnl) && sameSessionStops.length >= MAX_STOPS_PER_SESSION) {
     warnings.push(
-      `Você já tem ${MAX_STOPS_PER_DAY} stops hoje. O ideal é parar de operar para preservar a ofensiva.`,
+      `Você já tem ${MAX_STOPS_PER_SESSION} stops na sessão ${session}. O ideal é parar de operar nessa sessão para preservar a ofensiva.`,
     );
   }
 

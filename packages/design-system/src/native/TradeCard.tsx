@@ -17,6 +17,8 @@ export interface TradeCardProps {
   asset: string;
   date: string;
   type: TradeDirection;
+  /** Sessão do mercado: `day` (dia) ou `night` (noite). */
+  session?: 'day' | 'night';
   lots: number;
   pnl: number;
   notes?: string;
@@ -34,6 +36,7 @@ export function TradeCard({
   asset,
   date,
   type,
+  session,
   lots,
   pnl,
   notes,
@@ -60,6 +63,11 @@ export function TradeCard({
         <View style={styles.headerMain}>
           <Text style={styles.asset}>{asset}</Text>
           <Badge tone={type === 'Compra' ? 'success' : 'danger'}>{type}</Badge>
+          {session ? (
+            <Badge tone={session === 'night' ? 'orange' : 'info'}>
+              {session === 'night' ? 'Noite' : 'Dia'}
+            </Badge>
+          ) : null}
           {breakEven ? <Badge tone="neutral">BREAK EVEN</Badge> : null}
         </View>
         <Text style={styles.date}>{displayDate}</Text>

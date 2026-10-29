@@ -1,4 +1,4 @@
-import { isBreakEven, isStop, type Trade } from './trade';
+import { isBreakEven, isStop, type Trade, type TradeSession } from './trade';
 
 export interface StatsInput {
   trades: readonly Trade[];
@@ -24,6 +24,16 @@ export interface PeriodResults {
   monthly: PeriodResult;
 }
 
+/** Contadores de disciplina de uma sessão no dia atual. */
+export interface SessionCounters {
+  /** Operações da sessão que contam para o limite (break even não conta). */
+  countedTrades: number;
+  /** Stops (perdas reais) da sessão. */
+  stops: number;
+  /** Total de operações registradas na sessão, incluindo break even. */
+  totalTrades: number;
+}
+
 export interface Stats {
   totalTrades: number;
   wins: number;
@@ -41,8 +51,10 @@ export interface Stats {
   todayCount: number;
   /** Operações de hoje que contam para o limite diário (break even não conta). */
   todayCountedTrades: number;
-  /** Stops de hoje (perdas reais). */
+  /** Stops de hoje (perdas reais), somando dia e noite. */
   todayStops: number;
+  /** Contadores de hoje separados por sessão (dia/noite). */
+  todayBySession: Record<TradeSession, SessionCounters>;
   /** Resultado diário, semanal (desde segunda) e mensal. */
   periods: PeriodResults;
 }
@@ -63,6 +75,10 @@ export function calculateStats(input: StatsInput): Stats {
   let todayCount = 0;
   let todayCountedTrades = 0;
   let todayStops = 0;
+  const todayBySession: Record<TradeSession, SessionCounters> = {
+    day: { countedTrades: 0, stops: 0, totalTrades: 0 },
+    night: { countedTrades: 0, stops: 0, totalTrades: 0 },
+  };
 
   for (const trade of trades) {
     totalPnl += trade.pnl;
@@ -74,6 +90,11 @@ export function calculateStats(input: StatsInput): Stats {
       todayCount += 1;
       if (!isBreakEven(trade.pnl)) todayCountedTrades += 1;
       if (isStop(trade.pnl)) todayStops += 1;
+
+      const counters = todayBySession[trade.session];
+      counters.totalTrades += 1;
+      if (!isBreakEven(trade.pnl)) counters.countedTrades += 1;
+      if (isStop(trade.pnl)) counters.stops += 1;
     }
 
     if (isBreakEven(trade.pnl)) {
@@ -111,6 +132,7 @@ export function calculateStats(input: StatsInput): Stats {
     todayCount,
     todayCountedTrades,
     todayStops,
+    todayBySession,
     periods: calculatePeriodResults(trades, initialBalance, today),
   };
 }

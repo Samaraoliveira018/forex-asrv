@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
-import type { Trade, TradeInput, TradeType } from '@asrv/backend';
+import type { Trade, TradeInput, TradeSession, TradeType } from '@asrv/backend';
 import {
   Alert,
   Button,
@@ -21,6 +21,7 @@ type FormState = {
   date: string;
   asset: string;
   type: TradeType;
+  session: TradeSession;
   lots: string;
   pnl: string;
   notes: string;
@@ -29,6 +30,11 @@ type FormState = {
 const typeOptions: ReadonlyArray<{ value: TradeType; label: string }> = [
   { value: 'Compra', label: 'Compra (Long)' },
   { value: 'Venda', label: 'Venda (Short)' },
+];
+
+const sessionOptions: ReadonlyArray<{ value: TradeSession; label: string }> = [
+  { value: 'day', label: 'Dia (manhã)' },
+  { value: 'night', label: 'Noite' },
 ];
 
 export function TradeModal({
@@ -144,6 +150,7 @@ export function TradeModal({
           date: isoDate,
           asset: form.asset,
           type: form.type,
+          session: form.session,
           lots: numberFrom(form.lots),
           pnl: numberFrom(form.pnl),
           notes: form.notes,
@@ -190,6 +197,16 @@ export function TradeModal({
         placeholder="Ex: WIN, WTI, BTCUSD, EURUSD"
         autoCapitalize="characters"
       />
+
+      <View style={styles.typeField}>
+        <Text style={styles.fieldLabel}>Sessão do mercado</Text>
+        <SegmentedControl
+          label="Sessão do mercado"
+          value={form.session}
+          onChange={(session) => setForm((current) => ({ ...current, session }))}
+          options={sessionOptions}
+        />
+      </View>
 
       <View style={styles.typeField}>
         <Text style={styles.fieldLabel}>Direção</Text>
@@ -281,6 +298,7 @@ function formFor(trade: Trade | null): FormState {
     date: formatDate(trade?.date ?? today()),
     asset: trade?.asset ?? '',
     type: trade?.type ?? 'Compra',
+    session: trade?.session ?? 'day',
     lots: trade ? String(trade.lots) : '1',
     pnl: trade ? String(trade.pnl) : '',
     notes: trade?.notes ?? '',

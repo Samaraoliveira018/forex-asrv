@@ -18,6 +18,7 @@ type TradeRow = {
   date: string;
   asset: string;
   type: string;
+  session: string | null;
   lots: number | string;
   pnl: number | string;
   notes: string | null;
@@ -33,7 +34,7 @@ export function createSupabaseTradeRepository(
       return guard('TRADES_READ_FAILED', async () => {
         const { data, error } = await client
           .from('trades')
-          .select('id,date,asset,type,lots,pnl,notes,screenshot_path')
+          .select('id,date,asset,type,session,lots,pnl,notes,screenshot_path')
           .eq('user_id', getUserId())
           .order('date', { ascending: true });
 
@@ -51,6 +52,7 @@ export function createSupabaseTradeRepository(
             date: trade.date,
             asset: trade.asset,
             type: trade.type,
+            session: trade.session,
             lots: trade.lots,
             pnl: trade.pnl,
             notes: trade.notes,
@@ -329,12 +331,14 @@ function mapSession(raw: unknown): AuthSession | null {
 function toTrade(row: TradeRow): Trade {
   const lots = Number(row.lots);
   const pnl = Number(row.pnl);
+  const session = row.session === 'night' ? 'night' : row.session === 'day' || !row.session ? 'day' : null;
 
   if (
     !row.id ||
     !row.date ||
     !row.asset ||
     (row.type !== 'Compra' && row.type !== 'Venda') ||
+    session === null ||
     !Number.isFinite(lots) ||
     !Number.isFinite(pnl)
   ) {
@@ -346,6 +350,7 @@ function toTrade(row: TradeRow): Trade {
     date: row.date,
     asset: row.asset,
     type: row.type,
+    session,
     lots,
     pnl,
     notes: row.notes ?? '',

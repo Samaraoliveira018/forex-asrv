@@ -1,26 +1,31 @@
 import { DomainError } from './errors';
 
 /**
- * Máximo de operações por dia que contam para a disciplina.
+ * Máximo de operações por sessão (dia ou noite) que contam para a disciplina.
  * Break even não entra na contagem (ver `isBreakEven`).
  */
-export const MAX_TRADES_PER_DAY = 4;
+export const MAX_TRADES_PER_SESSION = 4;
 
 /**
- * Máximo de stops (operações com perda real) por dia.
- * Ao atingir o limite, o correto é parar de operar para preservar a ofensiva.
+ * Máximo de stops (operações com perda real) por sessão (dia ou noite).
+ * Ao atingir o limite, o correto é parar de operar naquela sessão para preservar a ofensiva.
  */
-export const MAX_STOPS_PER_DAY = 2;
+export const MAX_STOPS_PER_SESSION = 2;
 export const MAX_LOSS_RATIO = 0.25;
 export const BREAK_EVEN_TOLERANCE = 0.3;
 
 export type TradeType = 'Compra' | 'Venda';
+
+/** Sessão do mercado: abertura da manhã (`day`) ou da noite (`night`). */
+export type TradeSession = 'day' | 'night';
 
 export interface Trade {
   id: string;
   date: string;
   asset: string;
   type: TradeType;
+  /** Sessão em que a operação foi feita. */
+  session: TradeSession;
   lots: number;
   pnl: number;
   notes: string;
@@ -33,6 +38,8 @@ export interface TradeInput {
   date: string;
   asset: string;
   type: TradeType;
+  /** Ausente em registros antigos: assume `day`. */
+  session?: TradeSession;
   lots: number;
   pnl: number;
   notes?: string;
@@ -68,6 +75,11 @@ export function isStop(pnl: number): boolean {
   return Number.isFinite(pnl) && pnl < 0 && !isBreakEven(pnl);
 }
 
+/** Nome curto da sessão para exibição. */
+export function sessionLabel(session: TradeSession): string {
+  return session === 'night' ? 'Noite' : 'Dia';
+}
+
 export function createTrade(input: TradeInput, options: CreateTradeOptions = {}): Trade {
   if (!isIsoDate(input.date)) {
     throw new DomainError('INVALID_DATE', 'Data da operação inválida.');
@@ -81,6 +93,8 @@ export function createTrade(input: TradeInput, options: CreateTradeOptions = {})
   if (input.type !== 'Compra' && input.type !== 'Venda') {
     throw new DomainError('INVALID_TYPE', 'Tipo da operação inválido.');
   }
+
+  const session = normalizeSession(input.session);
 
   if (!Number.isFinite(input.lots) || input.lots <= 0) {
     throw new DomainError('INVALID_LOTS', 'A quantidade de lotes deve ser maior que zero.');
@@ -97,11 +111,21 @@ export function createTrade(input: TradeInput, options: CreateTradeOptions = {})
     date: input.date,
     asset,
     type: input.type,
+    session,
     lots: input.lots,
     pnl: input.pnl,
     notes: input.notes?.trim() ?? '',
     screenshotPath: normalizeScreenshotPath(input.screenshotPath),
   };
+}
+
+/** Registros antigos (sem sessão) contam como sessão do dia. */
+function normalizeSession(value: TradeSession | string | undefined): TradeSession {
+  if (!value) return 'day';
+  if (value !== 'day' && value !== 'night') {
+    throw new DomainError('INVALID_SESSION', 'Sessão da operação inválida.');
+  }
+  return value;
 }
 
 function normalizeScreenshotPath(value: string | undefined): string {

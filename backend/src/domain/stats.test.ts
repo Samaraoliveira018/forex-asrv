@@ -37,6 +37,11 @@ describe('calculateStats', () => {
       sellCount: 0,
       todayCount: 0,
       todayCountedTrades: 0,
+      todayStops: 0,
+      todayBySession: {
+        day: { countedTrades: 0, stops: 0, totalTrades: 0 },
+        night: { countedTrades: 0, stops: 0, totalTrades: 0 },
+      },
     });
   });
 
@@ -120,6 +125,33 @@ describe('calculateStats', () => {
     expect(stats.todayCount).toBe(4);
     expect(stats.todayCountedTrades).toBe(2);
     expect(stats.todayStops).toBe(1);
+  });
+
+  it('separa operações e stops de hoje por sessão', () => {
+    const stats = calculateStats({
+      trades: [
+        trade({ date: '2026-10-01', pnl: 10, session: 'day' }),
+        trade({ date: '2026-10-01', pnl: -5, session: 'day' }),
+        trade({ date: '2026-10-01', pnl: 0, session: 'day' }),
+        trade({ date: '2026-10-01', pnl: -7, session: 'night' }),
+        trade({ date: '2026-10-01', pnl: 20, session: 'night' }),
+        trade({ date: '2026-10-02', pnl: -9, session: 'night' }),
+      ],
+      initialBalance: 1000,
+      today: '2026-10-01',
+    });
+
+    expect(stats.todayBySession.day).toEqual({
+      countedTrades: 2,
+      stops: 1,
+      totalTrades: 3,
+    });
+    expect(stats.todayBySession.night).toEqual({
+      countedTrades: 2,
+      stops: 1,
+      totalTrades: 2,
+    });
+    expect(stats.todayStops).toBe(2);
   });
 
   it('calcula resultado diário, semanal e mensal com % de perda', () => {

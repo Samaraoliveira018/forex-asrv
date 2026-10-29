@@ -1,10 +1,12 @@
 import {
   MAX_LOSS_RATIO,
-  MAX_STOPS_PER_DAY,
-  MAX_TRADES_PER_DAY,
+  MAX_STOPS_PER_SESSION,
+  MAX_TRADES_PER_SESSION,
   isBreakEven,
   isStop,
+  sessionLabel,
   type Trade,
+  type TradeSession,
 } from './trade';
 
 export type ViolationKind =
@@ -16,6 +18,8 @@ export type ViolationKind =
 export interface Violation {
   kind: ViolationKind;
   date?: string;
+  /** Sessão relacionada à violação (limites de trades/stops). */
+  session?: TradeSession;
   message: string;
 }
 
@@ -41,25 +45,31 @@ export function evaluateDiscipline(input: DisciplineInput): DisciplineResult {
   }
 
   for (const [date, trades] of byDate) {
-    // Break even não conta para o limite diário: só operações com resultado relevante.
-    const countedTrades = trades.filter((trade) => !isBreakEven(trade.pnl));
+    // Os limites são independentes por sessão: 4 trades e 2 stops de dia + 4 trades e 2 stops de noite.
+    for (const session of ['day', 'night'] as const) {
+      const sessionTrades = trades.filter((trade) => trade.session === session);
 
-    if (countedTrades.length > MAX_TRADES_PER_DAY) {
-      violations.push({
-        kind: 'TOO_MANY_TRADES',
-        date,
-        message: `${countedTrades.length} operações em ${date}; o limite é ${MAX_TRADES_PER_DAY} por dia (break even não conta).`,
-      });
-    }
+      // Break even não conta para o limite da sessão: só operações com resultado relevante.
+      const countedTrades = sessionTrades.filter((trade) => !isBreakEven(trade.pnl));
+      if (countedTrades.length > MAX_TRADES_PER_SESSION) {
+        violations.push({
+          kind: 'TOO_MANY_TRADES',
+          date,
+          session,
+          message: `${countedTrades.length} operações em ${date} (sessão ${sessionLabel(session)}); o limite é ${MAX_TRADES_PER_SESSION} por sessão (break even não conta).`,
+        });
+      }
 
-    // Stop = perda real. Ao passar de 2 stops no dia, a disciplina foi quebrada.
-    const stops = trades.filter((trade) => isStop(trade.pnl));
-    if (stops.length > MAX_STOPS_PER_DAY) {
-      violations.push({
-        kind: 'TOO_MANY_STOPS',
-        date,
-        message: `${stops.length} stops em ${date}; o limite é ${MAX_STOPS_PER_DAY} por dia. Após 2 stops, pare de operar.`,
-      });
+      // Stop = perda real. Ao passar de 2 stops na sessão, a disciplina foi quebrada.
+      const stops = sessionTrades.filter((trade) => isStop(trade.pnl));
+      if (stops.length > MAX_STOPS_PER_SESSION) {
+        violations.push({
+          kind: 'TOO_MANY_STOPS',
+          date,
+          session,
+          message: `${stops.length} stops em ${date} (sessão ${sessionLabel(session)}); o limite é ${MAX_STOPS_PER_SESSION} por sessão. Após 2 stops, pare de operar nessa sessão.`,
+        });
+      }
     }
 
     const openingBalance = openingBalanceBefore(date, input.trades, input.initialBalance);
@@ -69,6 +79,7 @@ export function evaluateDiscipline(input: DisciplineInput): DisciplineResult {
         violations.push({
           kind: 'LOSS_OVER_LIMIT',
           date,
+          session: trade.session,
           message: `Perda de ${formatMoney(trade.pnl)} em ${date} passou de ${formatMoney(maxLoss)} (${MAX_LOSS_RATIO * 100}% do saldo inicial do dia).`,
         });
       }

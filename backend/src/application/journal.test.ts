@@ -286,6 +286,40 @@ describe('createJournalService', () => {
     expect(result.warnings.join(' ').toLowerCase()).toContain('parar de operar');
   });
 
+  it('não mistura os stops da sessão do dia com os da noite', async () => {
+    const { trades, service } = setup();
+    seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'day' });
+    seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'day' });
+
+    const result = await service.saveTrade({
+      date: '2026-10-21',
+      asset: 'EURUSD',
+      type: 'Compra',
+      session: 'night',
+      lots: 1,
+      pnl: -5,
+    });
+
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('avisa o segundo stop da sessão da noite', async () => {
+    const { trades, service } = setup();
+    seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'night' });
+
+    const result = await service.saveTrade({
+      date: '2026-10-21',
+      asset: 'EURUSD',
+      type: 'Compra',
+      session: 'night',
+      lots: 1,
+      pnl: -5,
+    });
+
+    expect(result.warnings.join(' ').toLowerCase()).toContain('2º stop');
+    expect(result.warnings.join(' ')).toContain('Noite');
+  });
+
   it('avisa quando a perda individual passa de 25% do saldo inicial do dia', async () => {
     const { service } = setup();
 

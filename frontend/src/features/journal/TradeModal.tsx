@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
-import type { Trade, TradeInput, TradeType } from '@asrv/backend';
+import type { Trade, TradeInput, TradeSession, TradeType } from '@asrv/backend';
 import { Button, Input, Modal, Select, Textarea } from '@asrv/design-system';
 import { fileToScreenshotDataUrl } from './image';
 import { formatDate, maskDateInput, parseDateInput } from './format';
@@ -8,6 +8,7 @@ type FormState = {
   date: string;
   asset: string;
   type: TradeType;
+  session: TradeSession;
   lots: string;
   pnl: string;
   notes: string;
@@ -16,6 +17,11 @@ type FormState = {
 const typeOptions = [
   { value: 'Compra', label: 'Compra (Long)' },
   { value: 'Venda', label: 'Venda (Short)' },
+];
+
+const sessionOptions = [
+  { value: 'day', label: 'Dia (manhã)' },
+  { value: 'night', label: 'Noite' },
 ];
 
 export function TradeModal({
@@ -92,6 +98,7 @@ export function TradeModal({
           date: isoDate,
           asset: form.asset,
           type: form.type,
+          session: form.session,
           lots: numberFrom(form.lots),
           pnl: numberFrom(form.pnl),
           notes: form.notes,
@@ -130,21 +137,30 @@ export function TradeModal({
 
         <div className="grid grid-cols-2 gap-3">
           <Select
+            label="Sessão"
+            value={form.session}
+            options={sessionOptions}
+            onChange={(session) =>
+              setForm((current) => ({ ...current, session: session as TradeSession }))
+            }
+          />
+          <Select
             label="Direção"
             value={form.type}
             options={typeOptions}
             onChange={(type) => setForm((current) => ({ ...current, type: type as TradeType }))}
           />
-          <Input
-            label="Lotes / Contratos"
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={form.lots}
-            required
-            onChangeText={(lots) => setForm((current) => ({ ...current, lots }))}
-          />
         </div>
+
+        <Input
+          label="Lotes / Contratos"
+          type="number"
+          min="0.01"
+          step="0.01"
+          value={form.lots}
+          required
+          onChangeText={(lots) => setForm((current) => ({ ...current, lots }))}
+        />
 
         <div>
           <div className="mb-1 flex items-center justify-between">
@@ -249,6 +265,7 @@ function formFor(trade: Trade | null): FormState {
     date: formatDate(trade?.date ?? today()),
     asset: trade?.asset ?? '',
     type: trade?.type ?? 'Compra',
+    session: trade?.session ?? 'day',
     lots: trade ? String(trade.lots) : '1',
     pnl: trade ? String(trade.pnl) : '',
     notes: trade?.notes ?? '',

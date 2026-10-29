@@ -302,6 +302,7 @@ describe('TradeCard', () => {
         asset="EURUSD"
         date="2026-10-21"
         type="Compra"
+        session="night"
         lots={1}
         pnl={100}
         notes="Rompimento"
@@ -311,6 +312,7 @@ describe('TradeCard', () => {
     );
 
     expect(screen.getByText('EURUSD')).toBeInTheDocument();
+    expect(screen.getByText('Noite')).toBeInTheDocument();
     expect(screen.getByText('+ 100.00')).toHaveClass('asrv-positive');
     expect(screen.getByText('Rompimento')).toBeInTheDocument();
 

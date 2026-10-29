@@ -1,4 +1,11 @@
-import { MAX_STOPS_PER_DAY, MAX_TRADES_PER_DAY, type JournalSnapshot, type Trade } from '@asrv/backend';
+import {
+  MAX_STOPS_PER_SESSION,
+  MAX_TRADES_PER_SESSION,
+  sessionLabel,
+  type JournalSnapshot,
+  type Trade,
+  type TradeSession,
+} from '@asrv/backend';
 import {
   Badge,
   Button,
@@ -46,7 +53,22 @@ export function JournalTab({
 }) {
   const { stats, discipline } = snapshot;
   const nextMilestone = milestones.find((milestone) => discipline.streak < milestone) ?? 60;
-  const todayCount = stats.todayCountedTrades;
+  const sessionTone = (session: TradeSession) => {
+    const counters = stats.todayBySession[session];
+    if (
+      counters.countedTrades > MAX_TRADES_PER_SESSION ||
+      counters.stops >= MAX_STOPS_PER_SESSION
+    ) {
+      return 'danger' as const;
+    }
+    if (
+      counters.countedTrades === MAX_TRADES_PER_SESSION ||
+      counters.stops === MAX_STOPS_PER_SESSION - 1
+    ) {
+      return 'warning' as const;
+    }
+    return 'neutral' as const;
+  };
   const periodTone = (pnl: number) => (pnl > 0 ? 'success' : pnl < 0 ? 'danger' : 'muted');
   const periodHint = (period: (typeof stats.periods)['daily']) =>
     `Resultado: ${signedPercent(period.pct)}\nPerda: ${period.lossPct.toFixed(2)}%`;
@@ -65,37 +87,24 @@ export function JournalTab({
         />
 
         <div className="flex flex-wrap items-center gap-2">
-          <span title="Break even não conta para o limite diário">
-            <Badge
-              tone={
-                todayCount > MAX_TRADES_PER_DAY
-                  ? 'danger'
-                  : todayCount === MAX_TRADES_PER_DAY
-                    ? 'warning'
-                    : 'neutral'
-              }
-              pill
-            >
-              <i className="fa-solid fa-gauge-high mr-1.5" aria-hidden="true" />
-              Hoje: {todayCount}/{MAX_TRADES_PER_DAY} trades
-            </Badge>
-          </span>
-
-          <span title="Máximo de 2 stops por dia: ao atingir, pare de operar">
-            <Badge
-              tone={
-                stats.todayStops >= MAX_STOPS_PER_DAY
-                  ? 'danger'
-                  : stats.todayStops === 1
-                    ? 'warning'
-                    : 'neutral'
-              }
-              pill
-            >
-              <i className="fa-solid fa-hand mr-1.5" aria-hidden="true" />
-              Stops: {stats.todayStops}/{MAX_STOPS_PER_DAY}
-            </Badge>
-          </span>
+          {(['day', 'night'] as const).map((session) => {
+            const counters = stats.todayBySession[session];
+            return (
+              <span
+                key={session}
+                title={`Sessão ${sessionLabel(session)}: máximo de ${MAX_TRADES_PER_SESSION} trades e ${MAX_STOPS_PER_SESSION} stops (break even não conta)`}
+              >
+                <Badge tone={sessionTone(session)} pill>
+                  <i
+                    className={`fa-solid ${session === 'day' ? 'fa-sun' : 'fa-moon'} mr-1.5`}
+                    aria-hidden="true"
+                  />
+                  {sessionLabel(session)}: {counters.countedTrades}/{MAX_TRADES_PER_SESSION} trades ·{' '}
+                  {counters.stops}/{MAX_STOPS_PER_SESSION} stops
+                </Badge>
+              </span>
+            );
+          })}
 
           <Button variant="success" size="sm" onClick={onNoTradeDay}>
             <i className="fa-solid fa-calendar-check" aria-hidden="true" />
@@ -151,8 +160,9 @@ export function JournalTab({
       <div>
         <h1 className="asrv-page-title">Diário de Trading</h1>
         <p className="asrv-page-subtitle">
-          Regras: Máx. {MAX_TRADES_PER_DAY} operações/dia (break even não conta) | Nenhuma perda
-          individual &gt; 25% do saldo inicial do dia
+          Regras: Máx. {MAX_TRADES_PER_SESSION} operações e {MAX_STOPS_PER_SESSION} stops por sessão
+          (dia/noite; break even não conta) | Nenhuma perda individual &gt; 25% do saldo inicial do
+          dia
         </p>
       </div>
 
@@ -328,6 +338,7 @@ function JournalGrid({
             asset={item.trade.asset}
             date={item.trade.date}
             type={item.trade.type}
+            session={item.trade.session}
             lots={item.trade.lots}
             pnl={item.trade.pnl}
             notes={item.trade.notes}
@@ -369,6 +380,7 @@ function JournalList({
               <th>Data</th>
               <th>Ativo</th>
               <th>Tipo</th>
+              <th>Sessão</th>
               <th>Lotes</th>
               <th>Resultado</th>
               <th>Status</th>
@@ -387,6 +399,11 @@ function JournalList({
                   <td>
                     <Badge tone={trade.type === 'Compra' ? 'success' : 'danger'}>
                       {trade.type}
+                    </Badge>
+                  </td>
+                  <td>
+                    <Badge tone={trade.session === 'night' ? 'orange' : 'info'}>
+                      {sessionLabel(trade.session)}
                     </Badge>
                   </td>
                   <td>{trade.lots}</td>

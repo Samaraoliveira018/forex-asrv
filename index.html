@@ -149,7 +149,7 @@
         <span class="hidden whitespace-nowrap text-sm font-semibold tracking-wide text-white lg:inline">Diário Trader ASRV</span>
         
         <!-- OFENSIVA STREAK (DUOLINGO STYLE) -->
-        <div class="asrv-topbar__streak" title="Dias seguidos de disciplina (operando com até 4 trades válidos por dia, sem estourar limites, ou registrando dia sem operações; break even não conta)">
+        <div class="asrv-topbar__streak" title="Dias seguidos de disciplina (até 4 trades e 2 stops por sessão, dia e noite, ou registrando dia sem operações; break even não conta)">
           <i class="fa-solid fa-fire text-orange-500 animate-bounce"></i>
           <span id="streak-count">0</span>
           <span class="hidden font-medium text-[11px] text-orange-300 lg:inline">dias de disciplina</span>
@@ -186,14 +186,14 @@
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
-            <!-- Limite Diário Badge -->
-            <div id="today-limit-badge" class="asrv-badge asrv-badge--neutral asrv-badge--pill" title="Break even não conta para o limite diário">
-              <i class="fa-solid fa-gauge-high"></i> Hoje: <span id="today-trade-count">0</span>/4 trades
+            <!-- Limites da sessão do dia -->
+            <div id="today-day-badge" class="asrv-badge asrv-badge--neutral asrv-badge--pill" title="Sessão Dia: máximo de 4 trades e 2 stops (break even não conta)">
+              <i class="fa-solid fa-sun"></i> Dia: <span id="today-day-trades">0</span>/4 trades · <span id="today-day-stops">0</span>/2 stops
             </div>
 
-            <!-- Stops do dia -->
-            <div id="today-stops-badge" class="asrv-badge asrv-badge--neutral asrv-badge--pill" title="Máximo de 2 stops por dia: ao atingir, pare de operar">
-              <i class="fa-solid fa-hand"></i> Stops: <span id="today-stop-count">0</span>/2
+            <!-- Limites da sessão da noite -->
+            <div id="today-night-badge" class="asrv-badge asrv-badge--neutral asrv-badge--pill" title="Sessão Noite: máximo de 4 trades e 2 stops (break even não conta)">
+              <i class="fa-solid fa-moon"></i> Noite: <span id="today-night-trades">0</span>/4 trades · <span id="today-night-stops">0</span>/2 stops
             </div>
 
             <!-- Botão Marcar Dia Sem Operar -->
@@ -251,7 +251,7 @@
         <!-- Section Title -->
         <div>
           <h2 class="asrv-page-title">Diário de Trading</h2>
-          <p class="asrv-page-subtitle">Regras: Máx. 4 operações/dia (break even não conta) | Nenhuma perda individual &gt; 25% do saldo inicial do dia</p>
+          <p class="asrv-page-subtitle">Regras: Máx. 4 operações e 2 stops por sessão (dia/noite; break even não conta) | Nenhuma perda individual &gt; 25% do saldo inicial do dia</p>
         </div>
 
         <!-- 4 MAIN KPI CARDS -->
@@ -346,6 +346,7 @@
                     <th class="p-3">Data</th>
                     <th class="p-3">Ativo</th>
                     <th class="p-3">Tipo</th>
+                    <th class="p-3">Sessão</th>
                     <th class="p-3">Lotes</th>
                     <th class="p-3">Resultado</th>
                     <th class="p-3">Status</th>
@@ -397,8 +398,8 @@
           <div class="asrv-card space-y-3">
             <h3 class="asrv-section-title">Regras de Ouro da Plataforma</h3>
             <div class="asrv-alert asrv-alert--danger space-y-2 text-xs">
-              <p>⚡ <strong>Limite estrito:</strong> Máximo de 4 operações por dia. Break even não conta para o limite.</p>
-              <p>🛑 <strong>Stops:</strong> Máximo de 2 stops por dia. Ao atingir 2, pare de operar para não perder a ofensiva.</p>
+              <p>⚡ <strong>Limite estrito:</strong> Máximo de 4 operações por sessão (dia e noite). Break even não conta para o limite.</p>
+              <p>🛑 <strong>Stops:</strong> Máximo de 2 stops por sessão. Ao atingir 2 stops no dia ou 2 na noite, pare de operar naquela sessão para não perder a ofensiva.</p>
               <p>🛑 <strong>Perda Individual Máxima:</strong> Nenhuma operação pode ter um prejuízo superior a 25% do saldo inicial do dia — capital inicial mais o resultado acumulado dos dias anteriores (taxas de spread mínimas são tratadas como Break Even).</p>
               <p>⚖️ <strong>Break Even (0x0):</strong> Posições encerradas no zero a zero ou com pequenas variações de spread preservam o capital e não contam no limite diário.</p>
               <p>🛡️ <strong>Saber Ficar de Fora:</strong> Registrar dias em que você não operou mantém a sua ofensiva ativa!</p>
@@ -411,10 +412,10 @@
               <input type="checkbox" class="asrv-checkbox"> Verificar calendário de notícias
             </label>
             <label class="asrv-check">
-              <input type="checkbox" class="asrv-checkbox"> Respeitar o limite de 4 trades diários (break even não conta)
+              <input type="checkbox" class="asrv-checkbox"> Respeitar o limite de 4 trades e 2 stops por sessão (dia/noite; break even não conta)
             </label>
             <label class="flex items-center gap-2 text-gray-300">
-              <input type="checkbox" class="asrv-checkbox"> Parar de operar após 2 stops no dia
+              <input type="checkbox" class="asrv-checkbox"> Parar de operar na sessão após 2 stops
             </label>
             <label class="asrv-check">
               <input type="checkbox" class="asrv-checkbox"> Mover o Stop para Break Even ao atingir a primeira parcial
@@ -513,16 +514,24 @@
 
         <div class="grid grid-cols-2 gap-3">
           <div>
+            <label class="asrv-field__label block mb-1">Sessão do mercado</label>
+            <select id="form-session" class="asrv-field__select">
+              <option value="day">Dia (manhã)</option>
+              <option value="night">Noite</option>
+            </select>
+          </div>
+          <div>
             <label class="asrv-field__label block mb-1">Direção</label>
             <select id="form-type" class="asrv-field__select">
               <option value="Compra">Compra (Long)</option>
               <option value="Venda">Venda (Short)</option>
             </select>
           </div>
-          <div>
-            <label class="asrv-field__label block mb-1">Lotes / Contratos</label>
-            <input type="number" id="form-lots" step="0.01" value="1" required class="asrv-field__input">
-          </div>
+        </div>
+
+        <div>
+          <label class="asrv-field__label block mb-1">Lotes / Contratos</label>
+          <input type="number" id="form-lots" step="0.01" value="1" required class="asrv-field__input">
         </div>
 
         <div>
@@ -667,6 +676,10 @@
       return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     }
 
+    function sessionLabel(session) {
+      return session === 'night' ? 'Noite' : 'Dia';
+    }
+
     // Sanitiza dados vindos do localStorage / backup importado
     function normalizeTrades(list) {
       if (!Array.isArray(list)) return [];
@@ -683,6 +696,7 @@
             date: typeof t.date === 'string' ? t.date.slice(0, 10) : '',
             asset: String(t.asset || '').toUpperCase(),
             type: t.type === 'Venda' ? 'Venda' : 'Compra',
+            session: t.session === 'night' ? 'night' : 'day',
             lots: Number(t.lots) || 0,
             pnl: Number(t.pnl) || 0,
             notes: typeof t.notes === 'string' ? t.notes : '',
@@ -849,7 +863,7 @@
       if (!cloudEnabled()) return;
 
       const [tradesRes, noTradeRes, settingsRes] = await Promise.all([
-        sb.from('trades').select('id,date,asset,type,lots,pnl,notes,screenshot_path').order('date', { ascending: true }),
+        sb.from('trades').select('id,date,asset,type,session,lots,pnl,notes,screenshot_path').order('date', { ascending: true }),
         sb.from('no_trade_days').select('day'),
         sb.from('settings').select('initial_balance').maybeSingle()
       ]);
@@ -894,6 +908,7 @@
             date: t.date,
             asset: t.asset,
             type: t.type,
+            session: t.session || 'day',
             lots: Number(t.lots) || 0,
             pnl: Number(t.pnl) || 0,
             notes: t.notes || '',
@@ -1131,6 +1146,7 @@
           date: t.date,
           asset: t.asset,
           type: t.type,
+          session: t.session || 'day',
           lots: Number(t.lots) || 0,
           pnl: Number(t.pnl) || 0,
           notes: t.notes || '',
@@ -1368,12 +1384,16 @@
 
       Object.keys(dailyTrades).forEach(date => {
         const dayTrades = dailyTrades[date];
-        // Break even não conta para o limite diário.
-        const countedTrades = dayTrades.filter(t => !isBreakEven(t.pnl));
-        if (countedTrades.length > 4) ruleViolated = true;
-        // Máximo de 2 stops por dia.
-        const dayStops = dayTrades.filter(t => isStop(t.pnl));
-        if (dayStops.length > 2) ruleViolated = true;
+        // Limites independentes por sessão: 4 trades e 2 stops de dia + 4 trades e 2 stops de noite.
+        ['day', 'night'].forEach(session => {
+          const sessionTrades = dayTrades.filter(t => t.session === session);
+          // Break even não conta para o limite da sessão.
+          const countedTrades = sessionTrades.filter(t => !isBreakEven(t.pnl));
+          if (countedTrades.length > 4) ruleViolated = true;
+          // Máximo de 2 stops por sessão.
+          const sessionStops = sessionTrades.filter(t => isStop(t.pnl));
+          if (sessionStops.length > 2) ruleViolated = true;
+        });
         // Saldo de abertura do dia: capital inicial + resultado dos dias anteriores.
         const openingBalance = initialBalance + trades
           .filter(t => t.date < date)
@@ -1563,6 +1583,7 @@
       document.getElementById('modal-title').innerText = 'Registrar Nova Operação';
       document.getElementById('modal-submit-btn').innerText = 'Salvar Operação';
       document.getElementById('form-date').value = formatShortDate(getLocalDateStr());
+      document.getElementById('form-session').value = 'day';
       modalShot = { dataUrl: null, removed: false, existingId: '' };
       renderModalShot();
       document.getElementById('trade-modal').classList.remove('hidden');
@@ -1578,6 +1599,7 @@
       document.getElementById('form-date').value = formatShortDate(trade.date);
       document.getElementById('form-asset').value = trade.asset;
       document.getElementById('form-type').value = trade.type;
+      document.getElementById('form-session').value = trade.session === 'night' ? 'night' : 'day';
       document.getElementById('form-lots').value = trade.lots;
       document.getElementById('form-pnl').value = trade.pnl;
       document.getElementById('form-notes').value = trade.notes || '';
@@ -1615,6 +1637,8 @@
       }
       const asset = document.getElementById('form-asset').value.toUpperCase();
       const type = document.getElementById('form-type').value;
+      const session = document.getElementById('form-session').value === 'night' ? 'night' : 'day';
+      const sessionName = sessionLabel(session);
       const lots = parseFloat(document.getElementById('form-lots').value);
       const pnl = parseFloat(document.getElementById('form-pnl').value);
       const notes = document.getElementById('form-notes').value;
@@ -1624,10 +1648,12 @@
       }
 
       const tradesOnDate = trades.filter(t => t.date === date && t.id.toString() !== editId);
-      // Break even não conta para o limite diário.
-      const countedTradesOnDate = tradesOnDate.filter(t => !isBreakEven(t.pnl));
-      // Stop = perda real. Após 2 stops no dia, o correto é parar de operar.
-      const stopsOnDate = tradesOnDate.filter(t => isStop(t.pnl));
+      // Os limites são independentes por sessão: 4 trades e 2 stops de dia + 4 trades e 2 stops de noite.
+      const sessionTradesOnDate = tradesOnDate.filter(t => t.session === session);
+      // Break even não conta para o limite da sessão.
+      const countedTradesOnDate = sessionTradesOnDate.filter(t => !isBreakEven(t.pnl));
+      // Stop = perda real. Após 2 stops na sessão, o correto é parar de operar nela.
+      const stopsOnDate = sessionTradesOnDate.filter(t => isStop(t.pnl));
       // Limite com base no saldo de abertura do dia: capital inicial + resultado dos dias anteriores.
       const openingBalance = initialBalance + trades
         .filter(t => t.date < date)
@@ -1635,13 +1661,13 @@
       const maxSingleLoss = openingBalance * 0.25;
 
       if (isStop(pnl) && stopsOnDate.length === 1) {
-        alert("⚠️ Este é o 2º stop do dia. Após ele, pare de operar para não perder a ofensiva.");
+        alert(`⚠️ Este é o 2º stop da sessão ${sessionName}. Após ele, pare de operar nessa sessão para não perder a ofensiva.`);
       } else if (isStop(pnl) && stopsOnDate.length >= 2) {
-        alert("⚠️ ATENÇÃO: Você já possui 2 stops registrados nesta data! Salvar este stop irá ZERAR a sua ofensiva. Pare de operar.");
+        alert(`⚠️ ATENÇÃO: Você já possui 2 stops na sessão ${sessionName} nesta data! Salvar este stop irá ZERAR a sua ofensiva. Pare de operar nessa sessão.`);
       } else if (!isBreakEven(pnl) && stopsOnDate.length >= 2) {
-        alert("⚠️ Você já tem 2 stops hoje. O ideal é parar de operar para preservar a ofensiva.");
+        alert(`⚠️ Você já tem 2 stops na sessão ${sessionName}. O ideal é parar de operar nessa sessão para preservar a ofensiva.`);
       } else if (!isBreakEven(pnl) && countedTradesOnDate.length >= 4) {
-        alert("⚠️ ATENÇÃO: Você já possui 4 operações válidas registradas nesta data (break even não conta)! Salvar esta operação irá ZERAR a sua ofensiva!");
+        alert(`⚠️ ATENÇÃO: Você já possui 4 operações válidas na sessão ${sessionName} nesta data (break even não conta)! Salvar esta operação irá ZERAR a sua ofensiva!`);
       } else if (pnl < 0 && !isBreakEven(pnl) && Math.abs(pnl) > maxSingleLoss) {
         alert(`⚠️ ATENÇÃO: Esta operação tem um prejuízo de ${Math.abs(pnl).toFixed(2)}, o que ultrapassa o limite máximo individual de 25% do saldo inicial do dia (${maxSingleLoss.toFixed(2)}). A sua ofensiva será ZERADA!`);
       }
@@ -1650,11 +1676,11 @@
       if (editId) {
         trades = trades.map(t => {
           if (String(t.id) !== editId) return t;
-          savedTrade = { ...t, date, asset, type, lots, pnl, notes, screenshot_path: t.screenshot_path || '' };
+          savedTrade = { ...t, date, asset, type, session, lots, pnl, notes, screenshot_path: t.screenshot_path || '' };
           return savedTrade;
         });
       } else {
-        savedTrade = { id: newTradeId(), date, asset, type, lots, pnl, notes, screenshot_path: '' };
+        savedTrade = { id: newTradeId(), date, asset, type, session, lots, pnl, notes, screenshot_path: '' };
         trades.push(savedTrade);
       }
 
@@ -1781,29 +1807,24 @@
       const returnPct = initialBalance > 0 ? ((totalPnl / initialBalance) * 100).toFixed(2) : 0;
 
       const todayStr = getLocalDateStr();
-      // O badge mostra só operações que contam para o limite (break even não conta).
-      const todayCount = trades.filter(t => t.date === todayStr && !isBreakEven(t.pnl)).length;
-      const badgeEl = document.getElementById('today-limit-badge');
-      document.getElementById('today-trade-count').innerText = todayCount;
+      // Os badges mostram só operações que contam para o limite da sessão (break even não conta).
+      ['day', 'night'].forEach(session => {
+        const sessionTrades = trades.filter(t => t.date === todayStr && t.session === session);
+        const todayCount = sessionTrades.filter(t => !isBreakEven(t.pnl)).length;
+        const todayStops = sessionTrades.filter(t => isStop(t.pnl)).length;
 
-      if (todayCount > 4) {
-        badgeEl.className = 'asrv-badge asrv-badge--danger asrv-badge--pill animate-pulse';
-      } else if (todayCount === 4) {
-        badgeEl.className = 'asrv-badge asrv-badge--warning asrv-badge--pill';
-      } else {
-        badgeEl.className = 'asrv-badge asrv-badge--neutral asrv-badge--pill';
-      }
+        document.getElementById(`today-${session}-trades`).innerText = todayCount;
+        document.getElementById(`today-${session}-stops`).innerText = todayStops;
 
-      const todayStops = trades.filter(t => t.date === todayStr && isStop(t.pnl)).length;
-      const stopsBadgeEl = document.getElementById('today-stops-badge');
-      document.getElementById('today-stop-count').innerText = todayStops;
-      if (todayStops >= 2) {
-        stopsBadgeEl.className = 'asrv-badge asrv-badge--danger asrv-badge--pill animate-pulse';
-      } else if (todayStops === 1) {
-        stopsBadgeEl.className = 'asrv-badge asrv-badge--warning asrv-badge--pill';
-      } else {
-        stopsBadgeEl.className = 'asrv-badge asrv-badge--neutral asrv-badge--pill';
-      }
+        const badgeEl = document.getElementById(`today-${session}-badge`);
+        if (todayCount > 4 || todayStops >= 2) {
+          badgeEl.className = 'asrv-badge asrv-badge--danger asrv-badge--pill animate-pulse';
+        } else if (todayCount === 4 || todayStops === 1) {
+          badgeEl.className = 'asrv-badge asrv-badge--warning asrv-badge--pill';
+        } else {
+          badgeEl.className = 'asrv-badge asrv-badge--neutral asrv-badge--pill';
+        }
+      });
 
       updatePeriodResults(todayStr);
 
@@ -1883,6 +1904,7 @@
               <div class="flex items-center gap-2">
                 <span class="asrv-trade-card__asset">${item.asset}</span>
                 <span class="asrv-badge ${item.type === 'Compra' ? 'asrv-badge--success' : 'asrv-badge--danger'}">${item.type}</span>
+                <span class="asrv-badge ${item.session === 'night' ? 'asrv-badge--orange' : 'asrv-badge--info'}">${sessionLabel(item.session)}</span>
                 ${isBE ? `<span class="asrv-badge asrv-badge--neutral">BREAK EVEN</span>` : ''}
               </div>
               <span class="asrv-trade-card__date">${formatShortDate(item.date)}</span>
@@ -1907,7 +1929,7 @@
     function renderJournalList() {
       const tbody = document.getElementById('trades-table-body');
       if (trades.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-gray-500">Nenhum registo encontrado.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-gray-500">Nenhum registo encontrado.</td></tr>`;
         return;
       }
       tbody.innerHTML = trades.map((t, idx) => {
@@ -1922,6 +1944,7 @@
             <td class="font-medium">${formatShortDate(t.date)}</td>
             <td class="font-bold text-white">${t.asset}</td>
             <td><span class="asrv-badge ${t.type === 'Compra' ? 'asrv-badge--success' : 'asrv-badge--danger'}">${t.type}</span></td>
+            <td><span class="asrv-badge ${t.session === 'night' ? 'asrv-badge--orange' : 'asrv-badge--info'}">${sessionLabel(t.session)}</span></td>
             <td>${t.lots}</td>
             <td class="font-bold ${isBE ? 'text-gray-300' : (t.pnl > 0 ? 'text-emerald-400' : 'text-red-400')}">${isValueHidden ? '••••••' : (isBE ? `${t.pnl.toFixed(2)} (BE)` : (t.pnl > 0 ? '+' : '') + t.pnl.toFixed(2))}</td>
             <td>${statusBadge}</td>

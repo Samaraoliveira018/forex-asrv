@@ -62,7 +62,8 @@ describe('JournalScreen (mobile)', () => {
     expect(await screen.findByText('EURUSD')).toBeTruthy();
     expect(screen.getAllByText('US$ 1.100,00').length).toBeGreaterThan(0);
     expect(screen.getByText('Metas de Ofensiva (Disciplina Trader)')).toBeTruthy();
-    expect(screen.getByText('Hoje: 0/4 trades')).toBeTruthy();
+    expect(screen.getByText(/Dia: 0\/4 trades/)).toBeTruthy();
+    expect(screen.getByText(/Noite: 0\/4 trades/)).toBeTruthy();
   });
 
   it('registra uma nova operação pelo modal e atualiza a lista', async () => {
@@ -70,6 +71,7 @@ describe('JournalScreen (mobile)', () => {
 
     await openNewTradeModal();
     await fireEvent.changeText(screen.getByLabelText('Ativo'), 'gbpusd');
+    await fireEvent.press(screen.getByRole('tab', { name: 'Noite' }));
     await fireEvent.press(screen.getByRole('tab', { name: 'Venda (Short)' }));
     await fireEvent.changeText(screen.getByLabelText('Lotes / Contratos'), '0.5');
     await fireEvent.changeText(screen.getByLabelText('Resultado'), '-25');
@@ -81,6 +83,7 @@ describe('JournalScreen (mobile)', () => {
           date: localToday(),
           asset: 'gbpusd',
           type: 'Venda',
+          session: 'night',
           lots: 0.5,
           pnl: -25,
         }),
@@ -145,7 +148,7 @@ describe('JournalScreen (mobile)', () => {
     fake.mocks.saveTrade.mockResolvedValueOnce({
       trade,
       synced: true,
-      warnings: ['Limite de 4 operações por dia atingido (break even não conta).'],
+      warnings: ['Limite de 4 operações na sessão Dia atingido (break even não conta).'],
     });
 
     await openNewTradeModal();
@@ -153,7 +156,7 @@ describe('JournalScreen (mobile)', () => {
     await fireEvent.changeText(screen.getByLabelText('Resultado'), '10');
     await fireEvent.press(screen.getByRole('button', { name: 'Salvar Operação' }));
 
-    expect(await screen.findByText('Limite de 4 operações por dia atingido (break even não conta).')).toBeTruthy();
+    expect(await screen.findByText('Limite de 4 operações na sessão Dia atingido (break even não conta).')).toBeTruthy();
   });
 
   it('exclui uma operação pelo histórico após confirmação', async () => {

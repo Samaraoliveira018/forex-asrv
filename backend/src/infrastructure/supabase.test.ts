@@ -26,6 +26,7 @@ describe('SupabaseTradeRepository', () => {
         date: '2026-10-02',
         asset: 'GBPUSD',
         type: 'Venda',
+        session: 'night',
         lots: '0.5',
         pnl: '-10.5',
         notes: null,
@@ -55,11 +56,13 @@ describe('SupabaseTradeRepository', () => {
     const trades = await repositories(client).trades.list();
 
     expect(trades.map((trade) => trade.id)).toEqual(['t1', 't2']);
+    expect(trades[0]?.session).toBe('day');
     expect(trades[1]).toEqual({
       id: 't2',
       date: '2026-10-02',
       asset: 'GBPUSD',
       type: 'Venda',
+      session: 'night',
       lots: 0.5,
       pnl: -10.5,
       notes: '',
@@ -75,6 +78,7 @@ describe('SupabaseTradeRepository', () => {
       date: '2026-10-01',
       asset: 'EURUSD',
       type: 'Compra',
+      session: 'day',
       lots: 1,
       pnl: 10,
       notes: '',
@@ -90,6 +94,7 @@ describe('SupabaseTradeRepository', () => {
       date: '2026-10-01',
       asset: 'EURUSD',
       type: 'Compra',
+      session: 'night',
       lots: 1,
       pnl: 25,
       notes: 'editado',
@@ -97,7 +102,7 @@ describe('SupabaseTradeRepository', () => {
     });
 
     expect(client.tables.trades).toHaveLength(1);
-    expect(client.tables.trades[0]).toMatchObject({ pnl: 25, notes: 'editado' });
+    expect(client.tables.trades[0]).toMatchObject({ pnl: 25, notes: 'editado', session: 'night' });
   });
 
   it('exclui pelo id do usuário', async () => {

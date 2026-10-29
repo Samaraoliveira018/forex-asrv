@@ -48,6 +48,7 @@ describe('JournalScreen', () => {
       target: { value: '22/10/26' },
     });
     await user.type(screen.getByLabelText('Ativo'), 'gbpusd');
+    await user.selectOptions(screen.getByLabelText('Sessão'), 'night');
     await user.selectOptions(screen.getByLabelText('Direção'), 'Venda');
     await user.clear(screen.getByLabelText('Lotes / Contratos'));
     await user.type(screen.getByLabelText('Lotes / Contratos'), '0.5');
@@ -59,12 +60,14 @@ describe('JournalScreen', () => {
         date: '2026-10-22',
         asset: 'gbpusd',
         type: 'Venda',
+        session: 'night',
         lots: 0.5,
         pnl: -25,
       }),
       undefined,
     );
     expect(await screen.findByText('GBPUSD')).toBeInTheDocument();
+    expect(screen.getAllByText('Noite').length).toBeGreaterThan(0);
   });
 
   it('anexa um print à operação', async () => {
@@ -114,7 +117,7 @@ describe('JournalScreen', () => {
     fake.mocks.saveTrade.mockResolvedValueOnce({
       trade,
       synced: true,
-      warnings: ['Limite de 4 operações por dia atingido (break even não conta).'],
+      warnings: ['Limite de 4 operações na sessão Dia atingido (break even não conta).'],
     });
     const user = userEvent.setup();
 
@@ -124,7 +127,7 @@ describe('JournalScreen', () => {
     await user.click(screen.getByRole('button', { name: 'Salvar Operação' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'Limite de 4 operações por dia atingido (break even não conta).',
+      'Limite de 4 operações na sessão Dia atingido (break even não conta).',
     );
   });
 

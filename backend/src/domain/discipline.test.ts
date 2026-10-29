@@ -94,7 +94,79 @@ describe('evaluateDiscipline', () => {
 
     expect(result.streak).toBe(0);
     expect(result.violations).toContainEqual(
-      expect.objectContaining({ kind: 'TOO_MANY_STOPS', date: '2026-10-01' }),
+      expect.objectContaining({ kind: 'TOO_MANY_STOPS', date: '2026-10-01', session: 'day' }),
+    );
+  });
+
+  it('permite 2 stops de dia e 2 stops de noite no mesmo dia', () => {
+    const result = evaluateDiscipline({
+      trades: [
+        trade({ date: '2026-10-01', pnl: -10, session: 'day' }),
+        trade({ date: '2026-10-01', pnl: -15, session: 'day' }),
+        trade({ date: '2026-10-01', pnl: -5, session: 'night' }),
+        trade({ date: '2026-10-01', pnl: -8, session: 'night' }),
+      ],
+      noTradeDays: [],
+      initialBalance: 1000,
+    });
+
+    expect(result.violations).toEqual([]);
+    expect(result.streak).toBe(1);
+  });
+
+  it('viola ao passar de dois stops na sessão da noite', () => {
+    const result = evaluateDiscipline({
+      trades: [
+        trade({ date: '2026-10-01', pnl: -10, session: 'night' }),
+        trade({ date: '2026-10-01', pnl: -15, session: 'night' }),
+        trade({ date: '2026-10-01', pnl: -5, session: 'night' }),
+      ],
+      noTradeDays: [],
+      initialBalance: 1000,
+    });
+
+    expect(result.streak).toBe(0);
+    expect(result.violations).toContainEqual(
+      expect.objectContaining({ kind: 'TOO_MANY_STOPS', date: '2026-10-01', session: 'night' }),
+    );
+  });
+
+  it('permite 4 trades de dia e 4 trades de noite no mesmo dia', () => {
+    const result = evaluateDiscipline({
+      trades: [
+        trade({ date: '2026-10-01', session: 'day' }),
+        trade({ date: '2026-10-01', session: 'day' }),
+        trade({ date: '2026-10-01', session: 'day' }),
+        trade({ date: '2026-10-01', session: 'day' }),
+        trade({ date: '2026-10-01', session: 'night' }),
+        trade({ date: '2026-10-01', session: 'night' }),
+        trade({ date: '2026-10-01', session: 'night' }),
+        trade({ date: '2026-10-01', session: 'night' }),
+      ],
+      noTradeDays: [],
+      initialBalance: 1000,
+    });
+
+    expect(result.violations).toEqual([]);
+    expect(result.streak).toBe(1);
+  });
+
+  it('viola ao passar de quatro trades na sessão da noite', () => {
+    const result = evaluateDiscipline({
+      trades: [
+        trade({ date: '2026-10-01', session: 'night' }),
+        trade({ date: '2026-10-01', session: 'night' }),
+        trade({ date: '2026-10-01', session: 'night' }),
+        trade({ date: '2026-10-01', session: 'night' }),
+        trade({ date: '2026-10-01', session: 'night' }),
+      ],
+      noTradeDays: [],
+      initialBalance: 1000,
+    });
+
+    expect(result.streak).toBe(0);
+    expect(result.violations).toContainEqual(
+      expect.objectContaining({ kind: 'TOO_MANY_TRADES', date: '2026-10-01', session: 'night' }),
     );
   });
 

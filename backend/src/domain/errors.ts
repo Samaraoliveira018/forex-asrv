@@ -4,6 +4,7 @@ export type DomainErrorCode =
   | 'INVALID_LOTS'
   | 'INVALID_PNL'
   | 'INVALID_TYPE'
+  | 'INVALID_SESSION'
   | 'INVALID_BALANCE'
   | 'INVALID_CREDENTIALS'
   | 'NO_TRADE_WITH_TRADES'

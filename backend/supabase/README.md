@@ -26,7 +26,7 @@ mobile (Expo) ────┘          │
 
 | Item | Situação |
 |---|---|
-| Schema (`trades`, `no_trade_days`, `settings`) | aplicado, com RLS |
+| Schema (`trades` com `session`, `no_trade_days`, `settings`) | aplicado, com RLS |
 | Policies (`user_id = (select auth.uid())`) | aplicadas |
 | Bucket privado `trade-screenshots` + policy `trade_screenshots_own` | aplicado (prints das operações) |
 | Trigger `updated_at` | aplicado (`search_path` fixo) |
@@ -46,6 +46,10 @@ Ainda falta apenas: **Authentication → Settings → Password Security → Enab
 
 > O `schema.sql` também cria o bucket privado `trade-screenshots` e a policy
 > `trade_screenshots_own` usados pelos prints das operações.
+>
+> A coluna `trades.session` (`day` ou `night`) separa as operações de dia e de noite. O script é
+> idempotente: em bancos existentes ele adiciona a coluna com default `day`, então todo o
+> histórico anterior passa a contar na sessão do dia.
 
 ### 2. Fechar o cadastro público
 App é de uso individual, então ninguém além de você deve conseguir criar conta.

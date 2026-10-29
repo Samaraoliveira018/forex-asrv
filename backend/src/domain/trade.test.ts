@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   BREAK_EVEN_TOLERANCE,
   MAX_LOSS_RATIO,
-  MAX_STOPS_PER_DAY,
-  MAX_TRADES_PER_DAY,
+  MAX_STOPS_PER_SESSION,
+  MAX_TRADES_PER_SESSION,
   createTrade,
   isBreakEven,
   isIsoDate,
@@ -39,11 +39,24 @@ describe('createTrade', () => {
       date: '2026-10-21',
       asset: 'EURUSD',
       type: 'Compra',
+      session: 'day',
       lots: 1,
       pnl: 10,
       notes: '',
       screenshotPath: '',
     });
+  });
+
+  it('aceita a sessão da noite e assume o dia quando não informada', () => {
+    expect(createTrade({ ...input, session: 'night' }).session).toBe('night');
+    expect(createTrade(input).session).toBe('day');
+  });
+
+  it('rejeita sessão desconhecida', () => {
+    expectDomainError(
+      () => createTrade({ ...input, session: 'madrugada' as never }),
+      'INVALID_SESSION',
+    );
   });
 
   it('normaliza o caminho do print e ignora valores inseguros', () => {
@@ -151,9 +164,9 @@ describe('isStop', () => {
 });
 
 describe('regras de disciplina', () => {
-  it('mantém os limites usados pelo app atual', () => {
-    expect(MAX_TRADES_PER_DAY).toBe(4);
-    expect(MAX_STOPS_PER_DAY).toBe(2);
+  it('mantém os limites por sessão usados pelo app', () => {
+    expect(MAX_TRADES_PER_SESSION).toBe(4);
+    expect(MAX_STOPS_PER_SESSION).toBe(2);
     expect(MAX_LOSS_RATIO).toBe(0.25);
     expect(BREAK_EVEN_TOLERANCE).toBe(0.3);
   });
