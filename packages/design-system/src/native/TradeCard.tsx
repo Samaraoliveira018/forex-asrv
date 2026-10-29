@@ -61,14 +61,18 @@ export function TradeCard({
     <View style={[styles.card, style]}>
       <View style={styles.header}>
         <View style={styles.headerMain}>
-          <Text style={styles.asset}>{asset}</Text>
-          <Badge tone={type === 'Compra' ? 'success' : 'danger'}>{type}</Badge>
-          {session ? (
-            <Badge tone={session === 'night' ? 'orange' : 'info'}>
-              {session === 'night' ? 'Noite' : 'Dia'}
-            </Badge>
-          ) : null}
-          {breakEven ? <Badge tone="neutral">BREAK EVEN</Badge> : null}
+          <View style={styles.assetGroup}>
+            <Text style={styles.asset}>{asset}</Text>
+            {breakEven ? <Badge tone="neutral">BREAK EVEN</Badge> : null}
+          </View>
+          <View style={styles.headerBadges}>
+            <Badge tone={type === 'Compra' ? 'success' : 'danger'}>{type}</Badge>
+            {session ? (
+              <Badge tone={session === 'night' ? 'orange' : 'info'}>
+                {session === 'night' ? 'Noite' : 'Dia'}
+              </Badge>
+            ) : null}
+          </View>
         </View>
         <Text style={styles.date}>{displayDate}</Text>
       </View>
@@ -147,6 +151,16 @@ const styles = StyleSheet.create({
   headerMain: {
     flex: 1,
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  assetGroup: {
+    alignItems: 'flex-start',
+    gap: 4,
+  },
+  headerBadges: {
+    flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: spacing.xs,
@@ -157,6 +171,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   date: {
+    flexShrink: 0,
     color: colors.textMuted,
     fontSize: typography.caption,
   },

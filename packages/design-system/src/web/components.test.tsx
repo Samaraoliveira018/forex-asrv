@@ -327,7 +327,8 @@ describe('TradeCard', () => {
       <TradeCard asset="WIN" date="2026-10-20" type="Venda" lots={2} pnl={0.1} hidden />,
     );
 
-    expect(screen.getByText('BREAK EVEN')).toBeInTheDocument();
+    const assetGroup = screen.getByText('WIN').closest('.asrv-trade-card__asset-group');
+    expect(assetGroup).toContainElement(screen.getByText('BREAK EVEN'));
     expect(screen.getByText('••••••')).toBeInTheDocument();
   });
 });

@@ -1901,11 +1901,15 @@
         return `
           <div class="asrv-trade-card">
             <div class="asrv-trade-card__header">
-              <div class="flex items-center gap-2">
-                <span class="asrv-trade-card__asset">${item.asset}</span>
-                <span class="asrv-badge ${item.type === 'Compra' ? 'asrv-badge--success' : 'asrv-badge--danger'}">${item.type}</span>
-                <span class="asrv-badge ${item.session === 'night' ? 'asrv-badge--orange' : 'asrv-badge--info'}">${sessionLabel(item.session)}</span>
-                ${isBE ? `<span class="asrv-badge asrv-badge--neutral">BREAK EVEN</span>` : ''}
+              <div class="asrv-trade-card__header-main">
+                <div class="asrv-trade-card__asset-group">
+                  <span class="asrv-trade-card__asset">${item.asset}</span>
+                  ${isBE ? `<span class="asrv-badge asrv-badge--neutral">BREAK EVEN</span>` : ''}
+                </div>
+                <div class="asrv-trade-card__badges">
+                  <span class="asrv-badge ${item.type === 'Compra' ? 'asrv-badge--success' : 'asrv-badge--danger'}">${item.type}</span>
+                  <span class="asrv-badge ${item.session === 'night' ? 'asrv-badge--orange' : 'asrv-badge--info'}">${sessionLabel(item.session)}</span>
+                </div>
               </div>
               <span class="asrv-trade-card__date">${formatShortDate(item.date)}</span>
             </div>

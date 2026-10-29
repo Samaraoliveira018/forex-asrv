@@ -50,15 +50,19 @@ export function TradeCard({
   return (
     <article className={classNames('asrv-trade-card', className)}>
       <div className="asrv-trade-card__header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="asrv-trade-card__asset">{asset}</span>
-          <Badge tone={type === 'Compra' ? 'success' : 'danger'}>{type}</Badge>
-          {session ? (
-            <Badge tone={session === 'night' ? 'orange' : 'info'}>
-              {session === 'night' ? 'Noite' : 'Dia'}
-            </Badge>
-          ) : null}
-          {breakEven ? <Badge tone="neutral">BREAK EVEN</Badge> : null}
+        <div className="asrv-trade-card__header-main">
+          <div className="asrv-trade-card__asset-group">
+            <span className="asrv-trade-card__asset">{asset}</span>
+            {breakEven ? <Badge tone="neutral">BREAK EVEN</Badge> : null}
+          </div>
+          <div className="asrv-trade-card__badges">
+            <Badge tone={type === 'Compra' ? 'success' : 'danger'}>{type}</Badge>
+            {session ? (
+              <Badge tone={session === 'night' ? 'orange' : 'info'}>
+                {session === 'night' ? 'Noite' : 'Dia'}
+              </Badge>
+            ) : null}
+          </div>
         </div>
         <span className="asrv-trade-card__date">{displayDate}</span>
       </div>

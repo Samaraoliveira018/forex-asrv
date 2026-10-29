@@ -92,7 +92,14 @@ export const Operacoes: Story = {
         onEdit={() => undefined}
         onDelete={() => undefined}
       />
-      <TradeCard asset="WIN" date="2026-10-20" type="Venda" lots={2} pnl={0.1} />
+      <TradeCard
+        asset="WIN"
+        date="2026-10-20"
+        type="Venda"
+        session="night"
+        lots={2}
+        pnl={0.1}
+      />
     </div>
   ),
 };
