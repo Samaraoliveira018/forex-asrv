@@ -76,7 +76,7 @@ O backend (`backend/`) passa a ser um pacote (`@asrv/backend`) importado por web
 **Critério para M-07:** M-06 concluído, uma semana de uso no `/app/` sem perda de dados
 e conferência local × nuvem com contagens iguais.
 
-### 2.2 Regras e experiência — entrega atual (v0.1.3)
+### 2.2 Regras e experiência — entrega anterior (v0.1.3)
 
 Objetivo: refletir a rotina real de operação (parar após 2 stops), deixar as datas mais curtas e
 dar leitura imediata de resultado/perda por período.
@@ -93,7 +93,7 @@ dar leitura imediata de resultado/perda por período.
 **Fora de escopo desta entrega:** migrar prints antigos `.jpg` para `.webp` (os antigos continuam
 válidos por URL assinada; a remoção apaga as duas extensões).
 
-### 2.3 Sessões dia/noite — entrega atual (próxima release)
+### 2.3 Sessões dia/noite — entrega atual (v0.1.4)
 
 Objetivo: separar a operação da manhã e da noite para que cada sessão tenha seu próprio
 orçamento de risco, sem misturar stops ou operações.
