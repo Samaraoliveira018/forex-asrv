@@ -2,7 +2,7 @@
   "expo": {
     "name": "Diário Trader ASRV",
     "slug": "forex-asrv",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "com.asrv.forexdiary",
-      "versionCode": 5
+      "versionCode": 6
     }
   }
 }
