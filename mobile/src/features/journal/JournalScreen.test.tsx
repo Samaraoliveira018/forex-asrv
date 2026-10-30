@@ -218,6 +218,42 @@ describe('JournalScreen (mobile)', () => {
     expect(screen.getByLabelText('Mostrar valores')).toBeTruthy();
   });
 
+  it('ordena a lista do histórico do mais recente para o mais antigo', async () => {
+    const older = createTrade({
+      id: 'older',
+      date: '2026-10-20',
+      asset: 'EURUSD',
+      type: 'Compra',
+      lots: 1,
+      pnl: 10,
+    });
+    const recentFirst = createTrade({
+      id: 'recent-first',
+      date: '2026-10-22',
+      asset: 'GBPUSD',
+      type: 'Compra',
+      lots: 1,
+      pnl: 20,
+    });
+    const recentLast = createTrade({
+      id: 'recent-last',
+      date: '2026-10-22',
+      asset: 'USDCAD',
+      type: 'Venda',
+      lots: 1,
+      pnl: -5,
+    });
+    await renderJournal({ trades: [older, recentFirst, recentLast] });
+
+    await fireEvent.press(await screen.findByRole('tab', { name: 'Lista' }));
+    await waitFor(() => expect(screen.queryByText(/Lotes \/ Contratos/)).toBeNull());
+
+    const assets = screen
+      .getAllByText(/^(EURUSD|GBPUSD|USDCAD)$/)
+      .map((node) => node.props.children);
+    expect(assets).toEqual(['USDCAD', 'GBPUSD', 'EURUSD']);
+  });
+
   it('navega entre Dashboard, Diário, Plano e Estatísticas', async () => {
     await renderJournal();
 

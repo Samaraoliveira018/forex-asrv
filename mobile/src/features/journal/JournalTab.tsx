@@ -30,6 +30,17 @@ export type Market = 'nacional' | 'internacional';
 const milestones = [3, 7, 14, 30, 60] as const;
 const milestoneLabels = ['Iniciante', 'Focado', 'Blindado', 'Mestre', 'Lenda'];
 
+/** Histórico sempre do mais recente para o mais antigo (empate: último registrado primeiro). */
+function sortTradesByMostRecent(trades: readonly Trade[]): Trade[] {
+  return trades
+    .map((trade, index) => ({ trade, index }))
+    .sort((a, b) => {
+      const byDate = b.trade.date.localeCompare(a.trade.date);
+      return byDate !== 0 ? byDate : b.index - a.index;
+    })
+    .map(({ trade }) => trade);
+}
+
 export function JournalTab({
   snapshot,
   hidden,
@@ -316,13 +327,15 @@ function JournalList({
   onEditTrade: (trade: Trade) => void;
   onDeleteTrade: (trade: Trade) => void;
 }) {
-  if (snapshot.trades.length === 0) {
+  const orderedTrades = sortTradesByMostRecent(snapshot.trades);
+
+  if (orderedTrades.length === 0) {
     return <EmptyState>Nenhum registro encontrado.</EmptyState>;
   }
 
   return (
     <Card>
-      {snapshot.trades.map((trade, index) => {
+      {orderedTrades.map((trade, index) => {
         const breakEven = Math.abs(trade.pnl) <= 0.3;
 
         return (

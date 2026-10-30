@@ -635,6 +635,17 @@
       return Number.isFinite(pnl) && pnl < 0 && !isBreakEven(pnl);
     }
 
+    // Histórico sempre do mais recente para o mais antigo (empate: último registrado primeiro).
+    function sortTradesByMostRecent(list) {
+      return list
+        .map((trade, index) => ({ trade, index }))
+        .sort((a, b) => {
+          const byDate = b.trade.date.localeCompare(a.trade.date);
+          return byDate !== 0 ? byDate : b.index - a.index;
+        })
+        .map(({ trade }) => trade);
+    }
+
     // Data no fuso LOCAL (evita o deslocamento de UTC, que no Brasil adianta o dia após as 21h)
     function getLocalDateStr(date = new Date()) {
       const y = date.getFullYear();
@@ -1935,11 +1946,12 @@
 
     function renderJournalList() {
       const tbody = document.getElementById('trades-table-body');
-      if (trades.length === 0) {
+      const orderedTrades = sortTradesByMostRecent(trades);
+      if (orderedTrades.length === 0) {
         tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-gray-500">Nenhum registo encontrado.</td></tr>`;
         return;
       }
-      tbody.innerHTML = trades.map((t, idx) => {
+      tbody.innerHTML = orderedTrades.map((t, idx) => {
         const isBE = isBreakEven(t.pnl);
         const statusBadge = isBE 
           ? `<span class="asrv-badge asrv-badge--neutral">BREAK EVEN</span>`

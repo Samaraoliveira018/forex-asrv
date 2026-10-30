@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { createTrade } from '@asrv/backend';
@@ -174,6 +174,49 @@ describe('JournalScreen', () => {
     await user.click(await screen.findByRole('tab', { name: 'Lista' }));
     expect(screen.getByRole('columnheader', { name: 'Ativo' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'EURUSD' })).toBeInTheDocument();
+  });
+
+  it('ordena a lista do histórico do mais recente para o mais antigo', async () => {
+    const older = createTrade({
+      id: 'older',
+      date: '2026-10-20',
+      asset: 'EURUSD',
+      type: 'Compra',
+      lots: 1,
+      pnl: 10,
+    });
+    const recentFirst = createTrade({
+      id: 'recent-first',
+      date: '2026-10-22',
+      asset: 'GBPUSD',
+      type: 'Compra',
+      lots: 1,
+      pnl: 20,
+    });
+    const recentLast = createTrade({
+      id: 'recent-last',
+      date: '2026-10-22',
+      asset: 'USDCAD',
+      type: 'Venda',
+      lots: 1,
+      pnl: -5,
+    });
+    const fake = createFakeBff({
+      snapshot: emptySnapshot([older, recentFirst, recentLast]),
+    });
+    render(
+      <BffProvider bff={fake.bff}>
+        <JournalScreen onSignedOut={vi.fn()} />
+      </BffProvider>,
+    );
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('tab', { name: 'Lista' }));
+    const rows = within(screen.getByRole('table')).getAllByRole('row');
+
+    expect(within(rows[1]!).getByText('USDCAD')).toBeInTheDocument();
+    expect(within(rows[2]!).getByText('GBPUSD')).toBeInTheDocument();
+    expect(within(rows[3]!).getByText('EURUSD')).toBeInTheDocument();
   });
 
   it('oculta os valores financeiros', async () => {
