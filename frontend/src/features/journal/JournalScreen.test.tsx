@@ -117,7 +117,7 @@ describe('JournalScreen', () => {
     fake.mocks.saveTrade.mockResolvedValueOnce({
       trade,
       synced: true,
-      warnings: ['Limite de 4 operações na sessão Dia atingido (break even não conta).'],
+      warnings: ['Limite de 6 operações na sessão Dia atingido (break even não conta).'],
     });
     const user = userEvent.setup();
 
@@ -127,7 +127,7 @@ describe('JournalScreen', () => {
     await user.click(screen.getByRole('button', { name: 'Salvar Operação' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'Limite de 4 operações na sessão Dia atingido (break even não conta).',
+      'Limite de 6 operações na sessão Dia atingido (break even não conta).',
     );
   });
 

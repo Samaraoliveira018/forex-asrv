@@ -165,8 +165,8 @@ describe('isStop', () => {
 
 describe('regras de disciplina', () => {
   it('mantém os limites por sessão usados pelo app', () => {
-    expect(MAX_TRADES_PER_SESSION).toBe(4);
-    expect(MAX_STOPS_PER_SESSION).toBe(2);
+    expect(MAX_TRADES_PER_SESSION).toBe(6);
+    expect(MAX_STOPS_PER_SESSION).toBe(3);
     expect(MAX_LOSS_RATIO).toBe(0.25);
     expect(BREAK_EVEN_TOLERANCE).toBe(0.3);
   });

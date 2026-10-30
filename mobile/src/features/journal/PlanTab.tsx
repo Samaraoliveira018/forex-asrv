@@ -5,7 +5,7 @@ import { Card, Checkbox, colors, spacing, typography } from '@asrv/design-system
 const checklistItems = [
   'Verificar calendário de notícias',
   `Respeitar o limite de ${MAX_TRADES_PER_SESSION} trades e ${MAX_STOPS_PER_SESSION} stops por sessão (dia/noite; break even não conta)`,
-  'Parar de operar na sessão após 2 stops',
+  `Parar de operar na sessão após ${MAX_STOPS_PER_SESSION} stops`,
   'Mover o Stop para Break Even ao atingir a primeira parcial',
   'Se a oportunidade passou, registrar o dia sem operação',
 ];
@@ -29,8 +29,9 @@ export function PlanTab({
             noite). Break even não conta para o limite.
           </Text>
           <Text style={styles.rule}>
-            🛑 Stops: Máximo de {MAX_STOPS_PER_SESSION} stops por sessão. Ao atingir 2 stops no
-            dia ou 2 na noite, pare de operar naquela sessão para não perder a ofensiva.
+            🛑 Stops: Máximo de {MAX_STOPS_PER_SESSION} stops por sessão. Ao atingir{' '}
+            {MAX_STOPS_PER_SESSION} stops no dia ou {MAX_STOPS_PER_SESSION} na noite, pare de operar
+            naquela sessão para não perder a ofensiva.
           </Text>
           <Text style={styles.rule}>
             🛑 Perda Individual Máxima: Nenhuma operação pode ter prejuízo superior a 25% do
@@ -38,7 +39,7 @@ export function PlanTab({
           </Text>
           <Text style={styles.rule}>
             ⚖️ Break Even (0x0): Posições encerradas no zero a zero preservam o capital e não
-            contam no limite diário.
+            contam no limite da sessão.
           </Text>
           <Text style={styles.rule}>
             🛡️ Saber Ficar de Fora: Registrar dias em que não operou mantém a ofensiva ativa.

@@ -109,7 +109,7 @@ describe('calculateStats', () => {
     expect(stats.todayCount).toBe(2);
   });
 
-  it('não conta break even nas operações do dia que contam para o limite', () => {
+  it('não conta break even nas operações do dia que contam para o limite da sessão', () => {
     const stats = calculateStats({
       trades: [
         trade({ date: '2026-10-01', pnl: 10 }),

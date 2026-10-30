@@ -1,13 +1,13 @@
 # Roadmap — Diário Trader ASRV
 
-> Última atualização: **28/10/2026** · Referência: sessões dia/noite + regras de stops
+> Última atualização: **30/10/2026** · Referência: sessões dia/noite + regras de stops
 > App atual: https://samaraoliveira018.github.io/forex-asrv/
 > Novo app (migração): https://samaraoliveira018.github.io/forex-asrv/app/
 > Documentação técnica: [`../backend/supabase/README.md`](../backend/supabase/README.md) · [`ARCHITECTURE.md`](./ARCHITECTURE.md)
 
 ## 1. Visão
 
-Um diário de trading pessoal que força **disciplina operacional** (máximo 4 trades válidos e 2
+Um diário de trading pessoal que força **disciplina operacional** (máximo 6 trades válidos e 3
 stops por sessão — dia e noite, com limites independentes; break even não conta —, perda
 individual ≤ 25% do saldo inicial do dia e ofensiva de dias) e que **nunca perde um registro**,
 esteja você online, offline ou trocando de dispositivo.
@@ -32,7 +32,7 @@ esteja você online, offline ou trocando de dispositivo.
 | Área | Entregue |
 |---|---|
 | App | Diário, dashboard, plano operacional e estatísticas em página estática |
-| Regras de disciplina | Limite de 4 trades e 2 stops por sessão (dia/noite, independentes; break even não conta), perda máxima de 25% do saldo inicial do dia, break even, ofensiva com metas (3/7/14/30/60 dias) |
+| Regras de disciplina | Limite de 6 trades e 3 stops por sessão (dia/noite, independentes; break even não conta), perda máxima de 25% do saldo inicial do dia, break even, ofensiva com metas (3/7/14/30/60 dias) |
 | Dados | Cache em `localStorage` com migração de chaves antigas e sanitização de dados |
 | Nuvem | Supabase (Postgres + Auth + RLS) com login por e-mail/senha e Storage privado para os prints (`trade-screenshots`, URL assinada) |
 | Sincronização | Online-first, fila offline, envio ao reconectar, sync manual e migração assistida do histórico local |
@@ -65,13 +65,13 @@ O backend (`backend/`) passa a ser um pacote (`@asrv/backend`) importado por web
 | M-08 | Design system web/native com tokens + Storybook | ✅ 31 testes |
 | M-09 | Release manual no GitHub com web + Storybook + checksums | ✅ |
 | M-10 | Print da operação (Storage privado + URL assinada) em web, mobile e `index.html` | ✅ |
-| M-11 | Stop loss diário: máximo de 2 stops (break even não conta); 3º stop zera a ofensiva | ✅ |
+| M-11 | Stop loss por sessão: máximo de 3 stops (break even não conta); 4º stop zera a ofensiva | ✅ |
 | M-12 | Datas curtas (`dd/mm/aa`) nos modais, cartões e listas | ✅ |
 | M-13 | Painel de resultado diário/semanal/mensal com % de resultado e % de perda | ✅ |
 | M-14 | Fonte do ativo reduzida para não quebrar o cabeçalho do cartão | ✅ |
 | M-15 | Prints convertidos para WebP (web, mobile e `index.html`) | ✅ |
 | M-16 | Estatísticas: Compra branco e Venda vermelho | ✅ |
-| M-17 | Sessões dia/noite: 4 trades e 2 stops por sessão, com limites independentes | ✅ |
+| M-17 | Sessões dia/noite: 6 trades e 3 stops por sessão, com limites independentes | ✅ |
 
 **Critério para M-07:** M-06 concluído, uma semana de uso no `/app/` sem perda de dados
 e conferência local × nuvem com contagens iguais.
@@ -93,7 +93,7 @@ dar leitura imediata de resultado/perda por período.
 **Fora de escopo desta entrega:** migrar prints antigos `.jpg` para `.webp` (os antigos continuam
 válidos por URL assinada; a remoção apaga as duas extensões).
 
-### 2.3 Sessões dia/noite — entrega atual (v0.1.4)
+### 2.3 Sessões dia/noite — entrega atual
 
 Objetivo: separar a operação da manhã e da noite para que cada sessão tenha seu próprio
 orçamento de risco, sem misturar stops ou operações.
@@ -101,9 +101,9 @@ orçamento de risco, sem misturar stops ou operações.
 | ID | Entrega | Regra / comportamento | Critério de aceite |
 |---|---|---|---|
 | M-17 | Sessão da operação | Todo registro passa a ter `session` com valor `day` ou `night`. Registros antigos sem sessão contam como **dia**. | Seletor “Sessão do mercado” no modal (web, mobile e `index.html`); coluna `session` no Supabase com default `day` |
-| M-18 | Limite de trades por sessão | Máximo de **4 operações válidas** por sessão (break even não conta). Dia e noite têm contadores independentes. | `MAX_TRADES_PER_SESSION = 4`; violação `TOO_MANY_TRADES` com `session`; badges `Dia: X/4` e `Noite: X/4` |
-| M-19 | Stops por sessão | Máximo de **2 stops** por sessão. O 3º stop na mesma sessão é violação; 2 stops de dia + 2 de noite é permitido. | `MAX_STOPS_PER_SESSION = 2`; violação `TOO_MANY_STOPS` com `session`; avisos citam a sessão |
-| M-20 | Ofensiva e estatísticas | A ofensiva avalia os limites por sessão; `Stats.todayBySession` expõe trades/stops de hoje em cada sessão. | `calculateStreak` e `evaluateDiscipline` por sessão; testes cobrindo 2+2 stops e 4+4 trades |
+| M-18 | Limite de trades por sessão | Máximo de **6 operações válidas** por sessão (break even não conta). Dia e noite têm contadores independentes. | `MAX_TRADES_PER_SESSION = 6`; violação `TOO_MANY_TRADES` com `session`; badges `Dia: X/6` e `Noite: X/6` |
+| M-19 | Stops por sessão | Máximo de **3 stops** por sessão. O 4º stop na mesma sessão é violação; 3 stops de dia + 3 de noite é permitido. | `MAX_STOPS_PER_SESSION = 3`; violação `TOO_MANY_STOPS` com `session`; avisos citam a sessão |
+| M-20 | Ofensiva e estatísticas | A ofensiva avalia os limites por sessão; `Stats.todayBySession` expõe trades/stops de hoje em cada sessão. | `calculateStreak` e `evaluateDiscipline` por sessão; testes cobrindo 3+3 stops e 6+6 trades |
 | M-21 | Paridade de interface | Cartões e listas mostram a sessão; o plano operacional descreve os limites por sessão. | Badge `Dia`/`Noite` no design system web/native e no `index.html`; textos do plano atualizados |
 
 **Migração:** rode o `schema.sql` novamente (idempotente). Ele adiciona `session` com default
@@ -165,7 +165,7 @@ Objetivo: usar o histórico para melhorar decisão, não só registrar.
 | R-17 | Análise por sessão/horário/dia | Revela quando o trader realmente tem vantagem | M | Gráficos e tabela com P/L e win rate por recorte |
 | R-18 | Calendário heatmap | Mostra consistência e sequências de perda | P | Mês navegável com cor por resultado diário |
 | R-19 | Relatório mensal | Fechamento do mês sem montar planilha | M | Página imprimível/PDF com resumo, gráficos e violações de regra |
-| R-20 | Alertas de violação em tempo real | Disciplina no momento da decisão | P | Aviso imediato ao ultrapassar 4 trades válidos (break even não conta), 2 stops ou a perda máxima, com registro no histórico |
+| R-20 | Alertas de violação em tempo real | Disciplina no momento da decisão | P | Aviso imediato ao ultrapassar 6 trades válidos (break even não conta), 3 stops ou a perda máxima, com registro no histórico |
 | R-21 | Checklist e plano editáveis | O plano hoje é estático | P | Itens do checklist persistem e o plano aceita edição |
 
 ---

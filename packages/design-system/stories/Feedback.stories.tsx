@@ -65,7 +65,7 @@ export const SegmentosEProgresso: Story = {
         <ProgressBar label="Ofensiva" value={7} max={14} />
         <div style={{ display: 'flex', gap: 8 }}>
           <Badge tone="neutral" pill>
-            Hoje: 0/4 trades
+            Hoje: 0/6 trades
           </Badge>
           <Badge tone="success" pill>
             Sincronizado

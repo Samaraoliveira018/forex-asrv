@@ -197,8 +197,10 @@ describe('createJournalService', () => {
     );
   });
 
-  it('avisa ao passar do limite diário, mas salva mesmo assim', async () => {
+  it('avisa ao passar do limite da sessão, mas salva mesmo assim', async () => {
     const { trades, service } = setup();
+    seedTrade(trades, { date: '2026-10-21' });
+    seedTrade(trades, { date: '2026-10-21' });
     seedTrade(trades, { date: '2026-10-21' });
     seedTrade(trades, { date: '2026-10-21' });
     seedTrade(trades, { date: '2026-10-21' });
@@ -214,11 +216,13 @@ describe('createJournalService', () => {
 
     expect(result.synced).toBe(true);
     expect(result.warnings.join(' ').toLowerCase()).toContain('limite');
-    expect(trades.items).toHaveLength(5);
+    expect(trades.items).toHaveLength(7);
   });
 
-  it('não avisa do limite diário quando a operação é break even', async () => {
+  it('não avisa do limite da sessão quando a operação é break even', async () => {
     const { trades, service } = setup();
+    seedTrade(trades, { date: '2026-10-21' });
+    seedTrade(trades, { date: '2026-10-21' });
     seedTrade(trades, { date: '2026-10-21' });
     seedTrade(trades, { date: '2026-10-21' });
     seedTrade(trades, { date: '2026-10-21' });
@@ -234,11 +238,12 @@ describe('createJournalService', () => {
 
     expect(result.synced).toBe(true);
     expect(result.warnings.join(' ').toLowerCase()).not.toContain('limite');
-    expect(trades.items).toHaveLength(5);
+    expect(trades.items).toHaveLength(7);
   });
 
-  it('avisa que o segundo stop é o último antes de parar de operar', async () => {
+  it('avisa que o terceiro stop é o último antes de parar de operar', async () => {
     const { trades, service } = setup();
+    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
     seedTrade(trades, { date: '2026-10-21', pnl: -10 });
 
     const result = await service.saveTrade({
@@ -249,11 +254,12 @@ describe('createJournalService', () => {
       pnl: -5,
     });
 
-    expect(result.warnings.join(' ').toLowerCase()).toContain('2º stop');
+    expect(result.warnings.join(' ').toLowerCase()).toContain('3º stop');
   });
 
-  it('avisa ao atingir o limite de dois stops no dia', async () => {
+  it('avisa ao atingir o limite de três stops na sessão', async () => {
     const { trades, service } = setup();
+    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
     seedTrade(trades, { date: '2026-10-21', pnl: -10 });
     seedTrade(trades, { date: '2026-10-21', pnl: -10 });
 
@@ -267,11 +273,12 @@ describe('createJournalService', () => {
 
     expect(result.synced).toBe(true);
     expect(result.warnings.join(' ').toLowerCase()).toContain('stop');
-    expect(trades.items).toHaveLength(3);
+    expect(trades.items).toHaveLength(4);
   });
 
-  it('avisa para parar de operar após dois stops mesmo em uma operação vencedora', async () => {
+  it('avisa para parar de operar após três stops mesmo em uma operação vencedora', async () => {
     const { trades, service } = setup();
+    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
     seedTrade(trades, { date: '2026-10-21', pnl: -10 });
     seedTrade(trades, { date: '2026-10-21', pnl: -10 });
 
@@ -290,6 +297,7 @@ describe('createJournalService', () => {
     const { trades, service } = setup();
     seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'day' });
     seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'day' });
+    seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'day' });
 
     const result = await service.saveTrade({
       date: '2026-10-21',
@@ -303,8 +311,9 @@ describe('createJournalService', () => {
     expect(result.warnings).toEqual([]);
   });
 
-  it('avisa o segundo stop da sessão da noite', async () => {
+  it('avisa o terceiro stop da sessão da noite', async () => {
     const { trades, service } = setup();
+    seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'night' });
     seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'night' });
 
     const result = await service.saveTrade({
@@ -316,7 +325,7 @@ describe('createJournalService', () => {
       pnl: -5,
     });
 
-    expect(result.warnings.join(' ').toLowerCase()).toContain('2º stop');
+    expect(result.warnings.join(' ').toLowerCase()).toContain('3º stop');
     expect(result.warnings.join(' ')).toContain('Noite');
   });
 

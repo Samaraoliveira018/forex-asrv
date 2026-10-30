@@ -43,9 +43,11 @@ describe('evaluateDiscipline', () => {
     expect(result.streak).toBe(2);
   });
 
-  it('viola ao passar de quatro trades válidos no mesmo dia e zera a ofensiva', () => {
+  it('viola ao passar de seis trades válidos no mesmo dia e zera a ofensiva', () => {
     const result = evaluateDiscipline({
       trades: [
+        trade({ date: '2026-10-01' }),
+        trade({ date: '2026-10-01' }),
         trade({ date: '2026-10-01' }),
         trade({ date: '2026-10-01' }),
         trade({ date: '2026-10-01' }),
@@ -62,9 +64,11 @@ describe('evaluateDiscipline', () => {
     );
   });
 
-  it('não conta operações break even no limite diário', () => {
+  it('não conta operações break even no limite da sessão', () => {
     const result = evaluateDiscipline({
       trades: [
+        trade({ date: '2026-10-01' }),
+        trade({ date: '2026-10-01' }),
         trade({ date: '2026-10-01' }),
         trade({ date: '2026-10-01' }),
         trade({ date: '2026-10-01' }),
@@ -81,12 +85,13 @@ describe('evaluateDiscipline', () => {
     expect(result.streak).toBe(1);
   });
 
-  it('viola ao passar de dois stops no mesmo dia', () => {
+  it('viola ao passar de três stops no mesmo dia', () => {
     const result = evaluateDiscipline({
       trades: [
         trade({ date: '2026-10-01', pnl: -10 }),
         trade({ date: '2026-10-01', pnl: -15 }),
         trade({ date: '2026-10-01', pnl: -5 }),
+        trade({ date: '2026-10-01', pnl: -7 }),
       ],
       noTradeDays: [],
       initialBalance: 1000,
@@ -98,13 +103,15 @@ describe('evaluateDiscipline', () => {
     );
   });
 
-  it('permite 2 stops de dia e 2 stops de noite no mesmo dia', () => {
+  it('permite 3 stops de dia e 3 stops de noite no mesmo dia', () => {
     const result = evaluateDiscipline({
       trades: [
         trade({ date: '2026-10-01', pnl: -10, session: 'day' }),
         trade({ date: '2026-10-01', pnl: -15, session: 'day' }),
+        trade({ date: '2026-10-01', pnl: -5, session: 'day' }),
         trade({ date: '2026-10-01', pnl: -5, session: 'night' }),
         trade({ date: '2026-10-01', pnl: -8, session: 'night' }),
+        trade({ date: '2026-10-01', pnl: -6, session: 'night' }),
       ],
       noTradeDays: [],
       initialBalance: 1000,
@@ -114,12 +121,13 @@ describe('evaluateDiscipline', () => {
     expect(result.streak).toBe(1);
   });
 
-  it('viola ao passar de dois stops na sessão da noite', () => {
+  it('viola ao passar de três stops na sessão da noite', () => {
     const result = evaluateDiscipline({
       trades: [
         trade({ date: '2026-10-01', pnl: -10, session: 'night' }),
         trade({ date: '2026-10-01', pnl: -15, session: 'night' }),
         trade({ date: '2026-10-01', pnl: -5, session: 'night' }),
+        trade({ date: '2026-10-01', pnl: -7, session: 'night' }),
       ],
       noTradeDays: [],
       initialBalance: 1000,
@@ -131,13 +139,17 @@ describe('evaluateDiscipline', () => {
     );
   });
 
-  it('permite 4 trades de dia e 4 trades de noite no mesmo dia', () => {
+  it('permite 6 trades de dia e 6 trades de noite no mesmo dia', () => {
     const result = evaluateDiscipline({
       trades: [
         trade({ date: '2026-10-01', session: 'day' }),
         trade({ date: '2026-10-01', session: 'day' }),
         trade({ date: '2026-10-01', session: 'day' }),
         trade({ date: '2026-10-01', session: 'day' }),
+        trade({ date: '2026-10-01', session: 'day' }),
+        trade({ date: '2026-10-01', session: 'day' }),
+        trade({ date: '2026-10-01', session: 'night' }),
+        trade({ date: '2026-10-01', session: 'night' }),
         trade({ date: '2026-10-01', session: 'night' }),
         trade({ date: '2026-10-01', session: 'night' }),
         trade({ date: '2026-10-01', session: 'night' }),
@@ -151,9 +163,11 @@ describe('evaluateDiscipline', () => {
     expect(result.streak).toBe(1);
   });
 
-  it('viola ao passar de quatro trades na sessão da noite', () => {
+  it('viola ao passar de seis trades na sessão da noite', () => {
     const result = evaluateDiscipline({
       trades: [
+        trade({ date: '2026-10-01', session: 'night' }),
+        trade({ date: '2026-10-01', session: 'night' }),
         trade({ date: '2026-10-01', session: 'night' }),
         trade({ date: '2026-10-01', session: 'night' }),
         trade({ date: '2026-10-01', session: 'night' }),

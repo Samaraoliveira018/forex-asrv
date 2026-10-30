@@ -74,7 +74,7 @@ frontend / mobile
                 └── componentes por plataforma
 ```
 
-- **domain**: entidades (`Trade`), validações, break even, limite diário, perda máxima,
+- **domain**: entidades (`Trade`), validações, break even, limites por sessão, perda máxima,
   ofensiva e estatísticas. Zero dependências externas.
 - **application**: portas (`TradeRepository`, `AuthGateway`, `PendingJobStorage`, `Clock`) e
   serviços (`createJournalService`, `createAuthService`). Não conhece Supabase.

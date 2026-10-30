@@ -49,7 +49,7 @@ export interface Stats {
   buyCount: number;
   sellCount: number;
   todayCount: number;
-  /** Operações de hoje que contam para o limite diário (break even não conta). */
+  /** Operações de hoje que contam para o limite da sessão (break even não conta). */
   todayCountedTrades: number;
   /** Stops de hoje (perdas reais), somando dia e noite. */
   todayStops: number;

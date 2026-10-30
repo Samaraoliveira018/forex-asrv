@@ -1,6 +1,6 @@
 # Diário Trader ASRV
 
-Diário de trading com disciplina operacional: no máximo 4 operações e 2 stops por sessão
+Diário de trading com disciplina operacional: no máximo 6 operações e 3 stops por sessão
 (dia/noite; break even não conta no limite), perda individual limitada a 25% do saldo inicial do
 dia, break even técnico e ofensiva de dias.
 Cada operação pode levar um **print** (foto ou captura de tela). Os dados ficam no Supabase

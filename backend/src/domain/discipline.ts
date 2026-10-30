@@ -45,7 +45,7 @@ export function evaluateDiscipline(input: DisciplineInput): DisciplineResult {
   }
 
   for (const [date, trades] of byDate) {
-    // Os limites são independentes por sessão: 4 trades e 2 stops de dia + 4 trades e 2 stops de noite.
+    // Os limites são independentes por sessão: 6 trades e 3 stops de dia + 6 trades e 3 stops de noite.
     for (const session of ['day', 'night'] as const) {
       const sessionTrades = trades.filter((trade) => trade.session === session);
 
@@ -60,14 +60,14 @@ export function evaluateDiscipline(input: DisciplineInput): DisciplineResult {
         });
       }
 
-      // Stop = perda real. Ao passar de 2 stops na sessão, a disciplina foi quebrada.
+      // Stop = perda real. Ao passar de 3 stops na sessão, a disciplina foi quebrada.
       const stops = sessionTrades.filter((trade) => isStop(trade.pnl));
       if (stops.length > MAX_STOPS_PER_SESSION) {
         violations.push({
           kind: 'TOO_MANY_STOPS',
           date,
           session,
-          message: `${stops.length} stops em ${date} (sessão ${sessionLabel(session)}); o limite é ${MAX_STOPS_PER_SESSION} por sessão. Após 2 stops, pare de operar nessa sessão.`,
+          message: `${stops.length} stops em ${date} (sessão ${sessionLabel(session)}); o limite é ${MAX_STOPS_PER_SESSION} por sessão. Após ${MAX_STOPS_PER_SESSION} stops, pare de operar nessa sessão.`,
         });
       }
     }
