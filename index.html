@@ -255,6 +255,30 @@
           <p class="asrv-page-subtitle">Regras: Operações sem limite e máximo de 4 stops por sessão (dia/noite; contador inclui break even) | Nenhuma perda individual &gt; 25% do saldo inicial do dia</p>
         </div>
 
+        <section class="asrv-card space-y-4" aria-label="Consultar diário por data">
+          <div class="flex flex-wrap items-end gap-3">
+            <div class="flex-1">
+              <h3 class="asrv-section-title">Histórico do diário</h3>
+              <p class="text-sm text-gray-400">Escolha uma data para consultar as operações e os resultados daquele dia.</p>
+            </div>
+            <label class="flex flex-col gap-1 text-sm text-gray-300">Data do diário
+              <input id="journal-date" type="date" class="bg-gray-900 border border-gray-700 rounded-lg p-3 text-white" style="color-scheme:dark" onchange="setJournalDate(this.value)">
+            </label>
+            <button type="button" class="asrv-segmented__item" onclick="setJournalDate(getLocalDateStr())">Hoje</button>
+            <button type="button" class="asrv-segmented__item" onclick="setJournalDate('')">Todos os dias</button>
+          </div>
+          <p id="journal-date-status" class="text-sm text-gray-400" aria-live="polite"></p>
+          <div id="journal-day-summary" class="grid grid-cols-2 lg:grid-cols-4 gap-4" aria-live="polite"></div>
+          <label class="flex flex-wrap items-center gap-3 text-sm text-gray-300">Mostrar operações
+            <select id="journal-result" class="bg-gray-900 border border-gray-700 rounded-lg p-3 text-white" onchange="journalResultFilter=this.value; refreshUI()">
+              <option value="all">Todos os resultados</option>
+              <option value="win">Ganhos</option>
+              <option value="loss">Perdas</option>
+              <option value="be">Break even</option>
+            </select>
+          </label>
+        </section>
+
         <!-- 4 MAIN KPI CARDS -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div class="asrv-card">
@@ -610,6 +634,8 @@
 
   <!-- JAVASCRIPT LOGIC -->
   <script>
+    let journalSelectedDate = '';
+    let journalResultFilter = 'all';
     let trades = [];
     let noTradeDays = [];
     let initialBalance = 150;
@@ -1808,6 +1834,41 @@
       if (maxLossEl) maxLossEl.innerText = formatCurrency(maxLoss, '- ');
     }
 
+    function setJournalDate(date) {
+      journalSelectedDate = date;
+      document.getElementById('journal-date').value = date;
+      refreshUI();
+    }
+
+    function matchesJournalTrade(trade) {
+      if (journalSelectedDate && trade.date !== journalSelectedDate) return false;
+      if (journalResultFilter === 'be') return isBreakEven(trade.pnl);
+      if (journalResultFilter === 'win') return trade.pnl > 0 && !isBreakEven(trade.pnl);
+      if (journalResultFilter === 'loss') return isStop(trade.pnl);
+      return true;
+    }
+
+    function renderJournalHistorySummary() {
+      const dayTrades = trades.filter(t => !journalSelectedDate || t.date === journalSelectedDate);
+      const gains = dayTrades.reduce((sum, t) => sum + Math.max(0, t.pnl), 0);
+      const losses = dayTrades.reduce((sum, t) => sum + Math.min(0, t.pnl), 0);
+      const pnl = gains + losses;
+      const wins = dayTrades.filter(t => t.pnl > 0 && !isBreakEven(t.pnl)).length;
+      const stops = dayTrades.filter(t => isStop(t.pnl)).length;
+      const be = dayTrades.filter(t => isBreakEven(t.pnl)).length;
+      const amount = value => isValueHidden ? '••••••' : `${value < 0 ? '- ' : value > 0 ? '+ ' : ''}$ ${Math.abs(value).toFixed(2)}`;
+      const title = journalSelectedDate ? `Diário de ${formatShortDate(journalSelectedDate)}` : 'Todos os dias';
+      const status = journalSelectedDate && noTradeDays.includes(journalSelectedDate) ? ' · Dia registrado sem operar' : dayTrades.length === 0 ? ' · Nenhuma operação registrada' : '';
+      document.getElementById('journal-date-status').innerText = `${title}${status} · ${dayTrades.length} operações · ${wins} ganhos · ${stops} perdas · ${be} BE`;
+      const cards = [
+        ['Ganhos brutos', amount(gains), 'text-emerald-400'],
+        ['Perdas brutas', amount(losses), 'text-red-400'],
+        ['Resultado líquido', amount(pnl), pnl < 0 ? 'text-red-400' : 'text-emerald-400'],
+        ['Operações (inclui BE)', String(dayTrades.length), 'text-white']
+      ];
+      document.getElementById('journal-day-summary').innerHTML = cards.map(([label, value, color]) => `<div><p class="asrv-stat__label">${label}</p><p class="text-2xl font-bold ${color}">${value}</p></div>`).join('');
+    }
+
     function refreshUI() {
       const totalTrades = trades.length;
       const wins = trades.filter(t => t.pnl > 0).length;
@@ -1862,6 +1923,7 @@
       document.getElementById('chart-stat-pnl').innerText = formatCurrency(totalPnl);
 
       updateDashboardMetrics();
+      renderJournalHistorySummary();
       renderJournalGrid();
       renderJournalList();
       // Desenha apenas gráficos de abas visíveis; as demais são (re)desenhadas ao trocar de aba
@@ -1874,12 +1936,12 @@
       const container = document.getElementById('journal-grid-view');
       
       const allItems = [
-        ...trades.map(t => ({ ...t, itemType: 'trade' })),
-        ...noTradeDays.map(d => ({ date: d, itemType: 'no_trade', id: `nt-${d}` }))
+        ...trades.filter(matchesJournalTrade).map(t => ({ ...t, itemType: 'trade' })),
+        ...noTradeDays.filter(d => journalResultFilter === 'all' && (!journalSelectedDate || d === journalSelectedDate)).map(d => ({ date: d, itemType: 'no_trade', id: `nt-${d}` }))
       ].sort((a, b) => b.date.localeCompare(a.date));
 
       if (allItems.length === 0) {
-        container.innerHTML = `<div class="col-span-full asrv-empty">Nenhuma operação ou dia de disciplina registrado ainda.</div>`;
+        container.innerHTML = `<div class="col-span-full asrv-empty">Nenhum registro para a data e o resultado selecionados.</div>`;
         return;
       }
 
@@ -1943,9 +2005,9 @@
 
     function renderJournalList() {
       const tbody = document.getElementById('trades-table-body');
-      const orderedTrades = sortTradesByMostRecent(trades);
+      const orderedTrades = sortTradesByMostRecent(trades.filter(matchesJournalTrade));
       if (orderedTrades.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-gray-500">Nenhum registo encontrado.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-gray-500">${journalSelectedDate && noTradeDays.includes(journalSelectedDate) && journalResultFilter === 'all' ? 'Dia registrado sem operar.' : 'Nenhuma operação para a data e o resultado selecionados.'}</td></tr>`;
         return;
       }
       tbody.innerHTML = orderedTrades.map((t, idx) => {

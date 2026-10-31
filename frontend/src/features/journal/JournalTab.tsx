@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   MAX_STOPS_PER_SESSION,
   sessionLabel,
@@ -61,6 +62,21 @@ export function JournalTab({
   onNoTradeDay: () => void;
   onDeleteNoTradeDay: (day: string) => void;
 }) {
+  const [selectedDate, setSelectedDate] = useState('');
+  const [resultFilter, setResultFilter] = useState('all');
+  const datedTrades = snapshot.trades.filter(t => !selectedDate || t.date === selectedDate);
+  const filteredSnapshot = {
+    ...snapshot,
+    trades: datedTrades.filter(t => resultFilter === 'all' || (resultFilter === 'be' ? isBreakEven(t.pnl) : resultFilter === 'win' ? t.pnl > 0 && !isBreakEven(t.pnl) : t.pnl < 0 && !isBreakEven(t.pnl))),
+    noTradeDays: snapshot.noTradeDays.filter(d => resultFilter === 'all' && (!selectedDate || d === selectedDate)),
+  };
+  const historyMoney = (value: number) => hidden ? '••••••' : `${value < 0 ? '- ' : value > 0 ? '+ ' : ''}$ ${Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const gains = datedTrades.reduce((sum, t) => sum + Math.max(0, t.pnl), 0);
+  const losses = datedTrades.reduce((sum, t) => sum + Math.min(0, t.pnl), 0);
+  const today = () => {
+    const d = new Date();
+    setSelectedDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+  };
   const { stats, discipline } = snapshot;
   const nextMilestone = milestones.find((milestone) => discipline.streak < milestone) ?? 60;
   const sessionTone = (session: TradeSession) => {
@@ -171,6 +187,37 @@ export function JournalTab({
         </p>
       </div>
 
+      <Card ariaLabel="Consultar diário por data">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex-1">
+            <h2 className="asrv-section-title">Histórico do diário</h2>
+            <p className="asrv-page-subtitle">Escolha uma data para consultar as operações e os resultados daquele dia.</p>
+          </div>
+          <label className="flex flex-col gap-1 text-sm text-slate-300">Data do diário
+            <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="rounded-lg border border-slate-700 bg-slate-900 p-3 text-white" style={{ colorScheme: 'dark' }} />
+          </label>
+          <Button onClick={today}>Hoje</Button>
+          <Button onClick={() => setSelectedDate('')}>Todos os dias</Button>
+        </div>
+        <p className="my-3 text-sm text-slate-400" aria-live="polite">
+          {selectedDate ? `Diário de ${formatDate(selectedDate)}` : 'Todos os dias'}
+          {selectedDate && snapshot.noTradeDays.includes(selectedDate) ? ' · Dia registrado sem operar' : ''}
+          {` · ${datedTrades.filter(t => t.pnl > 0 && !isBreakEven(t.pnl)).length} ganhos · ${datedTrades.filter(t => t.pnl < 0 && !isBreakEven(t.pnl)).length} perdas · ${datedTrades.filter(t => isBreakEven(t.pnl)).length} BE`}
+        </p>
+        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Resumo do histórico">
+          <StatCard label="Ganhos brutos" value={historyMoney(gains)} tone="success" />
+          <StatCard label="Perdas brutas" value={historyMoney(losses)} tone="danger" />
+          <StatCard label="Resultado líquido" value={historyMoney(gains + losses)} tone={periodTone(gains + losses)} />
+          <StatCard label="Operações (inclui BE)" value={String(datedTrades.length)} />
+        </div>
+        <label className="flex flex-wrap items-center gap-3 text-sm text-slate-300">Mostrar operações
+          <select value={resultFilter} onChange={e => setResultFilter(e.target.value)} className="rounded-lg border border-slate-700 bg-slate-900 p-3 text-white">
+            <option value="all">Todos os resultados</option><option value="win">Ganhos</option><option value="loss">Perdas</option><option value="be">Break even</option>
+          </select>
+        </label>
+        {filteredSnapshot.trades.length === 0 && filteredSnapshot.noTradeDays.length === 0 && <p role="status" className="mt-3 text-sm text-slate-400">Nenhum registro para a data e o resultado selecionados.</p>}
+      </Card>
+
       <section aria-label="Indicadores" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Patrimônio Total"
@@ -268,7 +315,7 @@ export function JournalTab({
 
         {view === 'grid' ? (
           <JournalGrid
-            snapshot={snapshot}
+            snapshot={filteredSnapshot}
             hidden={hidden}
             onEditTrade={onEditTrade}
             onDeleteTrade={onDeleteTrade}
@@ -276,7 +323,7 @@ export function JournalTab({
           />
         ) : (
           <JournalList
-            snapshot={snapshot}
+            snapshot={filteredSnapshot}
             hidden={hidden}
             onEditTrade={onEditTrade}
             onDeleteTrade={onDeleteTrade}

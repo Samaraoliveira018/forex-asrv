@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   MAX_STOPS_PER_SESSION,
@@ -21,7 +22,7 @@ import {
   typography,
 } from '@asrv/design-system';
 import { EquityChart } from './charts';
-import { formatDate, money, signedMoney, signedPercent, signedValue } from './format';
+import { formatDate, isBreakEven, money, signedMoney, signedPercent, signedValue } from './format';
 
 export type JournalView = 'grid' | 'list';
 export type Market = 'nacional' | 'internacional';
@@ -67,6 +68,20 @@ export function JournalTab({
   onNoTradeDay: () => void;
   onDeleteNoTradeDay: (day: string) => void;
 }) {
+  const [selectedDate, setSelectedDate] = useState('');
+  const [resultFilter, setResultFilter] = useState('all');
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const dateKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const datedTrades = snapshot.trades.filter(t => !selectedDate || t.date === selectedDate);
+  const filteredSnapshot = {
+    ...snapshot,
+    trades: datedTrades.filter(t => resultFilter === 'all' || (resultFilter === 'be' ? isBreakEven(t.pnl) : resultFilter === 'win' ? t.pnl > 0 && !isBreakEven(t.pnl) : t.pnl < 0 && !isBreakEven(t.pnl))),
+    noTradeDays: snapshot.noTradeDays.filter(d => resultFilter === 'all' && (!selectedDate || d === selectedDate)),
+  };
+  const historyMoney = (value: number) => hidden ? '••••••' : `${value < 0 ? '- ' : value > 0 ? '+ ' : ''}US$ ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const gains = datedTrades.reduce((sum, t) => sum + Math.max(0, t.pnl), 0);
+  const losses = datedTrades.reduce((sum, t) => sum + Math.min(0, t.pnl), 0);
   const { stats, discipline } = snapshot;
   const nextMilestone = milestones.find((milestone) => discipline.streak < milestone) ?? 60;
   const sessionTone = (session: TradeSession) => {
@@ -164,6 +179,46 @@ export function JournalTab({
         </Text>
       </View>
 
+      <Card>
+        <Text style={styles.sectionTitle}>Histórico do diário</Text>
+        <Text style={styles.pageSubtitle}>Escolha uma data para consultar as operações e os resultados daquele dia.</Text>
+        <Button onPress={() => setCalendarOpen(!calendarOpen)}>{selectedDate ? `Data do diário: ${formatDate(selectedDate)}` : 'Abrir calendário'}</Button>
+        {calendarOpen && <View accessibilityLabel="Calendário do diário">
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Button accessibilityLabel="Mês anterior" onPress={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}>‹</Button>
+            <Text style={styles.meta}>{calendarMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</Text>
+            <Button accessibilityLabel="Próximo mês" onPress={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}>›</Button>
+          </View>
+          <View style={{ flexDirection: 'row' }}>{['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, i) => <Text key={i} style={[styles.meta, { width: '14.2857%', textAlign: 'center' }]}>{day}</Text>)}</View>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+            {Array.from({ length: calendarMonth.getDay() + new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0).getDate() }, (_, i) => {
+              const day = i - calendarMonth.getDay() + 1;
+              if (day < 1) return <View key={i} style={{ width: '14.2857%' }} />;
+              const key = dateKey(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day));
+              const recorded = snapshot.trades.some(t => t.date === key) || snapshot.noTradeDays.includes(key);
+              return <Pressable key={i} accessibilityRole="button" accessibilityLabel={`${formatDate(key)}${recorded ? ', com registros' : ''}`} accessibilityState={{ selected: selectedDate === key }} onPress={() => { setSelectedDate(key); setCalendarOpen(false); }} style={{ width: '14.2857%', minHeight: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: selectedDate === key ? '#2563eb' : 'transparent', borderRadius: 8 }}>
+                <Text style={{ color: recorded ? '#34d399' : '#f8fafc', fontWeight: recorded ? '700' : '400' }}>{day}</Text>
+                {recorded && <Text style={{ color: '#34d399', fontSize: 10 }}>•</Text>}
+              </Pressable>;
+            })}
+          </View>
+        </View>}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          <Button onPress={() => { const d = new Date(); setSelectedDate(dateKey(d)); setCalendarMonth(new Date(d.getFullYear(), d.getMonth(), 1)); }}>Hoje</Button>
+          <Button onPress={() => setSelectedDate('')}>Todos os dias</Button>
+        </View>
+        <Text style={styles.meta}>{selectedDate ? `Diário de ${formatDate(selectedDate)}` : 'Todos os dias'}{selectedDate && snapshot.noTradeDays.includes(selectedDate) ? ' · Dia registrado sem operar' : ''}</Text>
+        <Text style={styles.meta}>{datedTrades.filter(t => t.pnl > 0 && !isBreakEven(t.pnl)).length} ganhos · {datedTrades.filter(t => t.pnl < 0 && !isBreakEven(t.pnl)).length} perdas · {datedTrades.filter(t => isBreakEven(t.pnl)).length} BE</Text>
+        <View style={styles.statsGrid}>
+          <StatCard label="Ganhos brutos" value={historyMoney(gains)} tone="success" />
+          <StatCard label="Perdas brutas" value={historyMoney(losses)} tone="danger" />
+          <StatCard label="Resultado líquido" value={historyMoney(gains + losses)} tone={periodTone(gains + losses)} />
+          <StatCard label="Operações (inclui BE)" value={String(datedTrades.length)} />
+        </View>
+        <SegmentedControl label="Mostrar operações" value={resultFilter} onChange={setResultFilter} options={[{ value: 'all', label: 'Todos' }, { value: 'win', label: 'Ganhos' }, { value: 'loss', label: 'Perdas' }, { value: 'be', label: 'BE' }]} />
+        {filteredSnapshot.trades.length === 0 && filteredSnapshot.noTradeDays.length === 0 && <Text style={styles.meta}>Nenhum registro para a data e o resultado selecionados.</Text>}
+      </Card>
+
       <View style={styles.statsGrid}>
         <StatCard
           label="Patrimônio Total"
@@ -237,7 +292,7 @@ export function JournalTab({
 
       {view === 'grid' ? (
         <JournalGrid
-          snapshot={snapshot}
+          snapshot={filteredSnapshot}
           hidden={hidden}
           onEditTrade={onEditTrade}
           onDeleteTrade={onDeleteTrade}
@@ -245,7 +300,7 @@ export function JournalTab({
         />
       ) : (
         <JournalList
-          snapshot={snapshot}
+          snapshot={filteredSnapshot}
           hidden={hidden}
           onEditTrade={onEditTrade}
           onDeleteTrade={onDeleteTrade}

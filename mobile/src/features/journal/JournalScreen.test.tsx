@@ -56,6 +56,34 @@ describe('JournalScreen (mobile)', () => {
     jest.restoreAllMocks();
   });
 
+  it('seleciona um dia no calendário e filtra ganhos, perdas e break even', async () => {
+    const now = new Date();
+    const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    const otherDay = `${day.slice(0, 8)}02`;
+    const entries = [
+      createTrade({ ...trade, id: 'gain', date: day, asset: 'EURUSD', pnl: 20 }),
+      createTrade({ ...trade, id: 'loss', date: day, asset: 'GBPUSD', pnl: -7 }),
+      createTrade({ ...trade, id: 'be', date: day, asset: 'USDJPY', pnl: -0.1 }),
+      createTrade({ ...trade, id: 'other', date: otherDay, asset: 'XAUUSD', pnl: 50 }),
+    ];
+    await renderJournal({ trades: entries });
+    await fireEvent.press(screen.getByRole('button', { name: 'Abrir calendário' }));
+    const formatted = `01/${day.slice(5, 7)}/${day.slice(2, 4)}`;
+    await fireEvent.press(screen.getByRole('button', { name: `${formatted}, com registros` }));
+    expect(screen.queryByText('XAUUSD')).toBeNull();
+    expect(screen.getByText('EURUSD')).toBeTruthy();
+    expect(screen.getByText('+ US$ 12,90')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('tab', { name: 'Perdas' }));
+    expect(screen.getByText('GBPUSD')).toBeTruthy();
+    expect(screen.queryByText('EURUSD')).toBeNull();
+    expect(screen.queryByText('USDJPY')).toBeNull();
+    await fireEvent.press(screen.getByRole('tab', { name: 'BE' }));
+    expect(screen.getByText('USDJPY')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('tab', { name: 'Todos' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Todos os dias' }));
+    expect(screen.getByText('XAUUSD')).toBeTruthy();
+  }, 20000);
+
   it('mostra o resumo, a ofensiva e o histórico', async () => {
     await renderJournal();
 
