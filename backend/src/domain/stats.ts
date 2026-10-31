@@ -26,7 +26,7 @@ export interface PeriodResults {
 
 /** Contadores de disciplina de uma sessão no dia atual. */
 export interface SessionCounters {
-  /** Operações da sessão que contam para o limite (break even não conta). */
+  /** Operações da sessão com resultado fora do break even. */
   countedTrades: number;
   /** Stops (perdas reais) da sessão. */
   stops: number;
@@ -49,7 +49,7 @@ export interface Stats {
   buyCount: number;
   sellCount: number;
   todayCount: number;
-  /** Operações de hoje que contam para o limite da sessão (break even não conta). */
+  /** Operações de hoje com resultado fora do break even. */
   todayCountedTrades: number;
   /** Stops de hoje (perdas reais), somando dia e noite. */
   todayStops: number;

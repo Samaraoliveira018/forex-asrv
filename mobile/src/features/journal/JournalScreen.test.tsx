@@ -62,8 +62,8 @@ describe('JournalScreen (mobile)', () => {
     expect(await screen.findByText('EURUSD')).toBeTruthy();
     expect(screen.getAllByText('US$ 1.100,00').length).toBeGreaterThan(0);
     expect(screen.getByText('Metas de Ofensiva (Disciplina Trader)')).toBeTruthy();
-    expect(screen.getByText(/Dia: 0\/6 trades/)).toBeTruthy();
-    expect(screen.getByText(/Noite: 0\/6 trades/)).toBeTruthy();
+    expect(screen.getByText(/Dia: 0 operações/)).toBeTruthy();
+    expect(screen.getByText(/Noite: 0 operações/)).toBeTruthy();
   });
 
   it('registra uma nova operação pelo modal e atualiza a lista', async () => {
@@ -148,7 +148,7 @@ describe('JournalScreen (mobile)', () => {
     fake.mocks.saveTrade.mockResolvedValueOnce({
       trade,
       synced: true,
-      warnings: ['Limite de 6 operações na sessão Dia atingido (break even não conta).'],
+      warnings: ['Limite de 4 stops na sessão Dia atingido.'],
     });
 
     await openNewTradeModal();
@@ -156,7 +156,7 @@ describe('JournalScreen (mobile)', () => {
     await fireEvent.changeText(screen.getByLabelText('Resultado'), '10');
     await fireEvent.press(screen.getByRole('button', { name: 'Salvar Operação' }));
 
-    expect(await screen.findByText('Limite de 6 operações na sessão Dia atingido (break even não conta).')).toBeTruthy();
+    expect(await screen.findByText('Limite de 4 stops na sessão Dia atingido.')).toBeTruthy();
   });
 
   it('exclui uma operação pelo histórico após confirmação', async () => {

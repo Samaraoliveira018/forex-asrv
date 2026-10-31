@@ -1,7 +1,6 @@
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   MAX_STOPS_PER_SESSION,
-  MAX_TRADES_PER_SESSION,
   sessionLabel,
   type JournalSnapshot,
   type Trade,
@@ -72,16 +71,10 @@ export function JournalTab({
   const nextMilestone = milestones.find((milestone) => discipline.streak < milestone) ?? 60;
   const sessionTone = (session: TradeSession) => {
     const counters = stats.todayBySession[session];
-    if (
-      counters.countedTrades > MAX_TRADES_PER_SESSION ||
-      counters.stops >= MAX_STOPS_PER_SESSION
-    ) {
+    if (counters.stops >= MAX_STOPS_PER_SESSION) {
       return 'danger' as const;
     }
-    if (
-      counters.countedTrades === MAX_TRADES_PER_SESSION ||
-      counters.stops === MAX_STOPS_PER_SESSION - 1
-    ) {
+    if (counters.stops === MAX_STOPS_PER_SESSION - 1) {
       return 'warning' as const;
     }
     return 'neutral' as const;
@@ -105,11 +98,12 @@ export function JournalTab({
       </View>
 
       <View style={styles.actions}>
+        <Text>Operações hoje: {stats.todayCount} (inclui BE)</Text>
         {(['day', 'night'] as const).map((session) => {
           const counters = stats.todayBySession[session];
           return (
             <Badge key={session} pill tone={sessionTone(session)}>
-              {sessionLabel(session)}: {counters.countedTrades}/{MAX_TRADES_PER_SESSION} trades ·{' '}
+              {sessionLabel(session)}: {counters.totalTrades} operações ·{' '}
               {counters.stops}/{MAX_STOPS_PER_SESSION} stops
             </Badge>
           );
@@ -164,8 +158,8 @@ export function JournalTab({
       <View>
         <Text style={styles.pageTitle}>Diário de Trading</Text>
         <Text style={styles.pageSubtitle}>
-          Máx. {MAX_TRADES_PER_SESSION} operações e {MAX_STOPS_PER_SESSION} stops por sessão
-          (dia/noite; break even não conta) | Nenhuma perda individual {'>'} 25% do saldo inicial do
+          Operações sem limite; máximo de {MAX_STOPS_PER_SESSION} stops por sessão
+          (dia/noite; contador inclui break even) | Nenhuma perda individual {'>'} 25% do saldo inicial do
           dia
         </Text>
       </View>

@@ -197,7 +197,7 @@ describe('createJournalService', () => {
     );
   });
 
-  it('avisa ao passar do limite da sessão, mas salva mesmo assim', async () => {
+  it('salva mais de seis operações sem aviso de limite', async () => {
     const { trades, service } = setup();
     seedTrade(trades, { date: '2026-10-21' });
     seedTrade(trades, { date: '2026-10-21' });
@@ -215,7 +215,7 @@ describe('createJournalService', () => {
     });
 
     expect(result.synced).toBe(true);
-    expect(result.warnings.join(' ').toLowerCase()).toContain('limite');
+    expect(result.warnings).toEqual([]);
     expect(trades.items).toHaveLength(7);
   });
 
@@ -241,8 +241,9 @@ describe('createJournalService', () => {
     expect(trades.items).toHaveLength(7);
   });
 
-  it('avisa que o terceiro stop é o último antes de parar de operar', async () => {
+  it('avisa que o quarto stop é o último antes de parar de operar', async () => {
     const { trades, service } = setup();
+    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
     seedTrade(trades, { date: '2026-10-21', pnl: -10 });
     seedTrade(trades, { date: '2026-10-21', pnl: -10 });
 
@@ -254,11 +255,12 @@ describe('createJournalService', () => {
       pnl: -5,
     });
 
-    expect(result.warnings.join(' ').toLowerCase()).toContain('3º stop');
+    expect(result.warnings.join(' ').toLowerCase()).toContain('4º stop');
   });
 
-  it('avisa ao atingir o limite de três stops na sessão', async () => {
+  it('avisa ao atingir o limite de quatro stops na sessão', async () => {
     const { trades, service } = setup();
+    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
     seedTrade(trades, { date: '2026-10-21', pnl: -10 });
     seedTrade(trades, { date: '2026-10-21', pnl: -10 });
     seedTrade(trades, { date: '2026-10-21', pnl: -10 });
@@ -273,11 +275,12 @@ describe('createJournalService', () => {
 
     expect(result.synced).toBe(true);
     expect(result.warnings.join(' ').toLowerCase()).toContain('stop');
-    expect(trades.items).toHaveLength(4);
+    expect(trades.items).toHaveLength(5);
   });
 
-  it('avisa para parar de operar após três stops mesmo em uma operação vencedora', async () => {
+  it('avisa para parar de operar após quatro stops mesmo em uma operação vencedora', async () => {
     const { trades, service } = setup();
+    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
     seedTrade(trades, { date: '2026-10-21', pnl: -10 });
     seedTrade(trades, { date: '2026-10-21', pnl: -10 });
     seedTrade(trades, { date: '2026-10-21', pnl: -10 });
@@ -298,6 +301,7 @@ describe('createJournalService', () => {
     seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'day' });
     seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'day' });
     seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'day' });
+    seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'day' });
 
     const result = await service.saveTrade({
       date: '2026-10-21',
@@ -311,8 +315,9 @@ describe('createJournalService', () => {
     expect(result.warnings).toEqual([]);
   });
 
-  it('avisa o terceiro stop da sessão da noite', async () => {
+  it('avisa o quarto stop da sessão da noite', async () => {
     const { trades, service } = setup();
+    seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'night' });
     seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'night' });
     seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'night' });
 
@@ -325,7 +330,7 @@ describe('createJournalService', () => {
       pnl: -5,
     });
 
-    expect(result.warnings.join(' ').toLowerCase()).toContain('3º stop');
+    expect(result.warnings.join(' ').toLowerCase()).toContain('4º stop');
     expect(result.warnings.join(' ')).toContain('Noite');
   });
 

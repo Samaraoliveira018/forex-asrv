@@ -1,7 +1,6 @@
 import {
   MAX_LOSS_RATIO,
   MAX_STOPS_PER_SESSION,
-  MAX_TRADES_PER_SESSION,
   isBreakEven,
   isStop,
   sessionLabel,
@@ -10,7 +9,6 @@ import {
 } from './trade';
 
 export type ViolationKind =
-  | 'TOO_MANY_TRADES'
   | 'TOO_MANY_STOPS'
   | 'LOSS_OVER_LIMIT'
   | 'BALANCE_DEPLETED';
@@ -45,22 +43,11 @@ export function evaluateDiscipline(input: DisciplineInput): DisciplineResult {
   }
 
   for (const [date, trades] of byDate) {
-    // Os limites são independentes por sessão: 6 trades e 3 stops de dia + 6 trades e 3 stops de noite.
+    // Os limites são independentes por sessão: 4 stops de dia + 4 stops de noite, sem limite de operações.
     for (const session of ['day', 'night'] as const) {
       const sessionTrades = trades.filter((trade) => trade.session === session);
 
-      // Break even não conta para o limite da sessão: só operações com resultado relevante.
-      const countedTrades = sessionTrades.filter((trade) => !isBreakEven(trade.pnl));
-      if (countedTrades.length > MAX_TRADES_PER_SESSION) {
-        violations.push({
-          kind: 'TOO_MANY_TRADES',
-          date,
-          session,
-          message: `${countedTrades.length} operações em ${date} (sessão ${sessionLabel(session)}); o limite é ${MAX_TRADES_PER_SESSION} por sessão (break even não conta).`,
-        });
-      }
-
-      // Stop = perda real. Ao passar de 3 stops na sessão, a disciplina foi quebrada.
+      // Stop = perda real; até quatro stops são permitidos por sessão.
       const stops = sessionTrades.filter((trade) => isStop(trade.pnl));
       if (stops.length > MAX_STOPS_PER_SESSION) {
         violations.push({

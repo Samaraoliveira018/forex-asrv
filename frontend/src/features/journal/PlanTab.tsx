@@ -1,9 +1,9 @@
-import { MAX_STOPS_PER_SESSION, MAX_TRADES_PER_SESSION } from '@asrv/backend';
+import { MAX_STOPS_PER_SESSION } from '@asrv/backend';
 import { Checkbox, Card } from '@asrv/design-system';
 
 const checklistItems = [
   'Verificar calendário de notícias',
-  `Respeitar o limite de ${MAX_TRADES_PER_SESSION} trades e ${MAX_STOPS_PER_SESSION} stops por sessão (dia/noite; break even não conta)`,
+  `Respeitar o limite de ${MAX_STOPS_PER_SESSION} stops por sessão (dia/noite)`,
   `Parar de operar na sessão após ${MAX_STOPS_PER_SESSION} stops`,
   'Mover o Stop para Break Even ao atingir a primeira parcial',
   'Se a oportunidade passou, registrar o dia sem operação',
@@ -25,8 +25,7 @@ export function PlanTab({
           <h2 className="asrv-section-title mb-3">Regras de Ouro da Plataforma</h2>
           <div className="asrv-alert asrv-alert--danger space-y-2 text-xs leading-relaxed">
             <p>
-              ⚡ <strong>Limite estrito:</strong> Máximo de {MAX_TRADES_PER_SESSION} operações por
-              sessão (dia e noite). Break even não conta para o limite.
+              ⚡ <strong>Operações sem limite:</strong> O contador inclui todas as operações, inclusive break even.
             </p>
             <p>
               🛑 <strong>Stops:</strong> Máximo de {MAX_STOPS_PER_SESSION} stops por sessão. Ao
@@ -40,7 +39,7 @@ export function PlanTab({
             </p>
             <p>
               ⚖️ <strong>Break Even (0x0):</strong> Posições encerradas no zero a zero ou com
-              pequenas variações de spread preservam o capital e não contam no limite da sessão.
+              pequenas variações de spread preservam o capital e contam no total de operações, mas não como stops.
             </p>
             <p>
               🛡️ <strong>Saber Ficar de Fora:</strong> Registrar dias em que você não operou

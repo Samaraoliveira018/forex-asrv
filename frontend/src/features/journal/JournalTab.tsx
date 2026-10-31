@@ -1,6 +1,5 @@
 import {
   MAX_STOPS_PER_SESSION,
-  MAX_TRADES_PER_SESSION,
   sessionLabel,
   type JournalSnapshot,
   type Trade,
@@ -66,16 +65,10 @@ export function JournalTab({
   const nextMilestone = milestones.find((milestone) => discipline.streak < milestone) ?? 60;
   const sessionTone = (session: TradeSession) => {
     const counters = stats.todayBySession[session];
-    if (
-      counters.countedTrades > MAX_TRADES_PER_SESSION ||
-      counters.stops >= MAX_STOPS_PER_SESSION
-    ) {
+    if (counters.stops >= MAX_STOPS_PER_SESSION) {
       return 'danger' as const;
     }
-    if (
-      counters.countedTrades === MAX_TRADES_PER_SESSION ||
-      counters.stops === MAX_STOPS_PER_SESSION - 1
-    ) {
+    if (counters.stops === MAX_STOPS_PER_SESSION - 1) {
       return 'warning' as const;
     }
     return 'neutral' as const;
@@ -98,19 +91,20 @@ export function JournalTab({
         />
 
         <div className="flex flex-wrap items-center gap-2">
+          <Badge tone="neutral" pill>Operações hoje: {stats.todayCount} (inclui BE)</Badge>
           {(['day', 'night'] as const).map((session) => {
             const counters = stats.todayBySession[session];
             return (
               <span
                 key={session}
-                title={`Sessão ${sessionLabel(session)}: máximo de ${MAX_TRADES_PER_SESSION} trades e ${MAX_STOPS_PER_SESSION} stops (break even não conta)`}
+                title={`Sessão ${sessionLabel(session)}: operações incluindo break even; máximo de ${MAX_STOPS_PER_SESSION} stops`}
               >
                 <Badge tone={sessionTone(session)} pill>
                   <i
                     className={`fa-solid ${session === 'day' ? 'fa-sun' : 'fa-moon'} mr-1.5`}
                     aria-hidden="true"
                   />
-                  {sessionLabel(session)}: {counters.countedTrades}/{MAX_TRADES_PER_SESSION} trades ·{' '}
+                  {sessionLabel(session)}: {counters.totalTrades} operações ·{' '}
                   {counters.stops}/{MAX_STOPS_PER_SESSION} stops
                 </Badge>
               </span>
@@ -171,8 +165,8 @@ export function JournalTab({
       <div>
         <h1 className="asrv-page-title">Diário de Trading</h1>
         <p className="asrv-page-subtitle">
-          Regras: Máx. {MAX_TRADES_PER_SESSION} operações e {MAX_STOPS_PER_SESSION} stops por sessão
-          (dia/noite; break even não conta) | Nenhuma perda individual &gt; 25% do saldo inicial do
+          Regras: Operações sem limite; máximo de {MAX_STOPS_PER_SESSION} stops por sessão
+          (dia/noite; contador inclui break even) | Nenhuma perda individual &gt; 25% do saldo inicial do
           dia
         </p>
       </div>

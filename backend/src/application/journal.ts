@@ -2,7 +2,6 @@ import { DomainError } from '../domain/errors';
 import {
   MAX_LOSS_RATIO,
   MAX_STOPS_PER_SESSION,
-  MAX_TRADES_PER_SESSION,
   createTrade,
   isBreakEven,
   isIsoDate,
@@ -302,21 +301,7 @@ function buildWarnings(
 ): string[] {
   const warnings: string[] = [];
 
-  // Break even não conta para o limite da sessão; a própria operação (edição) fica de fora.
-  const sameSession = existingTrades.filter(
-    (item) =>
-      item.date === trade.date &&
-      item.session === trade.session &&
-      item.id !== trade.id &&
-      !isBreakEven(item.pnl),
-  );
   const session = sessionLabel(trade.session);
-  if (!isBreakEven(trade.pnl) && sameSession.length >= MAX_TRADES_PER_SESSION) {
-    warnings.push(
-      `Limite de ${MAX_TRADES_PER_SESSION} operações na sessão ${session} atingido (break even não conta).`,
-    );
-  }
-
   const sameSessionStops = existingTrades.filter(
     (item) =>
       item.date === trade.date && item.session === trade.session && item.id !== trade.id && isStop(item.pnl),

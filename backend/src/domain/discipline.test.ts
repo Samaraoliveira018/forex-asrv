@@ -43,28 +43,13 @@ describe('evaluateDiscipline', () => {
     expect(result.streak).toBe(2);
   });
 
-  it('viola ao passar de seis trades válidos no mesmo dia e zera a ofensiva', () => {
-    const result = evaluateDiscipline({
-      trades: [
-        trade({ date: '2026-10-01' }),
-        trade({ date: '2026-10-01' }),
-        trade({ date: '2026-10-01' }),
-        trade({ date: '2026-10-01' }),
-        trade({ date: '2026-10-01' }),
-        trade({ date: '2026-10-01' }),
-        trade({ date: '2026-10-01' }),
-      ],
-      noTradeDays: ['2026-10-02', '2026-10-03'],
-      initialBalance: 1000,
-    });
-
-    expect(result.streak).toBe(0);
-    expect(result.violations).toContainEqual(
-      expect.objectContaining({ kind: 'TOO_MANY_TRADES', date: '2026-10-01' }),
-    );
+  it.each(['day', 'night'] as const)('permite muitas operações na sessão %s', (session) => {
+    const result = evaluateDiscipline({ trades: Array.from({ length: 30 }, (_, i) => trade({ session, pnl: i % 2 ? 0 : 10 })), noTradeDays: [], initialBalance: 1000 });
+    expect(result.violations).toEqual([]);
+    expect(result.streak).toBe(1);
   });
 
-  it('não conta operações break even no limite da sessão', () => {
+  it('permite operações break even sem limite', () => {
     const result = evaluateDiscipline({
       trades: [
         trade({ date: '2026-10-01' }),
@@ -85,12 +70,13 @@ describe('evaluateDiscipline', () => {
     expect(result.streak).toBe(1);
   });
 
-  it('viola ao passar de três stops no mesmo dia', () => {
+  it('viola ao passar de quatro stops no mesmo dia', () => {
     const result = evaluateDiscipline({
       trades: [
         trade({ date: '2026-10-01', pnl: -10 }),
         trade({ date: '2026-10-01', pnl: -15 }),
         trade({ date: '2026-10-01', pnl: -5 }),
+        trade({ date: '2026-10-01', pnl: -7 }),
         trade({ date: '2026-10-01', pnl: -7 }),
       ],
       noTradeDays: [],
@@ -103,7 +89,7 @@ describe('evaluateDiscipline', () => {
     );
   });
 
-  it('permite 3 stops de dia e 3 stops de noite no mesmo dia', () => {
+  it('permite 4 stops de dia e 4 stops de noite no mesmo dia', () => {
     const result = evaluateDiscipline({
       trades: [
         trade({ date: '2026-10-01', pnl: -10, session: 'day' }),
@@ -112,6 +98,8 @@ describe('evaluateDiscipline', () => {
         trade({ date: '2026-10-01', pnl: -5, session: 'night' }),
         trade({ date: '2026-10-01', pnl: -8, session: 'night' }),
         trade({ date: '2026-10-01', pnl: -6, session: 'night' }),
+        trade({ date: '2026-10-01', pnl: -6, session: 'night' }),
+        trade({ date: '2026-10-01', pnl: -6, session: 'day' }),
       ],
       noTradeDays: [],
       initialBalance: 1000,
@@ -121,12 +109,13 @@ describe('evaluateDiscipline', () => {
     expect(result.streak).toBe(1);
   });
 
-  it('viola ao passar de três stops na sessão da noite', () => {
+  it('viola ao passar de quatro stops na sessão da noite', () => {
     const result = evaluateDiscipline({
       trades: [
         trade({ date: '2026-10-01', pnl: -10, session: 'night' }),
         trade({ date: '2026-10-01', pnl: -15, session: 'night' }),
         trade({ date: '2026-10-01', pnl: -5, session: 'night' }),
+        trade({ date: '2026-10-01', pnl: -7, session: 'night' }),
         trade({ date: '2026-10-01', pnl: -7, session: 'night' }),
       ],
       noTradeDays: [],
@@ -163,25 +152,10 @@ describe('evaluateDiscipline', () => {
     expect(result.streak).toBe(1);
   });
 
-  it('viola ao passar de seis trades na sessão da noite', () => {
-    const result = evaluateDiscipline({
-      trades: [
-        trade({ date: '2026-10-01', session: 'night' }),
-        trade({ date: '2026-10-01', session: 'night' }),
-        trade({ date: '2026-10-01', session: 'night' }),
-        trade({ date: '2026-10-01', session: 'night' }),
-        trade({ date: '2026-10-01', session: 'night' }),
-        trade({ date: '2026-10-01', session: 'night' }),
-        trade({ date: '2026-10-01', session: 'night' }),
-      ],
-      noTradeDays: [],
-      initialBalance: 1000,
-    });
-
-    expect(result.streak).toBe(0);
-    expect(result.violations).toContainEqual(
-      expect.objectContaining({ kind: 'TOO_MANY_TRADES', date: '2026-10-01', session: 'night' }),
-    );
+  it.each(['day', 'night'] as const)('permite muitas operações na sessão %s', (session) => {
+    const result = evaluateDiscipline({ trades: Array.from({ length: 30 }, (_, i) => trade({ session, pnl: i % 2 ? 0 : 10 })), noTradeDays: [], initialBalance: 1000 });
+    expect(result.violations).toEqual([]);
+    expect(result.streak).toBe(1);
   });
 
   it('não conta break even como stop', () => {

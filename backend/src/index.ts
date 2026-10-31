@@ -5,7 +5,6 @@ export {
   BREAK_EVEN_TOLERANCE,
   MAX_LOSS_RATIO,
   MAX_STOPS_PER_SESSION,
-  MAX_TRADES_PER_SESSION,
   createTrade,
   isBreakEven,
   isIsoDate,

@@ -1,16 +1,10 @@
 import { DomainError } from './errors';
 
 /**
- * Máximo de operações por sessão (dia ou noite) que contam para a disciplina.
- * Break even não entra na contagem (ver `isBreakEven`).
- */
-export const MAX_TRADES_PER_SESSION = 6;
-
-/**
  * Máximo de stops (operações com perda real) por sessão (dia ou noite).
  * Ao atingir o limite, o correto é parar de operar naquela sessão para preservar a ofensiva.
  */
-export const MAX_STOPS_PER_SESSION = 3;
+export const MAX_STOPS_PER_SESSION = 4;
 export const MAX_LOSS_RATIO = 0.25;
 export const BREAK_EVEN_TOLERANCE = 0.3;
 

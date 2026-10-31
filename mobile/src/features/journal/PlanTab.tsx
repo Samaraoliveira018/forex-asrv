@@ -1,10 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { MAX_STOPS_PER_SESSION, MAX_TRADES_PER_SESSION } from '@asrv/backend';
+import { MAX_STOPS_PER_SESSION } from '@asrv/backend';
 import { Card, Checkbox, colors, spacing, typography } from '@asrv/design-system';
 
 const checklistItems = [
   'Verificar calendário de notícias',
-  `Respeitar o limite de ${MAX_TRADES_PER_SESSION} trades e ${MAX_STOPS_PER_SESSION} stops por sessão (dia/noite; break even não conta)`,
+  `Respeitar o limite de ${MAX_STOPS_PER_SESSION} stops por sessão (dia/noite)`,
   `Parar de operar na sessão após ${MAX_STOPS_PER_SESSION} stops`,
   'Mover o Stop para Break Even ao atingir a primeira parcial',
   'Se a oportunidade passou, registrar o dia sem operação',
@@ -25,8 +25,7 @@ export function PlanTab({
         <Text style={styles.sectionTitle}>Regras de Ouro da Plataforma</Text>
         <View style={styles.rules}>
           <Text style={styles.rule}>
-            ⚡ Limite estrito: Máximo de {MAX_TRADES_PER_SESSION} operações por sessão (dia e
-            noite). Break even não conta para o limite.
+            ⚡ Operações sem limite: O contador inclui todas as operações, inclusive break even.
           </Text>
           <Text style={styles.rule}>
             🛑 Stops: Máximo de {MAX_STOPS_PER_SESSION} stops por sessão. Ao atingir{' '}
@@ -38,8 +37,8 @@ export function PlanTab({
             saldo inicial do dia (capital inicial + resultado dos dias anteriores).
           </Text>
           <Text style={styles.rule}>
-            ⚖️ Break Even (0x0): Posições encerradas no zero a zero preservam o capital e não
-            contam no limite da sessão.
+            ⚖️ Break Even (0x0): Posições encerradas no zero a zero preservam o capital e
+            contam no total de operações, mas não como stops.
           </Text>
           <Text style={styles.rule}>
             🛡️ Saber Ficar de Fora: Registrar dias em que não operou mantém a ofensiva ativa.

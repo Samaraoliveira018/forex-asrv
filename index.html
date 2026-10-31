@@ -149,7 +149,7 @@
         <span class="hidden whitespace-nowrap text-sm font-semibold tracking-wide text-white lg:inline">Diário Trader ASRV</span>
         
         <!-- OFENSIVA STREAK (DUOLINGO STYLE) -->
-        <div class="asrv-topbar__streak" title="Dias seguidos de disciplina (até 6 trades e 3 stops por sessão, dia e noite, ou registrando dia sem operações; break even não conta)">
+        <div class="asrv-topbar__streak" title="Dias seguidos de disciplina (operações sem limite e 4 stops por sessão, dia e noite, ou registrando dia sem operações; break even não é stop)">
           <i class="fa-solid fa-fire text-orange-500 animate-bounce"></i>
           <span id="streak-count">0</span>
           <span class="hidden font-medium text-[11px] text-orange-300 lg:inline">dias de disciplina</span>
@@ -187,13 +187,14 @@
 
           <div class="flex flex-wrap items-center gap-2">
             <!-- Limites da sessão do dia -->
-            <div id="today-day-badge" class="asrv-badge asrv-badge--neutral asrv-badge--pill" title="Sessão Dia: máximo de 6 trades e 3 stops (break even não conta)">
-              <i class="fa-solid fa-sun"></i> Dia: <span id="today-day-trades">0</span>/6 trades · <span id="today-day-stops">0</span>/3 stops
+            <div class="asrv-badge asrv-badge--neutral asrv-badge--pill">Operações hoje: <span id="today-total-trades">0</span> (inclui BE)</div>
+            <div id="today-day-badge" class="asrv-badge asrv-badge--neutral asrv-badge--pill" title="Sessão Dia: operações incluindo break even; máximo de 4 stops">
+              <i class="fa-solid fa-sun"></i> Dia: <span id="today-day-trades">0</span> operações · <span id="today-day-stops">0</span>/4 stops
             </div>
 
             <!-- Limites da sessão da noite -->
-            <div id="today-night-badge" class="asrv-badge asrv-badge--neutral asrv-badge--pill" title="Sessão Noite: máximo de 6 trades e 3 stops (break even não conta)">
-              <i class="fa-solid fa-moon"></i> Noite: <span id="today-night-trades">0</span>/6 trades · <span id="today-night-stops">0</span>/3 stops
+            <div id="today-night-badge" class="asrv-badge asrv-badge--neutral asrv-badge--pill" title="Sessão Noite: operações incluindo break even; máximo de 4 stops">
+              <i class="fa-solid fa-moon"></i> Noite: <span id="today-night-trades">0</span> operações · <span id="today-night-stops">0</span>/4 stops
             </div>
 
             <!-- Botão Marcar Dia Sem Operar -->
@@ -251,7 +252,7 @@
         <!-- Section Title -->
         <div>
           <h2 class="asrv-page-title">Diário de Trading</h2>
-          <p class="asrv-page-subtitle">Regras: Máx. 6 operações e 3 stops por sessão (dia/noite; break even não conta) | Nenhuma perda individual &gt; 25% do saldo inicial do dia</p>
+          <p class="asrv-page-subtitle">Regras: Operações sem limite e máximo de 4 stops por sessão (dia/noite; contador inclui break even) | Nenhuma perda individual &gt; 25% do saldo inicial do dia</p>
         </div>
 
         <!-- 4 MAIN KPI CARDS -->
@@ -398,10 +399,10 @@
           <div class="asrv-card space-y-3">
             <h3 class="asrv-section-title">Regras de Ouro da Plataforma</h3>
             <div class="asrv-alert asrv-alert--danger space-y-2 text-xs">
-              <p>⚡ <strong>Limite estrito:</strong> Máximo de 6 operações por sessão (dia e noite). Break even não conta para o limite.</p>
-              <p>🛑 <strong>Stops:</strong> Máximo de 3 stops por sessão. Ao atingir 3 stops no dia ou 3 na noite, pare de operar naquela sessão para não perder a ofensiva.</p>
+              <p>⚡ <strong>Contador de operações:</strong> Operações sem limite. O contador inclui todas as operações, inclusive break even.</p>
+              <p>🛑 <strong>Stops:</strong> Máximo de 4 stops por sessão. Ao atingir 4 stops no dia ou 4 na noite, pare de operar naquela sessão para não perder a ofensiva.</p>
               <p>🛑 <strong>Perda Individual Máxima:</strong> Nenhuma operação pode ter um prejuízo superior a 25% do saldo inicial do dia — capital inicial mais o resultado acumulado dos dias anteriores (taxas de spread mínimas são tratadas como Break Even).</p>
-              <p>⚖️ <strong>Break Even (0x0):</strong> Posições encerradas no zero a zero ou com pequenas variações de spread preservam o capital e não contam no limite da sessão.</p>
+              <p>⚖️ <strong>Break Even (0x0):</strong> Posições encerradas no zero a zero ou com pequenas variações de spread preservam o capital e contam no total de operações, mas não como stops.</p>
               <p>🛡️ <strong>Saber Ficar de Fora:</strong> Registrar dias em que você não operou mantém a sua ofensiva ativa!</p>
               <p>🔥 <strong>Ofensiva & Metas:</strong> Acumule dias de disciplina para alcançar os níveis de 3, 7, 14, 30 e 60 dias.</p>
             </div>
@@ -412,10 +413,10 @@
               <input type="checkbox" class="asrv-checkbox"> Verificar calendário de notícias
             </label>
             <label class="asrv-check">
-              <input type="checkbox" class="asrv-checkbox"> Respeitar o limite de 6 trades e 3 stops por sessão (dia/noite; break even não conta)
+              <input type="checkbox" class="asrv-checkbox"> Respeitar o limite de 4 stops por sessão (dia/noite; contador inclui break even)
             </label>
             <label class="flex items-center gap-2 text-gray-300">
-              <input type="checkbox" class="asrv-checkbox"> Parar de operar na sessão após 3 stops
+              <input type="checkbox" class="asrv-checkbox"> Parar de operar na sessão após 4 stops
             </label>
             <label class="asrv-check">
               <input type="checkbox" class="asrv-checkbox"> Mover o Stop para Break Even ao atingir a primeira parcial
@@ -617,8 +618,7 @@
     let currentView = 'grid';
     let isValueHidden = false;
 
-    const MAX_TRADES_PER_SESSION = 6;
-    const MAX_STOPS_PER_SESSION = 3;
+    const MAX_STOPS_PER_SESSION = 4;
 
     let equityChartInstance = null;
     let assetChartInstance = null;
@@ -1398,13 +1398,11 @@
 
       Object.keys(dailyTrades).forEach(date => {
         const dayTrades = dailyTrades[date];
-        // Limites independentes por sessão: 6 trades e 3 stops de dia + 6 trades e 3 stops de noite.
+        // Limites independentes por sessão: operações sem limite e 4 stops de dia + operações sem limite e 4 stops de noite.
         ['day', 'night'].forEach(session => {
           const sessionTrades = dayTrades.filter(t => t.session === session);
-          // Break even não conta para o limite da sessão.
-          const countedTrades = sessionTrades.filter(t => !isBreakEven(t.pnl));
-          if (countedTrades.length > MAX_TRADES_PER_SESSION) ruleViolated = true;
-          // Máximo de 3 stops por sessão.
+          // Break even não é stop.
+          // Máximo de 4 stops por sessão.
           const sessionStops = sessionTrades.filter(t => isStop(t.pnl));
           if (sessionStops.length > MAX_STOPS_PER_SESSION) ruleViolated = true;
         });
@@ -1662,11 +1660,10 @@
       }
 
       const tradesOnDate = trades.filter(t => t.date === date && t.id.toString() !== editId);
-      // Os limites são independentes por sessão: 6 trades e 3 stops de dia + 6 trades e 3 stops de noite.
+      // Os limites são independentes por sessão: operações sem limite e 4 stops de dia + operações sem limite e 4 stops de noite.
       const sessionTradesOnDate = tradesOnDate.filter(t => t.session === session);
-      // Break even não conta para o limite da sessão.
-      const countedTradesOnDate = sessionTradesOnDate.filter(t => !isBreakEven(t.pnl));
-      // Stop = perda real. Após 3 stops na sessão, o correto é parar de operar nela.
+      // Break even não é stop.
+      // Stop = perda real. Após 4 stops na sessão, o correto é parar de operar nela.
       const stopsOnDate = sessionTradesOnDate.filter(t => isStop(t.pnl));
       // Limite com base no saldo de abertura do dia: capital inicial + resultado dos dias anteriores.
       const openingBalance = initialBalance + trades
@@ -1680,8 +1677,7 @@
         alert(`⚠️ ATENÇÃO: Você já possui ${MAX_STOPS_PER_SESSION} stops na sessão ${sessionName} nesta data! Salvar este stop irá ZERAR a sua ofensiva. Pare de operar nessa sessão.`);
       } else if (!isBreakEven(pnl) && stopsOnDate.length >= MAX_STOPS_PER_SESSION) {
         alert(`⚠️ Você já tem ${MAX_STOPS_PER_SESSION} stops na sessão ${sessionName}. O ideal é parar de operar nessa sessão para preservar a ofensiva.`);
-      } else if (!isBreakEven(pnl) && countedTradesOnDate.length >= MAX_TRADES_PER_SESSION) {
-        alert(`⚠️ ATENÇÃO: Você já possui ${MAX_TRADES_PER_SESSION} operações válidas na sessão ${sessionName} nesta data (break even não conta)! Salvar esta operação irá ZERAR a sua ofensiva!`);
+
       } else if (pnl < 0 && !isBreakEven(pnl) && Math.abs(pnl) > maxSingleLoss) {
         alert(`⚠️ ATENÇÃO: Esta operação tem um prejuízo de ${Math.abs(pnl).toFixed(2)}, o que ultrapassa o limite máximo individual de 25% do saldo inicial do dia (${maxSingleLoss.toFixed(2)}). A sua ofensiva será ZERADA!`);
       }
@@ -1821,19 +1817,20 @@
       const returnPct = initialBalance > 0 ? ((totalPnl / initialBalance) * 100).toFixed(2) : 0;
 
       const todayStr = getLocalDateStr();
-      // Os badges mostram só operações que contam para o limite da sessão (break even não conta).
+      // O contador inclui todas as operações, inclusive break even.
+      document.getElementById("today-total-trades").innerText = trades.filter(t => t.date === todayStr).length;
       ['day', 'night'].forEach(session => {
         const sessionTrades = trades.filter(t => t.date === todayStr && t.session === session);
-        const todayCount = sessionTrades.filter(t => !isBreakEven(t.pnl)).length;
+        const todayCount = sessionTrades.length;
         const todayStops = sessionTrades.filter(t => isStop(t.pnl)).length;
 
         document.getElementById(`today-${session}-trades`).innerText = todayCount;
         document.getElementById(`today-${session}-stops`).innerText = todayStops;
 
         const badgeEl = document.getElementById(`today-${session}-badge`);
-        if (todayCount > MAX_TRADES_PER_SESSION || todayStops >= MAX_STOPS_PER_SESSION) {
+        if (todayStops >= MAX_STOPS_PER_SESSION) {
           badgeEl.className = 'asrv-badge asrv-badge--danger asrv-badge--pill animate-pulse';
-        } else if (todayCount === MAX_TRADES_PER_SESSION || todayStops === MAX_STOPS_PER_SESSION - 1) {
+        } else if (todayStops === MAX_STOPS_PER_SESSION - 1) {
           badgeEl.className = 'asrv-badge asrv-badge--warning asrv-badge--pill';
         } else {
           badgeEl.className = 'asrv-badge asrv-badge--neutral asrv-badge--pill';
