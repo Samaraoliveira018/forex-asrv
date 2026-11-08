@@ -1,11 +1,16 @@
 import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
-  MAX_STOPS_PER_SESSION,
+  MAX_TRADES_PER_DAY,
+  OFFENSIVE_INTERVAL,
+  grossLoss,
+  historyRange,
+  offensiveMilestones,
+  isWeekend,
+  type HistoryPeriod,
   sessionLabel,
   type JournalSnapshot,
   type Trade,
-  type TradeSession,
 } from '@asrv/backend';
 import {
   Badge,
@@ -22,13 +27,11 @@ import {
   typography,
 } from '@asrv/design-system';
 import { EquityChart } from './charts';
-import { formatDate, isBreakEven, money, signedMoney, signedPercent, signedValue } from './format';
+import { formatDate, isBreakEven, money, signedMoney, signedPercent, signedValue, today } from './format';
 
 export type JournalView = 'grid' | 'list';
 export type Market = 'nacional' | 'internacional';
 
-const milestones = [3, 7, 14, 30, 60] as const;
-const milestoneLabels = ['Iniciante', 'Focado', 'Blindado', 'Mestre', 'Lenda'];
 
 /** Histórico sempre do mais recente para o mais antigo (empate: último registrado primeiro). */
 function sortTradesByMostRecent(trades: readonly Trade[]): Trade[] {
@@ -69,31 +72,35 @@ export function JournalTab({
   onDeleteNoTradeDay: (day: string) => void;
 }) {
   const [selectedDate, setSelectedDate] = useState('');
+  const [historyPeriod, setHistoryPeriod] = useState<HistoryPeriod>('day');
   const [resultFilter, setResultFilter] = useState('all');
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const dateKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  const datedTrades = snapshot.trades.filter(t => !selectedDate || t.date === selectedDate);
+  const range = selectedDate ? historyRange(selectedDate, historyPeriod) : null;
+  const inRange = (date: string) => !range || (date >= range.start && date <= range.end);
+  const datedTrades = snapshot.trades.filter(t => inRange(t.date));
+  const historyLabel = !range ? 'Todos os dias' : historyPeriod === 'day'
+    ? `Diário de ${formatDate(selectedDate)}`
+    : `${historyPeriod === 'week' ? 'Semana' : 'Mês'} de ${formatDate(range.start)} a ${formatDate(range.end)}`;
+  function changeHistoryPeriod(period: HistoryPeriod) {
+    setHistoryPeriod(period);
+    if (!selectedDate) setSelectedDate(today());
+  }
+  const currentDay = today();
+  const plan = snapshot.dailyPlans.find(item => item.date === currentDay);
+  const lossesToday = grossLoss(snapshot.trades.filter(trade => trade.date === currentDay));
   const filteredSnapshot = {
     ...snapshot,
     trades: datedTrades.filter(t => resultFilter === 'all' || (resultFilter === 'be' ? isBreakEven(t.pnl) : resultFilter === 'win' ? t.pnl > 0 && !isBreakEven(t.pnl) : t.pnl < 0 && !isBreakEven(t.pnl))),
-    noTradeDays: snapshot.noTradeDays.filter(d => resultFilter === 'all' && (!selectedDate || d === selectedDate)),
+    noTradeDays: snapshot.noTradeDays.filter(d => resultFilter === 'all' && inRange(d)),
   };
   const historyMoney = (value: number) => hidden ? '••••••' : `${value < 0 ? '- ' : value > 0 ? '+ ' : ''}US$ ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const gains = datedTrades.reduce((sum, t) => sum + Math.max(0, t.pnl), 0);
   const losses = datedTrades.reduce((sum, t) => sum + Math.min(0, t.pnl), 0);
   const { stats, discipline } = snapshot;
-  const nextMilestone = milestones.find((milestone) => discipline.streak < milestone) ?? 60;
-  const sessionTone = (session: TradeSession) => {
-    const counters = stats.todayBySession[session];
-    if (counters.stops >= MAX_STOPS_PER_SESSION) {
-      return 'danger' as const;
-    }
-    if (counters.stops === MAX_STOPS_PER_SESSION - 1) {
-      return 'warning' as const;
-    }
-    return 'neutral' as const;
-  };
+  const milestones = offensiveMilestones(discipline.streak);
+  const nextMilestone = (Math.floor(discipline.streak / OFFENSIVE_INTERVAL) + 1) * OFFENSIVE_INTERVAL;
   const periodTone = (pnl: number) => (pnl > 0 ? 'success' : pnl < 0 ? 'danger' : 'muted');
   const periodHint = (period: (typeof stats.periods)['daily']) =>
     `Resultado: ${signedPercent(period.pct)}\nPerda: ${period.lossPct.toFixed(2)}%`;
@@ -113,13 +120,13 @@ export function JournalTab({
       </View>
 
       <View style={styles.actions}>
-        <Text>Operações hoje: {stats.todayCount} (inclui BE)</Text>
+        <Text>Operações hoje: {stats.todayCount} de {MAX_TRADES_PER_DAY} (inclui BE)</Text>
         {(['day', 'night'] as const).map((session) => {
           const counters = stats.todayBySession[session];
           return (
-            <Badge key={session} pill tone={sessionTone(session)}>
+            <Badge key={session} pill tone="neutral">
               {sessionLabel(session)}: {counters.totalTrades} operações ·{' '}
-              {counters.stops}/{MAX_STOPS_PER_SESSION} stops
+              {counters.stops} stops
             </Badge>
           );
         })}
@@ -151,7 +158,7 @@ export function JournalTab({
           max={nextMilestone}
         />
         <View style={styles.milestones}>
-          {milestones.map((milestone, index) => {
+          {milestones.map((milestone) => {
             const reached = discipline.streak >= milestone;
             return (
               <View
@@ -162,7 +169,7 @@ export function JournalTab({
                   {milestone} Dias
                 </Text>
                 <Text style={[styles.milestoneLabel, reached && styles.milestoneLabelReached]}>
-                  {milestoneLabels[index]}
+                  {milestone / OFFENSIVE_INTERVAL}ª ofensiva
                 </Text>
               </View>
             );
@@ -173,15 +180,17 @@ export function JournalTab({
       <View>
         <Text style={styles.pageTitle}>Diário de Trading</Text>
         <Text style={styles.pageSubtitle}>
-          Operações sem limite; máximo de {MAX_STOPS_PER_SESSION} stops por sessão
-          (dia/noite; contador inclui break even) | Nenhuma perda individual {'>'} 25% do saldo inicial do
-          dia
+          Até duas operações por dia, incluindo break even. Escolha manhã ou noite. Sábado e domingo são dias sem operar.
         </Text>
       </View>
 
+      <Text style={styles.meta}>
+        {plan ? 'Checklist de hoje salvo.' : 'Checklist de hoje pendente no Plano Operacional.'}{' '}
+        {plan?.lossLimit == null ? 'Limite de perda ainda sem configuração.' : `Perda hoje: ${historyMoney(lossesToday)} de ${historyMoney(plan.lossLimit)}.`}
+      </Text>
       <Card>
         <Text style={styles.sectionTitle}>Histórico do diário</Text>
-        <Text style={styles.pageSubtitle}>Escolha uma data para consultar as operações e os resultados daquele dia.</Text>
+        <Text style={styles.pageSubtitle}>Escolha uma data e consulte as operações do dia, da semana ou do mês.</Text>
         <Button onPress={() => setCalendarOpen(!calendarOpen)}>{selectedDate ? `Data do diário: ${formatDate(selectedDate)}` : 'Abrir calendário'}</Button>
         {calendarOpen && <View accessibilityLabel="Calendário do diário">
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -204,15 +213,18 @@ export function JournalTab({
           </View>
         </View>}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          <Button onPress={() => { const d = new Date(); setSelectedDate(dateKey(d)); setCalendarMonth(new Date(d.getFullYear(), d.getMonth(), 1)); }}>Hoje</Button>
-          <Button onPress={() => setSelectedDate('')}>Todos os dias</Button>
+          <Button onPress={() => { const d = new Date(); setHistoryPeriod('day'); setSelectedDate(dateKey(d)); setCalendarMonth(new Date(d.getFullYear(), d.getMonth(), 1)); }}>Hoje</Button>
+          <Button onPress={() => { setSelectedDate(''); setHistoryPeriod('day'); }}>Todos os dias</Button>
         </View>
-        <Text style={styles.meta}>{selectedDate ? `Diário de ${formatDate(selectedDate)}` : 'Todos os dias'}{selectedDate && snapshot.noTradeDays.includes(selectedDate) ? ' · Dia registrado sem operar' : ''}</Text>
+        <SegmentedControl label="Período do histórico" value={historyPeriod} onChange={changeHistoryPeriod} options={[
+          { value: 'day', label: 'Dia' }, { value: 'week', label: 'Semana' }, { value: 'month', label: 'Mês' },
+        ]} />
+        <Text style={styles.meta}>{historyLabel}{historyPeriod === 'day' && selectedDate && snapshot.noTradeDays.includes(selectedDate) ? ' · Dia registrado sem operar' : ''}</Text>
         <Text style={styles.meta}>{datedTrades.filter(t => t.pnl > 0 && !isBreakEven(t.pnl)).length} ganhos · {datedTrades.filter(t => t.pnl < 0 && !isBreakEven(t.pnl)).length} perdas · {datedTrades.filter(t => isBreakEven(t.pnl)).length} BE</Text>
         <View style={styles.statsGrid}>
           <StatCard label="Ganhos brutos" value={historyMoney(gains)} tone="success" />
           <StatCard label="Perdas brutas" value={historyMoney(losses)} tone="danger" />
-          <StatCard label="Resultado líquido" value={historyMoney(gains + losses)} tone={periodTone(gains + losses)} />
+          <StatCard label={range && historyPeriod === 'week' ? 'Resultado semanal' : range && historyPeriod === 'month' ? 'Resultado mensal' : 'Resultado líquido'} value={historyMoney(gains + losses)} tone={periodTone(gains + losses)} />
           <StatCard label="Operações (inclui BE)" value={String(datedTrades.length)} />
         </View>
         <SegmentedControl label="Mostrar operações" value={resultFilter} onChange={setResultFilter} options={[{ value: 'all', label: 'Todos' }, { value: 'win', label: 'Ganhos' }, { value: 'loss', label: 'Perdas' }, { value: 'be', label: 'BE' }]} />
@@ -457,7 +469,7 @@ function NoTradeCard({ day, onDelete }: { day: string; onDelete: () => void }) {
         &quot;Mercado sem padrão claro. Decisão consciente de não operar e proteger o
         capital.&quot;
       </Text>
-      <Text style={styles.noTradeStreak}>+1 dia de Ofensiva 🔥</Text>
+      <Text style={styles.noTradeStreak}>{isWeekend(day) ? 'Dia de descanso' : '+1 dia de Ofensiva'}</Text>
       <Button
         variant="danger"
         size="sm"

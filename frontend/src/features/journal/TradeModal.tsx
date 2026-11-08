@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
-import type { Trade, TradeInput, TradeSession, TradeType } from '@asrv/backend';
-import { Button, Input, Modal, Select, Textarea } from '@asrv/design-system';
+import { isWeekend, type Trade, type TradeInput, type TradeSession, type TradeType } from '@asrv/backend';
+import { Button, Checkbox, Input, Modal, Select, Textarea } from '@asrv/design-system';
 import { fileToScreenshotDataUrl } from './image';
 import { formatDate, maskDateInput, parseDateInput } from './format';
 
@@ -44,12 +44,17 @@ export function TradeModal({
   const [readingPhoto, setReadingPhoto] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [confirmedWeekendDate, setConfirmedWeekendDate] = useState<string | null>(null);
+  const formDate = parseDateInput(form.date);
+  const weekendBreach = formDate !== null && confirmedWeekendDate === formDate;
+  const weekendEntry = formDate !== null && formDate !== trade?.date && isWeekend(formDate);
 
   const preview = photoDataUrl ?? (photoRemoved ? null : (screenshotUrl ?? null));
 
   useEffect(() => {
     if (!open) return;
     setForm(formFor(trade));
+    setConfirmedWeekendDate(null);
     setPhotoDataUrl(null);
     setPhotoRemoved(false);
     setReadingPhoto(false);
@@ -96,6 +101,7 @@ export function TradeModal({
         {
           ...(trade ? { id: trade.id } : {}),
           date: isoDate,
+          ...(weekendEntry ? { weekendBreach } : {}),
           asset: form.asset,
           type: form.type,
           session: form.session,
@@ -117,6 +123,9 @@ export function TradeModal({
   return (
     <Modal open={open} title={trade ? 'Editar Operação' : 'Registrar Nova Operação'} onClose={onClose}>
       <form className="mt-4 space-y-4 text-xs" onSubmit={handleSubmit} noValidate>
+        {weekendEntry && (
+          <Checkbox label="Já operei no fim de semana. Registrar como quebra e zerar a ofensiva." checked={weekendBreach} onChange={checked => setConfirmedWeekendDate(checked ? formDate : null)} />
+        )}
         <Input
           label="Data da Operação"
           type="text"

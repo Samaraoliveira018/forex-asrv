@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import {
-  MAX_STOPS_PER_SESSION,
+  MAX_TRADES_PER_DAY,
+  OFFENSIVE_INTERVAL,
+  grossLoss,
+  historyRange,
+  offensiveMilestones,
+  isWeekend,
+  type HistoryPeriod,
   sessionLabel,
   type JournalSnapshot,
   type Trade,
-  type TradeSession,
 } from '@asrv/backend';
 import {
   Badge,
@@ -17,12 +22,11 @@ import {
   TradeCard,
 } from '@asrv/design-system';
 import { EquityChart } from './charts';
-import { formatDate, isBreakEven, money, signedMoney, signedPercent, signedValue } from './format';
+import { formatDate, isBreakEven, money, signedMoney, signedPercent, signedValue, today } from './format';
 
 export type JournalView = 'grid' | 'list';
 export type Market = 'nacional' | 'internacional';
 
-const milestones = [3, 7, 14, 30, 60] as const;
 
 /** Histórico sempre do mais recente para o mais antigo (empate: último registrado primeiro). */
 function sortTradesByMostRecent(trades: readonly Trade[]): Trade[] {
@@ -63,32 +67,32 @@ export function JournalTab({
   onDeleteNoTradeDay: (day: string) => void;
 }) {
   const [selectedDate, setSelectedDate] = useState('');
+  const [historyPeriod, setHistoryPeriod] = useState<HistoryPeriod>('day');
   const [resultFilter, setResultFilter] = useState('all');
-  const datedTrades = snapshot.trades.filter(t => !selectedDate || t.date === selectedDate);
+  const range = selectedDate ? historyRange(selectedDate, historyPeriod) : null;
+  const inRange = (date: string) => !range || (date >= range.start && date <= range.end);
+  const datedTrades = snapshot.trades.filter(t => inRange(t.date));
+  const historyLabel = !range ? 'Todos os dias' : historyPeriod === 'day'
+    ? `Diário de ${formatDate(selectedDate)}`
+    : `${historyPeriod === 'week' ? 'Semana' : 'Mês'} de ${formatDate(range.start)} a ${formatDate(range.end)}`;
+  function changeHistoryPeriod(period: HistoryPeriod) {
+    setHistoryPeriod(period);
+    if (!selectedDate) setSelectedDate(today());
+  }
+  const currentDay = today();
+  const plan = snapshot.dailyPlans.find(item => item.date === currentDay);
+  const lossesToday = grossLoss(snapshot.trades.filter(trade => trade.date === currentDay));
   const filteredSnapshot = {
     ...snapshot,
     trades: datedTrades.filter(t => resultFilter === 'all' || (resultFilter === 'be' ? isBreakEven(t.pnl) : resultFilter === 'win' ? t.pnl > 0 && !isBreakEven(t.pnl) : t.pnl < 0 && !isBreakEven(t.pnl))),
-    noTradeDays: snapshot.noTradeDays.filter(d => resultFilter === 'all' && (!selectedDate || d === selectedDate)),
+    noTradeDays: snapshot.noTradeDays.filter(d => resultFilter === 'all' && inRange(d)),
   };
   const historyMoney = (value: number) => hidden ? '••••••' : `${value < 0 ? '- ' : value > 0 ? '+ ' : ''}$ ${Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const gains = datedTrades.reduce((sum, t) => sum + Math.max(0, t.pnl), 0);
   const losses = datedTrades.reduce((sum, t) => sum + Math.min(0, t.pnl), 0);
-  const today = () => {
-    const d = new Date();
-    setSelectedDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
-  };
   const { stats, discipline } = snapshot;
-  const nextMilestone = milestones.find((milestone) => discipline.streak < milestone) ?? 60;
-  const sessionTone = (session: TradeSession) => {
-    const counters = stats.todayBySession[session];
-    if (counters.stops >= MAX_STOPS_PER_SESSION) {
-      return 'danger' as const;
-    }
-    if (counters.stops === MAX_STOPS_PER_SESSION - 1) {
-      return 'warning' as const;
-    }
-    return 'neutral' as const;
-  };
+  const milestones = offensiveMilestones(discipline.streak);
+  const nextMilestone = (Math.floor(discipline.streak / OFFENSIVE_INTERVAL) + 1) * OFFENSIVE_INTERVAL;
   const periodTone = (pnl: number) => (pnl > 0 ? 'success' : pnl < 0 ? 'danger' : 'muted');
   const periodHint = (period: (typeof stats.periods)['daily']) =>
     `Resultado: ${signedPercent(period.pct)}\nPerda: ${period.lossPct.toFixed(2)}%`;
@@ -107,21 +111,21 @@ export function JournalTab({
         />
 
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone="neutral" pill>Operações hoje: {stats.todayCount} (inclui BE)</Badge>
+          <Badge tone="neutral" pill>Operações hoje: {stats.todayCount} de {MAX_TRADES_PER_DAY} (inclui BE)</Badge>
           {(['day', 'night'] as const).map((session) => {
             const counters = stats.todayBySession[session];
             return (
               <span
                 key={session}
-                title={`Sessão ${sessionLabel(session)}: operações incluindo break even; máximo de ${MAX_STOPS_PER_SESSION} stops`}
+                title={`Sessão ${sessionLabel(session)}: operações incluindo break even`}
               >
-                <Badge tone={sessionTone(session)} pill>
+                <Badge tone="neutral" pill>
                   <i
                     className={`fa-solid ${session === 'day' ? 'fa-sun' : 'fa-moon'} mr-1.5`}
                     aria-hidden="true"
                   />
                   {sessionLabel(session)}: {counters.totalTrades} operações ·{' '}
-                  {counters.stops}/{MAX_STOPS_PER_SESSION} stops
+                  {counters.stops} stops
                 </Badge>
               </span>
             );
@@ -166,13 +170,13 @@ export function JournalTab({
         />
 
         <div className="asrv-streak__milestones">
-          {milestones.map((milestone, index) => (
+          {milestones.map((milestone) => (
             <div
               key={milestone}
               className={`asrv-milestone ${discipline.streak >= milestone ? 'is-reached' : ''}`}
             >
               <strong>{milestone} Dias</strong>
-              <span>{['Iniciante', 'Focado', 'Blindado', 'Mestre', 'Lenda'][index]}</span>
+              <span>{milestone / OFFENSIVE_INTERVAL}ª ofensiva</span>
             </div>
           ))}
         </div>
@@ -181,33 +185,39 @@ export function JournalTab({
       <div>
         <h1 className="asrv-page-title">Diário de Trading</h1>
         <p className="asrv-page-subtitle">
-          Regras: Operações sem limite; máximo de {MAX_STOPS_PER_SESSION} stops por sessão
-          (dia/noite; contador inclui break even) | Nenhuma perda individual &gt; 25% do saldo inicial do
-          dia
+          Regras: Até duas operações por dia, incluindo break even. Escolha manhã ou noite. Sábado e domingo são dias sem operar.
         </p>
       </div>
+
+      <p className="asrv-page-subtitle">
+        {plan ? 'Checklist de hoje salvo.' : 'Checklist de hoje pendente no Plano Operacional.'}{' '}
+        {plan?.lossLimit == null ? 'Limite de perda ainda sem configuração.' : `Perda hoje: ${historyMoney(lossesToday)} de ${historyMoney(plan.lossLimit)}.`}
+      </p>
 
       <Card ariaLabel="Consultar diário por data">
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex-1">
             <h2 className="asrv-section-title">Histórico do diário</h2>
-            <p className="asrv-page-subtitle">Escolha uma data para consultar as operações e os resultados daquele dia.</p>
+            <p className="asrv-page-subtitle">Escolha uma data e consulte as operações do dia, da semana ou do mês.</p>
           </div>
           <label className="flex flex-col gap-1 text-sm text-slate-300">Data do diário
             <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="rounded-lg border border-slate-700 bg-slate-900 p-3 text-white" style={{ colorScheme: 'dark' }} />
           </label>
-          <Button onClick={today}>Hoje</Button>
-          <Button onClick={() => setSelectedDate('')}>Todos os dias</Button>
+          <Button onClick={() => { setHistoryPeriod('day'); setSelectedDate(today()); }}>Hoje</Button>
+          <Button onClick={() => { setSelectedDate(''); setHistoryPeriod('day'); }}>Todos os dias</Button>
         </div>
+        <SegmentedControl ariaLabel="Período do histórico" value={historyPeriod} onChange={changeHistoryPeriod} options={[
+          { value: 'day', label: 'Dia' }, { value: 'week', label: 'Semana' }, { value: 'month', label: 'Mês' },
+        ]} />
         <p className="my-3 text-sm text-slate-400" aria-live="polite">
-          {selectedDate ? `Diário de ${formatDate(selectedDate)}` : 'Todos os dias'}
-          {selectedDate && snapshot.noTradeDays.includes(selectedDate) ? ' · Dia registrado sem operar' : ''}
+          {historyLabel}
+          {historyPeriod === 'day' && selectedDate && snapshot.noTradeDays.includes(selectedDate) ? ' · Dia registrado sem operar' : ''}
           {` · ${datedTrades.filter(t => t.pnl > 0 && !isBreakEven(t.pnl)).length} ganhos · ${datedTrades.filter(t => t.pnl < 0 && !isBreakEven(t.pnl)).length} perdas · ${datedTrades.filter(t => isBreakEven(t.pnl)).length} BE`}
         </p>
         <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Resumo do histórico">
           <StatCard label="Ganhos brutos" value={historyMoney(gains)} tone="success" />
           <StatCard label="Perdas brutas" value={historyMoney(losses)} tone="danger" />
-          <StatCard label="Resultado líquido" value={historyMoney(gains + losses)} tone={periodTone(gains + losses)} />
+          <StatCard label={range && historyPeriod === 'week' ? 'Resultado semanal' : range && historyPeriod === 'month' ? 'Resultado mensal' : 'Resultado líquido'} value={historyMoney(gains + losses)} tone={periodTone(gains + losses)} />
           <StatCard label="Operações (inclui BE)" value={String(datedTrades.length)} />
         </div>
         <label className="flex flex-wrap items-center gap-3 text-sm text-slate-300">Mostrar operações
@@ -372,7 +382,7 @@ function JournalGrid({
                 &quot;Mercado sem padrão claro. Decisão consciente de não operar e proteger o
                 capital.&quot;
               </p>
-              <p className="mt-2 text-xs font-bold text-emerald-400">+1 dia de Ofensiva 🔥</p>
+              <p className="mt-2 text-xs font-bold text-emerald-400">{isWeekend(item.day) ? 'Dia de descanso' : '+1 dia de Ofensiva'}</p>
             </div>
             <div className="asrv-trade-card__footer">
               <button

@@ -1,11 +1,13 @@
 import type {
   AuthGateway,
   AuthSession,
+  DailyPlanRepository,
   NoTradeDayRepository,
   ScreenshotStorage,
   SettingsRepository,
   TradeRepository,
 } from '../application/ports';
+import { isWeekend, type DailyPlan } from '../domain/dailyPlan';
 import { DomainError } from '../domain/errors';
 import type { Trade } from '../domain/trade';
 import { BackendError, type BackendErrorCode } from './errors';
@@ -57,10 +59,12 @@ export function createSupabaseTradeRepository(
             pnl: trade.pnl,
             notes: trade.notes,
             screenshot_path: trade.screenshotPath,
+            weekend_breach: isWeekend(trade.date),
           },
           { onConflict: 'user_id,id' },
         );
 
+        if (error?.code === 'P0001') throw new DomainError('TRADE_RULE', error.message);
         if (error) throw new BackendError('TRADES_WRITE_FAILED', error.message);
       });
     },
@@ -150,6 +154,45 @@ export function createSupabaseSettingsRepository(
           .upsert({ user_id: getUserId(), initial_balance: value }, { onConflict: 'user_id' });
 
         if (error) throw new BackendError('SETTINGS_WRITE_FAILED', error.message);
+      });
+    },
+  };
+}
+
+export function createSupabaseDailyPlanRepository(
+  client: SupabaseClientLike,
+  getUserId: () => string,
+): DailyPlanRepository {
+  return {
+    async list() {
+      return guard('DAILY_PLAN_FAILED', async () => {
+        const { data, error } = await client.from('daily_plans').select('day,loss_limit,answers')
+          .eq('user_id', getUserId()).order('day', { ascending: true });
+        if (error) throw new BackendError('DAILY_PLAN_FAILED', error.message);
+        return ((data ?? []) as { day: string; loss_limit: number | string | null; answers: DailyPlan['answers'] }[])
+          .map(row => ({ date: row.day, lossLimit: row.loss_limit === null ? null : Number(row.loss_limit), answers: row.answers }));
+      });
+    },
+    async save(plan) {
+      await guard('DAILY_PLAN_FAILED', async () => {
+        const { error } = await client.from('daily_plans').upsert({
+          user_id: getUserId(), day: plan.date, loss_limit: plan.lossLimit, answers: plan.answers,
+        }, { onConflict: 'user_id,day' });
+        if (error) throw new BackendError('DAILY_PLAN_FAILED', error.message);
+      });
+    },
+    async resetAt() {
+      return guard('DAILY_PLAN_FAILED', async () => {
+        const { data, error } = await client.from('settings').select('reset_at').eq('user_id', getUserId()).maybeSingle();
+        if (error) throw new BackendError('DAILY_PLAN_FAILED', error.message);
+        return data?.reset_at ? Date.parse(data.reset_at) : null;
+      });
+    },
+    async resetJournal() {
+      return guard('JOURNAL_RESET_FAILED', async () => {
+        const { data, error } = await client.rpc('reset_trading_journal');
+        if (error) throw new BackendError('JOURNAL_RESET_FAILED', error.message);
+        return data as string[];
       });
     },
   };

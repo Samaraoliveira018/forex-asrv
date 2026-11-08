@@ -5,6 +5,7 @@ import type { AuthSession, Clock } from './application/ports';
 import { DomainError } from './domain/errors';
 import {
   createSupabaseAuthGateway,
+  createSupabaseDailyPlanRepository,
   createSupabaseNoTradeDayRepository,
   createSupabaseScreenshotStorage,
   createSupabaseSettingsRepository,
@@ -58,6 +59,7 @@ export function createBff(config: BffConfig): Bff {
   const base = createJournalService({
     trades: createSupabaseTradeRepository(client, requireUserId),
     noTradeDays: createSupabaseNoTradeDayRepository(client, requireUserId),
+    dailyPlans: createSupabaseDailyPlanRepository(client, requireUserId),
     settings: createSupabaseSettingsRepository(client, requireUserId),
     screenshots: createSupabaseScreenshotStorage(client, requireUserId),
     pending: createKeyValueQueue(config.storage, config.queueKey),
@@ -72,16 +74,25 @@ export function createBff(config: BffConfig): Bff {
     return operation();
   };
 
+  let lastMutation: Promise<unknown> = Promise.resolve();
+  function mutate<T>(operation: () => Promise<T>): Promise<T> {
+    const result = lastMutation.then(() => withSession(operation));
+    lastMutation = result.catch(() => undefined);
+    return result;
+  }
+
   const journal: JournalService = {
     list: () => withSession(() => base.list()),
     saveTrade: (input, screenshotDataUrl) =>
-      withSession(() => base.saveTrade(input, screenshotDataUrl)),
-    deleteTrade: (id) => withSession(() => base.deleteTrade(id)),
-    registerNoTradeDay: (day) => withSession(() => base.registerNoTradeDay(day)),
-    removeNoTradeDay: (day) => withSession(() => base.removeNoTradeDay(day)),
-    saveInitialBalance: (value) => withSession(() => base.saveInitialBalance(value)),
+      mutate(() => base.saveTrade(input, screenshotDataUrl)),
+    deleteTrade: (id) => mutate(() => base.deleteTrade(id)),
+    registerNoTradeDay: (day) => mutate(() => base.registerNoTradeDay(day)),
+    removeNoTradeDay: (day) => mutate(() => base.removeNoTradeDay(day)),
+    saveInitialBalance: (value) => mutate(() => base.saveInitialBalance(value)),
     pendingCount: () => base.pendingCount(),
-    flush: () => withSession(() => base.flush()),
+    saveDailyPlan: plan => mutate(() => base.saveDailyPlan(plan)),
+    resetJournal: () => mutate(() => base.resetJournal()),
+    flush: () => mutate(() => base.flush()),
   };
 
   return {

@@ -117,7 +117,7 @@ describe('JournalScreen', () => {
     fake.mocks.saveTrade.mockResolvedValueOnce({
       trade,
       synced: true,
-      warnings: ['Limite de 4 stops na sessão Dia atingido.'],
+      warnings: ['Duas operações registradas. Encerre as operações do dia.'],
     });
     const user = userEvent.setup();
 
@@ -127,7 +127,7 @@ describe('JournalScreen', () => {
     await user.click(screen.getByRole('button', { name: 'Salvar Operação' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'Limite de 4 stops na sessão Dia atingido.',
+      'Duas operações registradas. Encerre as operações do dia.',
     );
   });
 

@@ -1,3 +1,4 @@
+import type { DailyPlan } from '../domain/dailyPlan';
 import type { Trade } from '../domain/trade';
 
 export interface AuthSession {
@@ -15,6 +16,13 @@ export interface NoTradeDayRepository {
   list(): Promise<string[]>;
   add(day: string): Promise<void>;
   remove(day: string): Promise<void>;
+}
+
+export interface DailyPlanRepository {
+  list(): Promise<DailyPlan[]>;
+  save(plan: DailyPlan): Promise<void>;
+  resetJournal(): Promise<string[]>;
+  resetAt(): Promise<number | null>;
 }
 
 export interface SettingsRepository {
@@ -46,12 +54,12 @@ export interface Clock {
   today(): string;
 }
 
-export type PendingJob =
+export type PendingJob = { queuedAt?: number } & (
   | { op: 'upsertTrade'; trade: Trade; screenshotDataUrl?: string }
   | { op: 'deleteTrade'; id: string }
   | { op: 'addNoTradeDay'; day: string }
   | { op: 'removeNoTradeDay'; day: string }
-  | { op: 'setInitialBalance'; value: number };
+  | { op: 'setInitialBalance'; value: number });
 
 export interface PendingJobStorage {
   read(): Promise<PendingJob[]>;

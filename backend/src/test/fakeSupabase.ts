@@ -19,6 +19,7 @@ export class FakeSupabase implements SupabaseClientLike {
     trades: [],
     no_trade_days: [],
     settings: [],
+    daily_plans: [],
   };
 
   session: { user: { id: string; email: string } } | null = null;
@@ -32,6 +33,20 @@ export class FakeSupabase implements SupabaseClientLike {
   from(table: string): FakeQuery {
     if (this.offline) throw new Error('offline');
     return new FakeQuery(this, table);
+  }
+
+  async rpc(name: string): Promise<QueryResult> {
+    const userId = this.session?.user.id;
+    if (name !== 'reset_trading_journal' || !userId || this.offline) {
+      return { data: null, error: { message: 'reset unavailable' } };
+    }
+    const ids = this.tables.trades.filter(row => row.user_id === userId).map(row => row.id);
+    for (const table of ['trades', 'no_trade_days', 'daily_plans']) {
+      this.tables[table] = this.tables[table]!.filter(row => row.user_id !== userId);
+    }
+    this.tables.settings = this.tables.settings.filter(row => row.user_id !== userId);
+    this.tables.settings.push({ user_id: userId, initial_balance: 0, reset_at: new Date().toISOString() });
+    return { data: ids, error: null };
   }
 
   storage = {

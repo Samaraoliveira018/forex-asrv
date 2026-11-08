@@ -14,6 +14,8 @@ export type BackendErrorCode =
   | 'SCREENSHOT_UPLOAD_FAILED'
   | 'SCREENSHOT_URL_FAILED'
   | 'SCREENSHOT_DELETE_FAILED'
+  | 'DAILY_PLAN_FAILED'
+  | 'JOURNAL_RESET_FAILED'
   | 'MAPPING_FAILED';
 
 export class BackendError extends Error {

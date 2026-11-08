@@ -3,8 +3,6 @@ export type { DomainErrorCode } from './domain/errors';
 
 export {
   BREAK_EVEN_TOLERANCE,
-  MAX_LOSS_RATIO,
-  MAX_STOPS_PER_SESSION,
   createTrade,
   isBreakEven,
   isIsoDate,
@@ -68,3 +66,8 @@ export type { SupabaseClientLike, SupabaseErrorLike } from './infrastructure/sup
 
 export { PENDING_QUEUE_KEY, createKeyValueQueue } from './infrastructure/storage';
 export type { KeyValueStorage } from './infrastructure/storage';
+
+export { CHECKLIST_SECTIONS, MAX_TRADES_PER_DAY, OFFENSIVE_INTERVAL, grossLoss, isWeekend, offensiveMilestones } from './domain/dailyPlan';
+export type { DailyPlan } from './domain/dailyPlan';
+export { historyRange } from './domain/stats';
+export type { HistoryPeriod } from './domain/stats';

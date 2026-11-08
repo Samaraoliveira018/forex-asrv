@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   BREAK_EVEN_TOLERANCE,
-  MAX_LOSS_RATIO,
-  MAX_STOPS_PER_SESSION,
   createTrade,
   isBreakEven,
   isIsoDate,
@@ -163,9 +161,7 @@ describe('isStop', () => {
 });
 
 describe('regras de disciplina', () => {
-  it('mantém os limites por sessão usados pelo app', () => {
-    expect(MAX_STOPS_PER_SESSION).toBe(4);
-    expect(MAX_LOSS_RATIO).toBe(0.25);
+  it('mantém a tolerância de break even usada pelo app', () => {
     expect(BREAK_EVEN_TOLERANCE).toBe(0.3);
   });
 });

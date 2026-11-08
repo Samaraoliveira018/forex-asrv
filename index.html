@@ -187,14 +187,14 @@
 
           <div class="flex flex-wrap items-center gap-2">
             <!-- Limites da sessão do dia -->
-            <div class="asrv-badge asrv-badge--neutral asrv-badge--pill">Operações hoje: <span id="today-total-trades">0</span> (inclui BE)</div>
-            <div id="today-day-badge" class="asrv-badge asrv-badge--neutral asrv-badge--pill" title="Sessão Dia: operações incluindo break even; máximo de 4 stops">
-              <i class="fa-solid fa-sun"></i> Dia: <span id="today-day-trades">0</span> operações · <span id="today-day-stops">0</span>/4 stops
+            <div class="asrv-badge asrv-badge--neutral asrv-badge--pill">Operações hoje: <span id="today-total-trades">0</span> de 2 (inclui BE)</div>
+            <div id="today-day-badge" class="asrv-badge asrv-badge--neutral asrv-badge--pill" title="Sessão Dia: operações incluindo break even">
+              <i class="fa-solid fa-sun"></i> Dia: <span id="today-day-trades">0</span> operações · <span id="today-day-stops">0</span> stops
             </div>
 
             <!-- Limites da sessão da noite -->
-            <div id="today-night-badge" class="asrv-badge asrv-badge--neutral asrv-badge--pill" title="Sessão Noite: operações incluindo break even; máximo de 4 stops">
-              <i class="fa-solid fa-moon"></i> Noite: <span id="today-night-trades">0</span> operações · <span id="today-night-stops">0</span>/4 stops
+            <div id="today-night-badge" class="asrv-badge asrv-badge--neutral asrv-badge--pill" title="Sessão Noite: operações incluindo break even">
+              <i class="fa-solid fa-moon"></i> Noite: <span id="today-night-trades">0</span> operações · <span id="today-night-stops">0</span> stops
             </div>
 
             <!-- Botão Marcar Dia Sem Operar -->
@@ -218,55 +218,40 @@
               <i class="fa-solid fa-trophy text-amber-400 text-base"></i>
               <h3 class="asrv-section-title">Metas de Ofensiva (Disciplina Trader)</h3>
             </div>
-            <span class="text-xs font-semibold text-orange-400" id="streak-goal-text">Próxima meta: 3 dias</span>
+            <span class="text-xs font-semibold text-orange-400" id="streak-goal-text">Próxima meta: 30 dias</span>
           </div>
           
           <div class="asrv-progress">
             <div id="streak-progress-bar" class="asrv-progress__bar" style="width: 0%"></div>
           </div>
 
-          <div class="grid grid-cols-5 gap-2 text-center pt-1">
-            <div id="milestone-3" class="asrv-milestone">
-              <p class="font-bold">3 Dias</p>
-              <p class="text-[9px]">Iniciante</p>
-            </div>
-            <div id="milestone-7" class="asrv-milestone">
-              <p class="font-bold">7 Dias</p>
-              <p class="text-[9px]">Focado</p>
-            </div>
-            <div id="milestone-14" class="asrv-milestone">
-              <p class="font-bold">14 Dias</p>
-              <p class="text-[9px]">Blindado</p>
-            </div>
-            <div id="milestone-30" class="asrv-milestone">
-              <p class="font-bold">30 Dias</p>
-              <p class="text-[9px]">Mestre</p>
-            </div>
-            <div id="milestone-60" class="asrv-milestone">
-              <p class="font-bold">60 Dias</p>
-              <p class="text-[9px]">Lenda</p>
-            </div>
-          </div>
+          <div id="offensive-milestones" class="grid grid-cols-5 gap-2 text-center pt-1"></div>
         </div>
 
         <!-- Section Title -->
         <div>
           <h2 class="asrv-page-title">Diário de Trading</h2>
-          <p class="asrv-page-subtitle">Regras: Operações sem limite e máximo de 4 stops por sessão (dia/noite; contador inclui break even) | Nenhuma perda individual &gt; 25% do saldo inicial do dia</p>
+          <p class="asrv-page-subtitle">Regras: Até duas operações por dia, incluindo break even. Escolha manhã ou noite. Sábado e domingo são dias sem operar.</p>
         </div>
 
+        <p id="today-plan-status" class="asrv-page-subtitle"></p>
         <section class="asrv-card space-y-4" aria-label="Consultar diário por data">
           <div class="flex flex-wrap items-end gap-3">
             <div class="flex-1">
               <h3 class="asrv-section-title">Histórico do diário</h3>
-              <p class="text-sm text-gray-400">Escolha uma data para consultar as operações e os resultados daquele dia.</p>
+              <p class="text-sm text-gray-400">Escolha uma data e consulte as operações do dia, da semana ou do mês.</p>
             </div>
             <label class="flex flex-col gap-1 text-sm text-gray-300">Data do diário
               <input id="journal-date" type="date" class="bg-gray-900 border border-gray-700 rounded-lg p-3 text-white" style="color-scheme:dark" onchange="setJournalDate(this.value)">
             </label>
-            <button type="button" class="asrv-segmented__item" onclick="setJournalDate(getLocalDateStr())">Hoje</button>
+            <button type="button" class="asrv-segmented__item" onclick="setJournalDate(getLocalDateStr(), true)">Hoje</button>
             <button type="button" class="asrv-segmented__item" onclick="setJournalDate('')">Todos os dias</button>
           </div>
+          <label class="flex items-center gap-3 text-sm">Período do histórico
+            <select id="journal-period" class="asrv-field__input" onchange="setJournalPeriod(this.value)">
+              <option value="day">Dia</option><option value="week">Semana</option><option value="month">Mês</option>
+            </select>
+          </label>
           <p id="journal-date-status" class="text-sm text-gray-400" aria-live="polite"></p>
           <div id="journal-day-summary" class="grid grid-cols-2 lg:grid-cols-4 gap-4" aria-live="polite"></div>
           <label class="flex flex-wrap items-center gap-3 text-sm text-gray-300">Mostrar operações
@@ -418,38 +403,22 @@
 
       <!-- TAB 3: PLANO OPERACIONAL -->
       <section id="tab-plan" class="tab-content hidden space-y-6">
-        <h2 class="asrv-page-title">Plano Operacional & Disciplina</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="asrv-card space-y-3">
-            <h3 class="asrv-section-title">Regras de Ouro da Plataforma</h3>
-            <div class="asrv-alert asrv-alert--danger space-y-2 text-xs">
-              <p>⚡ <strong>Contador de operações:</strong> Operações sem limite. O contador inclui todas as operações, inclusive break even.</p>
-              <p>🛑 <strong>Stops:</strong> Máximo de 4 stops por sessão. Ao atingir 4 stops no dia ou 4 na noite, pare de operar naquela sessão para não perder a ofensiva.</p>
-              <p>🛑 <strong>Perda Individual Máxima:</strong> Nenhuma operação pode ter um prejuízo superior a 25% do saldo inicial do dia — capital inicial mais o resultado acumulado dos dias anteriores (taxas de spread mínimas são tratadas como Break Even).</p>
-              <p>⚖️ <strong>Break Even (0x0):</strong> Posições encerradas no zero a zero ou com pequenas variações de spread preservam o capital e contam no total de operações, mas não como stops.</p>
-              <p>🛡️ <strong>Saber Ficar de Fora:</strong> Registrar dias em que você não operou mantém a sua ofensiva ativa!</p>
-              <p>🔥 <strong>Ofensiva & Metas:</strong> Acumule dias de disciplina para alcançar os níveis de 3, 7, 14, 30 e 60 dias.</p>
-            </div>
-          </div>
-          <div class="asrv-card space-y-3">
-            <h3 class="asrv-section-title">Checklist Operacional</h3>
-            <label class="asrv-check">
-              <input type="checkbox" class="asrv-checkbox"> Verificar calendário de notícias
-            </label>
-            <label class="asrv-check">
-              <input type="checkbox" class="asrv-checkbox"> Respeitar o limite de 4 stops por sessão (dia/noite; contador inclui break even)
-            </label>
-            <label class="flex items-center gap-2 text-gray-300">
-              <input type="checkbox" class="asrv-checkbox"> Parar de operar na sessão após 4 stops
-            </label>
-            <label class="asrv-check">
-              <input type="checkbox" class="asrv-checkbox"> Mover o Stop para Break Even ao atingir a primeira parcial
-            </label>
-            <label class="asrv-check">
-              <input type="checkbox" class="asrv-checkbox"> Se a oportunidade passou, registrar o dia sem operação
-            </label>
-          </div>
-        </div>
+        <h2 class="asrv-page-title">Plano Operacional</h2>
+        <p class="asrv-page-subtitle">Até duas operações por dia, incluindo break even, em uma única sessão. Sábado e domingo são dias sem operar.</p>
+        <form id="daily-plan-form" class="asrv-card space-y-4" onsubmit="saveDailyPlan(event)">
+          <h3 class="asrv-section-title">Checklist Operacional Diário</h3>
+          <label class="block">Data do checklist
+            <input id="daily-plan-date" type="date" class="asrv-field__input" onchange="renderPlanEditor()" required>
+          </label>
+          <label class="block">Limite de perda diária ($ / R$)
+            <input id="daily-plan-limit" class="asrv-field__input" inputmode="decimal" placeholder="Ex.: 10,00">
+          </label>
+          <p class="asrv-page-subtitle">O limite soma os resultados negativos da data, inclusive taxas registradas no break even.</p>
+          <button class="asrv-btn asrv-btn--primary" type="submit">Salvar checklist e limite</button>
+          <div id="daily-plan-fields" class="space-y-4"></div>
+          <p id="daily-plan-status" role="status"></p>
+          <button class="asrv-btn asrv-btn--primary" type="submit">Salvar checklist e limite</button>
+        </form>
       </section>
 
       <!-- TAB 4: DADOS ESTATÍSTICOS -->
@@ -632,9 +601,257 @@
     </div>
   </div>
 
+  <script id="checklist-definition" type="application/json">
+[
+  {
+    "title": "Estado mental",
+    "fields": [
+      {
+        "id": "feeling",
+        "label": "Como estou me sentindo hoje?",
+        "kind": "text"
+      },
+      {
+        "id": "sleep",
+        "label": "Tive uma boa noite de sono."
+      },
+      {
+        "id": "physical",
+        "label": "Estou fisicamente bem."
+      },
+      {
+        "id": "emotional",
+        "label": "Estou emocionalmente estável."
+      },
+      {
+        "id": "commitment",
+        "label": "Estou disposto(a) a seguir meu plano operacional."
+      },
+      {
+        "id": "risk",
+        "label": "Gestão de risco definida."
+      }
+    ]
+  },
+  {
+    "title": "Pré-trading",
+    "fields": [
+      {
+        "id": "preTrading",
+        "label": "Realizei meu pré-trading antes de operar."
+      },
+      {
+        "id": "activity",
+        "label": "Qual atividade realizei hoje?",
+        "kind": "text"
+      }
+    ]
+  },
+  {
+    "title": "Preparação para o mercado",
+    "fields": [
+      {
+        "id": "news",
+        "label": "Verifiquei as notícias do dia."
+      },
+      {
+        "id": "overview",
+        "label": "Fiz meu 360°."
+      },
+      {
+        "id": "assets",
+        "label": "Ativos escolhidos para operar hoje",
+        "kind": "text"
+      }
+    ]
+  },
+  {
+    "title": "1 · Captura da liquidez diária",
+    "fields": [
+      {
+        "id": "dailyLiquidity",
+        "label": "O preço capturou a máxima (PDH) ou a mínima (PDL) do dia anterior."
+      }
+    ]
+  },
+  {
+    "title": "2 · Tendência macro",
+    "fields": [
+      {
+        "id": "trend",
+        "label": "Direção predominante",
+        "options": [
+          "Alta",
+          "Baixa"
+        ]
+      },
+      {
+        "id": "bias",
+        "label": "Viés operacional",
+        "options": [
+          "A favor da macroestrutura",
+          "Contra a macro apenas em último caso"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "3 · Tendência mediana",
+    "hint": "Em baixa, observe a captura do PDH e dos topos da correção. Em alta, observe a captura do PDL e dos fundos da correção.",
+    "fields": [
+      {
+        "id": "correction",
+        "label": "Identifiquei o movimento corretivo."
+      },
+      {
+        "id": "priceZone",
+        "label": "Região do preço",
+        "options": [
+          "Cara",
+          "Barata"
+        ]
+      },
+      {
+        "id": "asiaLiquidity",
+        "label": "Capturou a máxima ou mínima da Ásia."
+      }
+    ]
+  },
+  {
+    "title": "4 · Tendência micro e CHoCH",
+    "fields": [
+      {
+        "id": "microLiquidity",
+        "label": "Capturou uma liquidez importante."
+      },
+      {
+        "id": "poi",
+        "label": "Reagiu em um POI (Order Block) válido."
+      },
+      {
+        "id": "imbalance",
+        "label": "Gerou ineficiência com movimento agressivo."
+      },
+      {
+        "id": "structure",
+        "label": "Quebrou uma estrutura válida."
+      }
+    ]
+  },
+  {
+    "title": "5 · Projeção de contexto",
+    "fields": [
+      {
+        "id": "fibonacci",
+        "label": "Projetei a Fibonacci de extensão."
+      },
+      {
+        "id": "ote",
+        "label": "Identifiquei níveis de OTE (Premium e Discount)."
+      },
+      {
+        "id": "orderBlocks",
+        "label": "Marquei os Order Blocks válidos."
+      },
+      {
+        "id": "fvg",
+        "label": "Na ausência de Order Block, utilizei um FVG."
+      }
+    ]
+  },
+  {
+    "title": "6 · Entrada",
+    "fields": [
+      {
+        "id": "internalLiquidity",
+        "label": "Aguardei o ativo gerar liquidez interna."
+      },
+      {
+        "id": "internalSweep",
+        "label": "Aguardei a captura da liquidez interna."
+      },
+      {
+        "id": "microReaction",
+        "label": "O preço reagiu no Order Block da microestrutura."
+      },
+      {
+        "id": "entry",
+        "label": "Entrada executada."
+      }
+    ]
+  },
+  {
+    "title": "7 · Gerenciamento",
+    "fields": [
+      {
+        "id": "stop",
+        "label": "Stop posicionado em 110% da Fibonacci."
+      },
+      {
+        "id": "targetFib",
+        "label": "Alvo: Fibonacci de extensão (100%)."
+      },
+      {
+        "id": "targetExternal",
+        "label": "Alvo: liquidez externa."
+      },
+      {
+        "id": "targetPreviousDay",
+        "label": "Alvo: captura de PDL ou PDH."
+      },
+      {
+        "id": "targetAsia",
+        "label": "Alvo: máxima ou mínima da Ásia."
+      },
+      {
+        "id": "targetOrderBlock",
+        "label": "Alvo: ponto de parada do preço (Order Block válido)."
+      }
+    ]
+  },
+  {
+    "title": "Pós-operação",
+    "fields": [
+      {
+        "id": "journal",
+        "label": "Preenchi minha planilha."
+      },
+      {
+        "id": "riskFollowed",
+        "label": "Respeitei meu gerenciamento de risco."
+      },
+      {
+        "id": "planFollowed",
+        "label": "Segui meu plano operacional."
+      },
+      {
+        "id": "score",
+        "label": "Nota para minha execução",
+        "options": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ]
+      },
+      {
+        "id": "lesson",
+        "label": "Maior aprendizado de hoje",
+        "kind": "text"
+      }
+    ]
+  }
+]
+  </script>
+
   <!-- JAVASCRIPT LOGIC -->
   <script>
     let journalSelectedDate = '';
+    let journalPeriod = 'day';
+    let dailyPlans = [];
+    let cloudResetAt = 0;
+    let savingDailyPlan = false;
     let journalResultFilter = 'all';
     let trades = [];
     let noTradeDays = [];
@@ -644,7 +861,7 @@
     let currentView = 'grid';
     let isValueHidden = false;
 
-    const MAX_STOPS_PER_SESSION = 4;
+    const MAX_TRADES_PER_DAY = 2;
 
     let equityChartInstance = null;
     let assetChartInstance = null;
@@ -902,19 +1119,27 @@
     async function pullAll() {
       if (!cloudEnabled()) return;
 
-      const [tradesRes, noTradeRes, settingsRes] = await Promise.all([
+      const [tradesRes, noTradeRes, settingsRes, plansRes] = await Promise.all([
         sb.from('trades').select('id,date,asset,type,session,lots,pnl,notes,screenshot_path').order('date', { ascending: true }),
         sb.from('no_trade_days').select('day'),
-        sb.from('settings').select('initial_balance').maybeSingle()
+        sb.from('settings').select('initial_balance,reset_at').maybeSingle(),
+        sb.from('daily_plans').select('day,loss_limit,answers')
       ]);
 
       if (tradesRes.error) throw tradesRes.error;
       if (noTradeRes.error) throw noTradeRes.error;
       if (settingsRes.error) throw settingsRes.error;
+      if (plansRes.error) throw plansRes.error;
+      dailyPlans = (plansRes.data || []).map(row => ({ date: row.day, lossLimit: row.loss_limit == null ? null : Number(row.loss_limit), answers: row.answers }));
 
       trades = normalizeTrades(tradesRes.data || []);
       noTradeDays = normalizeNoTradeDays((noTradeRes.data || []).map(r => r.day));
 
+      cloudResetAt = settingsRes.data?.reset_at ? Date.parse(settingsRes.data.reset_at) : 0;
+      if (cloudResetAt) {
+        pendingOps = pendingOps.filter(job => job.at > cloudResetAt);
+        savePending();
+      }
       const cloudBalance = settingsRes.data ? Number(settingsRes.data.initial_balance) : NaN;
       if (Number.isFinite(cloudBalance)) initialBalance = cloudBalance;
 
@@ -952,7 +1177,8 @@
             lots: Number(t.lots) || 0,
             pnl: Number(t.pnl) || 0,
             notes: t.notes || '',
-            screenshot_path: t.screenshot_path || ''
+            screenshot_path: t.screenshot_path || '',
+            weekend_breach: isWeekend(t.date)
           }, { onConflict: 'user_id,id' });
           if (error) throw error;
           return;
@@ -1006,6 +1232,7 @@
         setCloudStatus('connected');
         if (pendingOps.length > 0) flushPending();
       } catch (err) {
+        if (err.code === 'P0001') throw err;
         console.warn('Falha ao enviar para a nuvem, guardando na fila:', err);
         pendingOps.push({ op, payload, at: Date.now() });
         savePending();
@@ -1174,10 +1401,21 @@
       if (!cloudEnabled()) return;
       const uid = cloudUser.id;
 
+      const byDate = new Map();
+      for (const trade of trades) {
+        const day = byDate.get(trade.date) || [];
+        day.push(trade);
+        byDate.set(trade.date, day);
+        if (day.length > MAX_TRADES_PER_DAY || day.some(item => item.session !== trade.session)) {
+          throw new Error('O backup tem uma data com mais de duas operações ou com sessões misturadas.');
+        }
+      }
       const { error: e1 } = await sb.from('trades').delete().eq('user_id', uid);
       if (e1) throw e1;
       const { error: e2 } = await sb.from('no_trade_days').delete().eq('user_id', uid);
       if (e2) throw e2;
+      const { error: plansError } = await sb.from('daily_plans').delete().eq('user_id', uid);
+      if (plansError) throw plansError;
 
       if (trades.length > 0) {
         const rows = trades.map(t => ({
@@ -1190,7 +1428,8 @@
           lots: Number(t.lots) || 0,
           pnl: Number(t.pnl) || 0,
           notes: t.notes || '',
-          screenshot_path: t.screenshot_path || ''
+          screenshot_path: t.screenshot_path || '',
+          weekend_breach: isWeekend(t.date)
         }));
         const { error } = await sb.from('trades').upsert(rows, { onConflict: 'user_id,id' });
         if (error) throw error;
@@ -1207,12 +1446,18 @@
         { onConflict: 'user_id' }
       );
       if (e3) throw e3;
+      if (dailyPlans.length > 0) {
+        const rows = dailyPlans.map(plan => ({ user_id: uid, day: plan.date, loss_limit: plan.lossLimit, answers: plan.answers }));
+        const { error } = await sb.from('daily_plans').upsert(rows, { onConflict: 'user_id,day' });
+        if (error) throw error;
+      }
     }
 
     async function bootCloudData() {
       const snapshot = {
         trades: trades.slice(),
         noTradeDays: noTradeDays.slice(),
+        dailyPlans: dailyPlans.slice(),
         initialBalance
       };
 
@@ -1222,7 +1467,7 @@
       const cloudEmpty = trades.length === 0 && noTradeDays.length === 0;
       const localTotal = snapshot.trades.length + snapshot.noTradeDays.length;
 
-      if (cloudEmpty && localTotal > 0) {
+      if (cloudEmpty && !cloudResetAt && localTotal > 0) {
         const enviar = confirm(
           `Encontramos ${localTotal} registro(s) salvos neste navegador e a nuvem está vazia.\n\n` +
           `Enviar esses dados para o Supabase agora?`
@@ -1231,6 +1476,7 @@
         if (enviar) {
           trades = snapshot.trades;
           noTradeDays = snapshot.noTradeDays;
+          dailyPlans = snapshot.dailyPlans;
           initialBalance = snapshot.initialBalance;
           saveData();
           await replaceCloudWithLocal();
@@ -1238,6 +1484,7 @@
         } else {
           trades = snapshot.trades;
           noTradeDays = snapshot.noTradeDays;
+          dailyPlans = snapshot.dailyPlans;
           initialBalance = snapshot.initialBalance;
           const balInput = document.getElementById('initial-balance-input');
           if (balInput) balInput.value = initialBalance;
@@ -1338,9 +1585,8 @@
       noTradeDays = normalizeNoTradeDays(noTradeDays);
 
       const savedBal = localStorage.getItem('diario_trader_asrv_initial_bal') || localStorage.getItem('positionpips_initial_bal');
-      if (savedBal) {
-        initialBalance = parseFloat(savedBal) || 150;
-      }
+      if (savedBal != null && Number.isFinite(Number(savedBal))) initialBalance = Number(savedBal);
+      try { dailyPlans = JSON.parse(localStorage.getItem('diario_trader_asrv_daily_plans')) || []; } catch { dailyPlans = []; }
       document.getElementById('initial-balance-input').value = initialBalance;
 
       calculateStreak();
@@ -1360,6 +1606,8 @@
     function saveData() {
       localStorage.setItem('diario_trader_asrv_trades', JSON.stringify(trades));
       localStorage.setItem('diario_trader_asrv_notrades', JSON.stringify(noTradeDays));
+      localStorage.setItem('diario_trader_asrv_daily_plans', JSON.stringify(dailyPlans));
+      localStorage.setItem('diario_trader_asrv_initial_bal', String(initialBalance));
       calculateStreak();
     }
 
@@ -1402,92 +1650,97 @@
       document.getElementById('form-pnl').value = 0;
     }
 
-    // STREAK & RULES ENGINE
+    function isWeekend(date) {
+      const day = new Date(`${date}T00:00:00Z`).getUTCDay();
+      return day === 0 || day === 6;
+    }
+
+    function grossDailyLoss(dayTrades) {
+      return dayTrades.reduce((sum, t) => sum + Math.round(Math.max(0, -t.pnl) * 100), 0) / 100;
+    }
+
     function calculateStreak() {
-      const allDates = new Set();
-      trades.forEach(t => allDates.add(t.date));
-      noTradeDays.forEach(d => allDates.add(d));
-
-      if (allDates.size === 0) {
-        streakDays = 0;
-        updateStreakUI();
-        return;
+      const dates = [...new Set([...trades.map(t => t.date), ...noTradeDays])].sort();
+      let balance = initialBalance;
+      streakDays = 0;
+      for (const date of dates) {
+        const dayTrades = trades.filter(t => t.date === date);
+        const lossLimit = dailyPlans.find(plan => plan.date === date)?.lossLimit;
+        const before = balance;
+        balance += dayTrades.reduce((sum, t) => sum + t.pnl, 0);
+        const broken = dayTrades.length > 0 && (isWeekend(date) || dayTrades.length > MAX_TRADES_PER_DAY ||
+          new Set(dayTrades.map(t => t.session)).size > 1 ||
+          (lossLimit != null && grossDailyLoss(dayTrades) > lossLimit) ||
+          (balance <= 0 && (before > 0 || dayTrades.some(t => t.pnl < 0))));
+        if (broken) streakDays = 0;
+        else if (!isWeekend(date)) streakDays += 1;
       }
-
-      const dailyTrades = {};
-      trades.forEach(t => {
-        if (!dailyTrades[t.date]) dailyTrades[t.date] = [];
-        dailyTrades[t.date].push(t);
-      });
-
-      let ruleViolated = false;
-
-      Object.keys(dailyTrades).forEach(date => {
-        const dayTrades = dailyTrades[date];
-        // Limites independentes por sessão: operações sem limite e 4 stops de dia + operações sem limite e 4 stops de noite.
-        ['day', 'night'].forEach(session => {
-          const sessionTrades = dayTrades.filter(t => t.session === session);
-          // Break even não é stop.
-          // Máximo de 4 stops por sessão.
-          const sessionStops = sessionTrades.filter(t => isStop(t.pnl));
-          if (sessionStops.length > MAX_STOPS_PER_SESSION) ruleViolated = true;
-        });
-        // Saldo de abertura do dia: capital inicial + resultado dos dias anteriores.
-        const openingBalance = initialBalance + trades
-          .filter(t => t.date < date)
-          .reduce((sum, t) => sum + t.pnl, 0);
-        const maxAllowedSingleLoss = openingBalance * 0.25;
-        dayTrades.forEach(t => {
-          // Ignora micro-prejuízos de spread/taxas considerados Break Even na regra de 25%
-          if (t.pnl < 0 && !isBreakEven(t.pnl) && Math.abs(t.pnl) > maxAllowedSingleLoss) {
-            ruleViolated = true;
-          }
-        });
-      });
-
-      const totalPnl = trades.reduce((a, b) => a + b.pnl, 0);
-      if ((initialBalance + totalPnl) <= 0) ruleViolated = true;
-
-      if (ruleViolated) {
-        streakDays = 0;
-      } else {
-        streakDays = allDates.size;
-      }
-
       updateStreakUI();
     }
 
     function updateStreakUI() {
       document.getElementById('streak-count').innerText = streakDays;
-
-      const milestones = [3, 7, 14, 30, 60];
-      let nextMilestone = 60;
-      for (let m of milestones) {
-        if (streakDays < m) {
-          nextMilestone = m;
-          break;
-        }
-      }
-
+      const nextMilestone = (Math.floor(streakDays / 30) + 1) * 30;
       document.getElementById('streak-goal-text').innerText = `Próxima meta: ${nextMilestone} dias (${streakDays}/${nextMilestone})`;
-      const pct = Math.min(100, (streakDays / nextMilestone) * 100);
-      document.getElementById('streak-progress-bar').style.width = `${pct}%`;
-
-      milestones.forEach(m => {
-        const el = document.getElementById(`milestone-${m}`);
-        if (el) {
-          if (streakDays >= m) {
-            el.className = "asrv-milestone is-reached";
-          } else {
-            el.className = "asrv-milestone";
-          }
-        }
-      });
+      document.getElementById('streak-progress-bar').style.width = `${Math.min(100, streakDays / nextMilestone * 100)}%`;
+      const block = Math.max(0, Math.floor((streakDays - 1) / 150));
+      document.getElementById('offensive-milestones').innerHTML = Array.from({ length: 5 }, (_, index) => {
+        const level = block * 5 + index + 1;
+        const milestone = level * 30;
+        return `<div class="asrv-milestone ${streakDays >= milestone ? 'is-reached' : ''}"><p class="font-bold">${milestone} dias</p><p class="text-[9px]">${level}ª ofensiva</p></div>`;
+      }).join('');
     }
 
-    // EXPORT / IMPORT
+    function renderPlanEditor() {
+      const form = document.getElementById('daily-plan-form');
+      const date = document.getElementById('daily-plan-date');
+      date.max = getLocalDateStr();
+      if (!date.value) date.value = date.max;
+      const saved = dailyPlans.find(plan => plan.date === date.value);
+      document.getElementById('daily-plan-limit').value = saved?.lossLimit ?? '';
+      const sections = JSON.parse(document.getElementById('checklist-definition').textContent);
+      document.getElementById('daily-plan-fields').innerHTML = sections.map(section => {
+        const fields = section.fields.map(field => {
+          if (field.kind === 'text') return `<label class="block">${field.label}<textarea name="${field.id}" maxlength="2000" class="asrv-field__input"></textarea></label>`;
+          if (field.options) return `<label class="block">${field.label}<select name="${field.id}" class="asrv-field__input"><option value="">Selecione</option>${field.options.map(option => `<option>${option}</option>`).join('')}</select></label>`;
+          return `<label class="asrv-check"><input type="checkbox" name="${field.id}" class="asrv-checkbox"> ${field.label}</label>`;
+        }).join('');
+        return `<fieldset class="space-y-3"><legend class="asrv-section-title">${section.title}</legend>${section.hint ? `<p class="asrv-page-subtitle">${section.hint}</p>` : ''}${fields}</fieldset>`;
+      }).join('');
+      for (const field of form.querySelectorAll('[name]')) {
+        if (field.type === 'checkbox') field.checked = saved?.answers[field.name] === true;
+        else field.value = saved?.answers[field.name] ?? '';
+      }
+      document.getElementById('daily-plan-status').innerText = saved ? 'Checklist salvo para esta data.' : 'Checklist pendente para esta data.';
+    }
+
+    async function saveDailyPlan(event) {
+      event.preventDefault();
+      if (savingDailyPlan) return;
+      const status = document.getElementById('daily-plan-status');
+      if (!cloudEnabled()) { status.innerText = 'Entre na sua conta para salvar o checklist no banco.'; return; }
+      const date = document.getElementById('daily-plan-date').value;
+      const value = document.getElementById('daily-plan-limit').value.trim();
+      const limit = value ? Math.round(Number(value.replace(',', '.')) * 100) / 100 : null;
+      if (limit !== null && (!Number.isFinite(limit) || limit <= 0 || limit >= 1e12)) { status.innerText = 'Informe um limite maior que zero.'; return; }
+      const answers = Object.fromEntries([...event.currentTarget.querySelectorAll('[name]')].map(field => [field.name, field.type === 'checkbox' ? field.checked : field.value.trim()]));
+      savingDailyPlan = true;
+      try {
+        const { error } = await sb.from('daily_plans').upsert({ user_id: cloudUser.id, day: date, loss_limit: limit, answers }, { onConflict: 'user_id,day' });
+        if (error) throw error;
+        dailyPlans = [...dailyPlans.filter(plan => plan.date !== date), { date, lossLimit: limit, answers }];
+        saveData();
+        refreshUI();
+        status.innerText = `Checklist e limite salvos para ${formatShortDate(date)}.`;
+      } catch (error) {
+        status.innerText = error.message || 'Falha ao salvar o checklist.';
+      } finally {
+        savingDailyPlan = false;
+      }
+    }
+
     function exportData() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ trades, noTradeDays, initialBalance }, null, 2));
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ trades, noTradeDays, dailyPlans, initialBalance }, null, 2));
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute("href", dataStr);
       downloadAnchor.setAttribute("download", `diario_trader_asrv_backup_${getLocalDateStr()}.json`);
@@ -1506,7 +1759,9 @@
           if (imported.trades && Array.isArray(imported.trades)) {
             trades = normalizeTrades(imported.trades);
             noTradeDays = normalizeNoTradeDays(imported.noTradeDays || []);
-            initialBalance = Number(imported.initialBalance) || 150;
+            const importedBalance = imported.initialBalance;
+            initialBalance = Number.isFinite(importedBalance) && importedBalance >= 0 ? importedBalance : 150;
+            dailyPlans = Array.isArray(imported.dailyPlans) ? imported.dailyPlans : [];
             document.getElementById('initial-balance-input').value = initialBalance;
             localStorage.setItem('diario_trader_asrv_initial_bal', initialBalance);
             saveData();
@@ -1538,28 +1793,33 @@
     }
 
     async function resetData() {
-      if (confirm('Tem a certeza de que deseja resetar todo o histórico e a sua ofensiva?')) {
-        trades = [];
-        noTradeDays = [];
-        saveData();
-        refreshUI();
-
-        if (cloudEnabled()) {
-          try {
-            const uid = cloudUser.id;
-            const { error: e1 } = await sb.from('trades').delete().eq('user_id', uid);
-            if (e1) throw e1;
-            const { error: e2 } = await sb.from('no_trade_days').delete().eq('user_id', uid);
-            if (e2) throw e2;
-            pendingOps = [];
-            savePending();
-            setCloudStatus('connected');
-          } catch (err) {
-            console.warn('Falha ao limpar a nuvem:', err);
-            setCloudStatus('pending');
-          }
+      if (!confirm('Apagar as operações, os dias sem operar e os checklists desta conta e zerar o saldo inicial?')) return;
+      if (savingTrade || savingDailyPlan || flushingPending) {
+        alert('Aguarde a gravação em andamento antes de zerar o diário.');
+        return;
+      }
+      if (cloudEnabled()) {
+        try {
+          const { data, error } = await sb.rpc('reset_trading_journal');
+          if (error) throw error;
+          await Promise.allSettled((data || []).map(id => removeTradeScreenshotFile(id)));
+          setCloudStatus('connected');
+        } catch (error) {
+          alert(`Não foi possível zerar o diário no banco: ${error.message}`);
+          return;
         }
       }
+      trades = [];
+      noTradeDays = [];
+      dailyPlans = [];
+      screenshotUrls = {};
+      initialBalance = 0;
+      pendingOps = [];
+      savePending();
+      document.getElementById('initial-balance-input').value = '0';
+      saveData();
+      renderPlanEditor();
+      refreshUI();
     }
 
     function deleteNoTradeDay(date) {
@@ -1591,6 +1851,7 @@
         updateDashboardMetrics();
         renderAssetChart();
       }
+      if (tabId === 'plan') renderPlanEditor();
       if (tabId === 'stats') {
         renderStatsCharts();
       }
@@ -1662,7 +1923,7 @@
       if (savingTrade) return;
       savingTrade = true;
       persistTrade()
-        .catch(err => console.error('Falha ao salvar a operação:', err))
+        .catch(err => alert(err.message || 'Falha ao salvar a operação.'))
         .finally(() => { savingTrade = false; });
     }
 
@@ -1676,49 +1937,23 @@
       const asset = document.getElementById('form-asset').value.toUpperCase();
       const type = document.getElementById('form-type').value;
       const session = document.getElementById('form-session').value === 'night' ? 'night' : 'day';
-      const sessionName = sessionLabel(session);
       const lots = parseFloat(document.getElementById('form-lots').value);
       const pnl = parseFloat(document.getElementById('form-pnl').value);
       const notes = document.getElementById('form-notes').value;
-
-      if (noTradeDays.includes(date)) {
-        noTradeDays = noTradeDays.filter(d => d !== date);
+      if (!Number.isFinite(pnl) || !Number.isFinite(lots) || lots <= 0 || !asset.trim()) {
+        alert('Preencha ativo, lotes e resultado.');
+        return;
       }
-
-      const tradesOnDate = trades.filter(t => t.date === date && t.id.toString() !== editId);
-      // Os limites são independentes por sessão: operações sem limite e 4 stops de dia + operações sem limite e 4 stops de noite.
-      const sessionTradesOnDate = tradesOnDate.filter(t => t.session === session);
-      // Break even não é stop.
-      // Stop = perda real. Após 4 stops na sessão, o correto é parar de operar nela.
-      const stopsOnDate = sessionTradesOnDate.filter(t => isStop(t.pnl));
-      // Limite com base no saldo de abertura do dia: capital inicial + resultado dos dias anteriores.
-      const openingBalance = initialBalance + trades
-        .filter(t => t.date < date)
-        .reduce((sum, t) => sum + t.pnl, 0);
-      const maxSingleLoss = openingBalance * 0.25;
-
-      if (isStop(pnl) && stopsOnDate.length === MAX_STOPS_PER_SESSION - 1) {
-        alert(`⚠️ Este é o ${MAX_STOPS_PER_SESSION}º stop da sessão ${sessionName}. Após ele, pare de operar nessa sessão para não perder a ofensiva.`);
-      } else if (isStop(pnl) && stopsOnDate.length >= MAX_STOPS_PER_SESSION) {
-        alert(`⚠️ ATENÇÃO: Você já possui ${MAX_STOPS_PER_SESSION} stops na sessão ${sessionName} nesta data! Salvar este stop irá ZERAR a sua ofensiva. Pare de operar nessa sessão.`);
-      } else if (!isBreakEven(pnl) && stopsOnDate.length >= MAX_STOPS_PER_SESSION) {
-        alert(`⚠️ Você já tem ${MAX_STOPS_PER_SESSION} stops na sessão ${sessionName}. O ideal é parar de operar nessa sessão para preservar a ofensiva.`);
-
-      } else if (pnl < 0 && !isBreakEven(pnl) && Math.abs(pnl) > maxSingleLoss) {
-        alert(`⚠️ ATENÇÃO: Esta operação tem um prejuízo de ${Math.abs(pnl).toFixed(2)}, o que ultrapassa o limite máximo individual de 25% do saldo inicial do dia (${maxSingleLoss.toFixed(2)}). A sua ofensiva será ZERADA!`);
-      }
-
-      let savedTrade;
-      if (editId) {
-        trades = trades.map(t => {
-          if (String(t.id) !== editId) return t;
-          savedTrade = { ...t, date, asset, type, session, lots, pnl, notes, screenshot_path: t.screenshot_path || '' };
-          return savedTrade;
-        });
-      } else {
-        savedTrade = { id: newTradeId(), date, asset, type, session, lots, pnl, notes, screenshot_path: '' };
-        trades.push(savedTrade);
-      }
+      const previous = trades.find(t => t.id === editId);
+      const addsToDay = previous?.date !== date;
+      const tradesOnDate = trades.filter(t => t.date === date && t.id !== editId);
+      if (addsToDay && tradesOnDate.length >= MAX_TRADES_PER_DAY) { alert('Você já registrou duas operações nessa data, incluindo break even.'); return; }
+      if ((addsToDay || previous?.session !== session) && tradesOnDate.some(t => t.session !== session)) { alert('As duas operações devem ser da mesma sessão.'); return; }
+      const limit = dailyPlans.find(plan => plan.date === date)?.lossLimit;
+      if (addsToDay && limit != null && grossDailyLoss(tradesOnDate) >= limit) { alert('O limite de perda diária já foi atingido.'); return; }
+      if (isWeekend(date) && addsToDay && !confirm('Sábado e domingo são dias sem operar. Se já executou esta operação, deseja registrar a quebra e zerar a ofensiva?')) return;
+      const savedTrade = { id: previous?.id ?? newTradeId(), date, asset, type, session, lots, pnl, notes,
+        screenshot_path: previous?.screenshot_path ?? '' };
 
       if (modalShot.dataUrl && !cloudEnabled()) {
         alert('Entre na nuvem (Supabase) para anexar o print. A operação será salva sem a imagem.');
@@ -1734,11 +1969,20 @@
         }
       } else if (modalShot.removed) {
         savedTrade.screenshot_path = '';
-        if (cloudEnabled()) await removeTradeScreenshotFile(savedTrade.id);
       }
 
-      saveData();
       await queueCloud('upsertTrade', savedTrade);
+      if (previous) trades = trades.map(t => t.id === editId ? savedTrade : t);
+      else trades.push(savedTrade);
+      if (noTradeDays.includes(date)) {
+        noTradeDays = noTradeDays.filter(d => d !== date);
+        await queueCloud('deleteNoTrade', date);
+      }
+      if (modalShot.removed && cloudEnabled()) await removeTradeScreenshotFile(savedTrade.id);
+      if (limit != null && grossDailyLoss([...tradesOnDate, savedTrade]) >= limit) {
+        alert('Limite de perda diária atingido. Encerre as operações do dia.');
+      }
+      saveData();
       if (shotDataUrl) await queueCloud('uploadScreenshot', { id: savedTrade.id, dataUrl: shotDataUrl });
       closeModal();
       if (cloudEnabled()) await refreshScreenshotUrls();
@@ -1834,14 +2078,43 @@
       if (maxLossEl) maxLossEl.innerText = formatCurrency(maxLoss, '- ');
     }
 
-    function setJournalDate(date) {
+    function setJournalDate(date, resetPeriod = false) {
+      if (!date || resetPeriod) {
+        journalPeriod = 'day';
+        document.getElementById('journal-period').value = 'day';
+      }
       journalSelectedDate = date;
       document.getElementById('journal-date').value = date;
       refreshUI();
     }
 
+    function setJournalPeriod(period) {
+      journalPeriod = period;
+      setJournalDate(journalSelectedDate || getLocalDateStr());
+    }
+
+    function journalRange() {
+      if (!journalSelectedDate) return null;
+      if (journalPeriod === 'week') {
+        const start = startOfWeekIso(journalSelectedDate);
+        const end = new Date(`${start}T00:00:00Z`);
+        end.setUTCDate(end.getUTCDate() + 6);
+        return [start, end.toISOString().slice(0, 10)];
+      }
+      if (journalPeriod === 'month') {
+        const [year, month] = journalSelectedDate.split('-').map(Number);
+        return [`${journalSelectedDate.slice(0, 7)}-01`, new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10)];
+      }
+      return [journalSelectedDate, journalSelectedDate];
+    }
+
+    function matchesJournalDate(date) {
+      const range = journalRange();
+      return !range || (date >= range[0] && date <= range[1]);
+    }
+
     function matchesJournalTrade(trade) {
-      if (journalSelectedDate && trade.date !== journalSelectedDate) return false;
+      if (!matchesJournalDate(trade.date)) return false;
       if (journalResultFilter === 'be') return isBreakEven(trade.pnl);
       if (journalResultFilter === 'win') return trade.pnl > 0 && !isBreakEven(trade.pnl);
       if (journalResultFilter === 'loss') return isStop(trade.pnl);
@@ -1849,7 +2122,7 @@
     }
 
     function renderJournalHistorySummary() {
-      const dayTrades = trades.filter(t => !journalSelectedDate || t.date === journalSelectedDate);
+      const dayTrades = trades.filter(t => matchesJournalDate(t.date));
       const gains = dayTrades.reduce((sum, t) => sum + Math.max(0, t.pnl), 0);
       const losses = dayTrades.reduce((sum, t) => sum + Math.min(0, t.pnl), 0);
       const pnl = gains + losses;
@@ -1857,13 +2130,14 @@
       const stops = dayTrades.filter(t => isStop(t.pnl)).length;
       const be = dayTrades.filter(t => isBreakEven(t.pnl)).length;
       const amount = value => isValueHidden ? '••••••' : `${value < 0 ? '- ' : value > 0 ? '+ ' : ''}$ ${Math.abs(value).toFixed(2)}`;
-      const title = journalSelectedDate ? `Diário de ${formatShortDate(journalSelectedDate)}` : 'Todos os dias';
-      const status = journalSelectedDate && noTradeDays.includes(journalSelectedDate) ? ' · Dia registrado sem operar' : dayTrades.length === 0 ? ' · Nenhuma operação registrada' : '';
+      const range = journalRange();
+      const title = !range ? 'Todos os dias' : journalPeriod === 'day' ? `Diário de ${formatShortDate(journalSelectedDate)}` : `${journalPeriod === 'week' ? 'Semana' : 'Mês'} de ${formatShortDate(range[0])} a ${formatShortDate(range[1])}`;
+      const status = journalPeriod === 'day' && journalSelectedDate && noTradeDays.includes(journalSelectedDate) ? ' · Dia registrado sem operar' : dayTrades.length === 0 ? ' · Nenhuma operação registrada' : '';
       document.getElementById('journal-date-status').innerText = `${title}${status} · ${dayTrades.length} operações · ${wins} ganhos · ${stops} perdas · ${be} BE`;
       const cards = [
         ['Ganhos brutos', amount(gains), 'text-emerald-400'],
         ['Perdas brutas', amount(losses), 'text-red-400'],
-        ['Resultado líquido', amount(pnl), pnl < 0 ? 'text-red-400' : 'text-emerald-400'],
+        [range && journalPeriod === 'week' ? 'Resultado semanal' : range && journalPeriod === 'month' ? 'Resultado mensal' : 'Resultado líquido', amount(pnl), pnl < 0 ? 'text-red-400' : 'text-emerald-400'],
         ['Operações (inclui BE)', String(dayTrades.length), 'text-white']
       ];
       document.getElementById('journal-day-summary').innerHTML = cards.map(([label, value, color]) => `<div><p class="asrv-stat__label">${label}</p><p class="text-2xl font-bold ${color}">${value}</p></div>`).join('');
@@ -1888,15 +2162,12 @@
         document.getElementById(`today-${session}-trades`).innerText = todayCount;
         document.getElementById(`today-${session}-stops`).innerText = todayStops;
 
-        const badgeEl = document.getElementById(`today-${session}-badge`);
-        if (todayStops >= MAX_STOPS_PER_SESSION) {
-          badgeEl.className = 'asrv-badge asrv-badge--danger asrv-badge--pill animate-pulse';
-        } else if (todayStops === MAX_STOPS_PER_SESSION - 1) {
-          badgeEl.className = 'asrv-badge asrv-badge--warning asrv-badge--pill';
-        } else {
-          badgeEl.className = 'asrv-badge asrv-badge--neutral asrv-badge--pill';
-        }
       });
+      const plan = dailyPlans.find(item => item.date === todayStr);
+      const loss = grossDailyLoss(trades.filter(t => t.date === todayStr));
+      const limitStatus = plan?.lossLimit == null ? 'Limite de perda ainda sem configuração.' :
+        isValueHidden ? 'Limite de perda configurado.' : `Perda hoje: ${loss.toFixed(2)} de ${plan.lossLimit.toFixed(2)}.`;
+      document.getElementById('today-plan-status').innerText = `${plan ? 'Checklist de hoje salvo.' : 'Checklist de hoje pendente no Plano Operacional.'} ${limitStatus}`;
 
       updatePeriodResults(todayStr);
 
@@ -1937,7 +2208,7 @@
       
       const allItems = [
         ...trades.filter(matchesJournalTrade).map(t => ({ ...t, itemType: 'trade' })),
-        ...noTradeDays.filter(d => journalResultFilter === 'all' && (!journalSelectedDate || d === journalSelectedDate)).map(d => ({ date: d, itemType: 'no_trade', id: `nt-${d}` }))
+        ...noTradeDays.filter(d => journalResultFilter === 'all' && matchesJournalDate(d)).map(d => ({ date: d, itemType: 'no_trade', id: `nt-${d}` }))
       ].sort((a, b) => b.date.localeCompare(a.date));
 
       if (allItems.length === 0) {
@@ -1957,7 +2228,7 @@
               </div>
               <div class="asrv-trade-card__body">
                 <p class="text-xs text-gray-400 italic">"Mercado sem padrão claro. Decisão consciente de não operar e proteger o capital."</p>
-                <p class="text-xs font-bold text-emerald-400 mt-2">+1 dia de Ofensiva 🔥</p>
+                <p class="text-xs font-bold text-emerald-400 mt-2">${isWeekend(item.date) ? 'Dia de descanso' : '+1 dia de Ofensiva'}</p>
               </div>
               <div class="asrv-trade-card__footer">
                 <button onclick="deleteNoTradeDay('${item.date}')" class="asrv-trade-card__action asrv-trade-card__action--danger"><i class="fa-solid fa-trash"></i> Eliminar</button>
@@ -2007,7 +2278,7 @@
       const tbody = document.getElementById('trades-table-body');
       const orderedTrades = sortTradesByMostRecent(trades.filter(matchesJournalTrade));
       if (orderedTrades.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-gray-500">${journalSelectedDate && noTradeDays.includes(journalSelectedDate) && journalResultFilter === 'all' ? 'Dia registrado sem operar.' : 'Nenhuma operação para a data e o resultado selecionados.'}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-gray-500">${journalPeriod === 'day' && journalSelectedDate && noTradeDays.includes(journalSelectedDate) && journalResultFilter === 'all' ? 'Dia registrado sem operar.' : 'Nenhuma operação para a data e o resultado selecionados.'}</td></tr>`;
         return;
       }
       tbody.innerHTML = orderedTrades.map((t, idx) => {

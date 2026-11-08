@@ -1,101 +1,83 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { MAX_STOPS_PER_SESSION } from '@asrv/backend';
-import { Card, Checkbox, colors, spacing, typography } from '@asrv/design-system';
+import { useState } from 'react';
+import { Text, View } from 'react-native';
+import { CHECKLIST_SECTIONS, type DailyPlan } from '@asrv/backend';
+import { Alert, Button, Card, Checkbox, Input, Textarea, colors, spacing, typography } from '@asrv/design-system';
+import { formatDate, maskDateInput, parseDateInput, today } from './format';
 
-const checklistItems = [
-  'Verificar calendário de notícias',
-  `Respeitar o limite de ${MAX_STOPS_PER_SESSION} stops por sessão (dia/noite)`,
-  `Parar de operar na sessão após ${MAX_STOPS_PER_SESSION} stops`,
-  'Mover o Stop para Break Even ao atingir a primeira parcial',
-  'Se a oportunidade passou, registrar o dia sem operação',
-];
-
-export function PlanTab({
-  checklist,
-  onToggle,
-}: {
-  checklist: readonly boolean[];
-  onToggle: (index: number, checked: boolean) => void;
+export function PlanTab({ plans, onSave }: {
+  plans: readonly DailyPlan[];
+  onSave: (plan: DailyPlan) => Promise<void>;
 }) {
+  const [dateDraft, setDateDraft] = useState(() => formatDate(today()));
+  const date = parseDateInput(dateDraft);
   return (
-    <View style={styles.screen}>
-      <Text style={styles.pageTitle}>Plano Operacional & Disciplina</Text>
-
-      <Card>
-        <Text style={styles.sectionTitle}>Regras de Ouro da Plataforma</Text>
-        <View style={styles.rules}>
-          <Text style={styles.rule}>
-            ⚡ Operações sem limite: O contador inclui todas as operações, inclusive break even.
-          </Text>
-          <Text style={styles.rule}>
-            🛑 Stops: Máximo de {MAX_STOPS_PER_SESSION} stops por sessão. Ao atingir{' '}
-            {MAX_STOPS_PER_SESSION} stops no dia ou {MAX_STOPS_PER_SESSION} na noite, pare de operar
-            naquela sessão para não perder a ofensiva.
-          </Text>
-          <Text style={styles.rule}>
-            🛑 Perda Individual Máxima: Nenhuma operação pode ter prejuízo superior a 25% do
-            saldo inicial do dia (capital inicial + resultado dos dias anteriores).
-          </Text>
-          <Text style={styles.rule}>
-            ⚖️ Break Even (0x0): Posições encerradas no zero a zero preservam o capital e
-            contam no total de operações, mas não como stops.
-          </Text>
-          <Text style={styles.rule}>
-            🛡️ Saber Ficar de Fora: Registrar dias em que não operou mantém a ofensiva ativa.
-          </Text>
-          <Text style={styles.rule}>
-            🔥 Ofensiva & Metas: Acumule dias de disciplina para alcançar 3, 7, 14, 30 e 60
-            dias.
-          </Text>
-        </View>
-      </Card>
-
-      <Card>
-        <Text style={styles.sectionTitle}>Checklist Operacional</Text>
-        <View style={styles.checklist}>
-          {checklistItems.map((item, index) => (
-            <Checkbox
-              key={item}
-              label={item}
-              checked={checklist[index] ?? false}
-              onChange={(checked) => onToggle(index, checked)}
-            />
-          ))}
-        </View>
-      </Card>
+    <View style={{ gap: spacing.md }}>
+      <Text style={{ color: colors.text, fontSize: typography.hero }}>Plano Operacional</Text>
+      <Text style={{ color: colors.text }}>Até duas operações por dia, incluindo break even, em uma única sessão. Sábado e domingo são dias sem operar.</Text>
+      <Input label="Data do checklist" value={dateDraft} onChangeText={value => setDateDraft(maskDateInput(value))} keyboardType="numeric" />
+      {date && date <= today() && <DailyChecklist key={date} date={date} saved={plans.find(plan => plan.date === date)} onSave={onSave} />}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    gap: spacing.lg,
-  },
-  pageTitle: {
-    color: colors.text,
-    fontSize: typography.hero,
-    fontWeight: '800',
-  },
-  sectionTitle: {
-    color: colors.text,
-    fontSize: typography.subtitle,
-    fontWeight: '700',
-    marginBottom: spacing.sm,
-  },
-  rules: {
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.4)',
-    borderRadius: 8,
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-    padding: spacing.md,
-  },
-  rule: {
-    color: colors.dangerText,
-    fontSize: typography.caption,
-    lineHeight: 19,
-  },
-  checklist: {
-    gap: spacing.xs,
-  },
-});
+function DailyChecklist({ date, saved, onSave }: {
+  date: string;
+  saved?: DailyPlan;
+  onSave: (plan: DailyPlan) => Promise<void>;
+}) {
+  const [answers, setAnswers] = useState(saved?.answers ?? {});
+  const [limit, setLimit] = useState(saved?.lossLimit?.toString() ?? '');
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState('');
+  const [error, setError] = useState('');
+
+  function answer(id: string, value: boolean | string) {
+    setAnswers(current => ({ ...current, [id]: value }));
+    setStatus('Alterações pendentes de salvar.');
+  }
+
+  async function save() {
+    setSaving(true);
+    setStatus('');
+    setError('');
+    try {
+      await onSave({ date, answers, lossLimit: limit.trim() ? Number(limit.replace(',', '.')) : null });
+      setStatus('Checklist e limite salvos para esta data.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Falha ao salvar o checklist.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <View style={{ gap: spacing.md }}>
+        <Text style={{ color: colors.text, fontSize: typography.subtitle }}>Checklist Operacional Diário</Text>
+        <Input label="Limite de perda diária ($ / R$)" value={limit} onChangeText={value => { setLimit(value); setStatus('Alterações pendentes de salvar.'); }} keyboardType="decimal-pad" placeholder="Ex.: 10,00" />
+        <Text style={{ color: colors.text }}>O limite soma os resultados negativos desta data, inclusive taxas registradas no break even.</Text>
+        <Button disabled={saving} onPress={save}>Salvar checklist e limite</Button>
+        {CHECKLIST_SECTIONS.map(section => (
+          <View key={section.title} style={{ gap: spacing.sm }}>
+            <Text style={{ color: colors.text, fontSize: typography.subtitle }}>{section.title}</Text>
+            {'hint' in section && <Text style={{ color: colors.text }}>{section.hint}</Text>}
+            {section.fields.map(field => {
+              const value = String(answers[field.id] ?? '');
+              if ('kind' in field) return <Textarea key={field.id} label={field.label} value={value} onChangeText={text => answer(field.id, text)} />;
+              if (field.options) return (
+                <View key={field.id} style={{ gap: spacing.xs }}>
+                  <Text style={{ color: colors.text }}>{field.label}</Text>
+                  {field.options.map(option => <Checkbox key={option} label={option} checked={value === option} onChange={checked => answer(field.id, checked ? option : '')} />)}
+                </View>
+              );
+              return <Checkbox key={field.id} label={field.label} checked={answers[field.id] === true} onChange={checked => answer(field.id, checked)} />;
+            })}
+          </View>
+        ))}
+        <Text accessibilityLiveRegion="polite" style={{ color: colors.text }}>{status || (saved ? 'Checklist salvo para esta data.' : 'Checklist pendente para esta data.')}</Text>
+        {error && <Alert tone="danger">{error}</Alert>}
+        <Button disabled={saving} onPress={save}>Salvar checklist e limite</Button>
+      </View>
+    </Card>
+  );
+}

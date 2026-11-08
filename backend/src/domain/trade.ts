@@ -1,11 +1,5 @@
 import { DomainError } from './errors';
 
-/**
- * Máximo de stops (operações com perda real) por sessão (dia ou noite).
- * Ao atingir o limite, o correto é parar de operar naquela sessão para preservar a ofensiva.
- */
-export const MAX_STOPS_PER_SESSION = 4;
-export const MAX_LOSS_RATIO = 0.25;
 export const BREAK_EVEN_TOLERANCE = 0.3;
 
 export type TradeType = 'Compra' | 'Venda';
@@ -29,6 +23,8 @@ export interface Trade {
 
 export interface TradeInput {
   id?: string;
+  /** Confirma o registro de uma operação de fim de semana já executada. */
+  weekendBreach?: boolean;
   date: string;
   asset: string;
   type: TradeType;

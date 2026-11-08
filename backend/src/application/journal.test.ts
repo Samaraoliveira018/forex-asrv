@@ -1,3 +1,4 @@
+import type { DailyPlan } from '../domain/dailyPlan';
 import { describe, expect, it } from 'vitest';
 import { DomainError } from '../domain/errors';
 import { createTrade, type Trade } from '../domain/trade';
@@ -134,10 +135,24 @@ function setup() {
   const settings = new FakeSettingsRepository();
   const screenshots = new FakeScreenshotStorage();
   const pending = new FakeQueue();
+  const plans = new Map<string, DailyPlan>();
 
   const service = createJournalService({
     trades,
     noTradeDays,
+    dailyPlans: {
+      list: async () => [...plans.values()],
+      resetAt: async () => null,
+      save: async plan => { plans.set(plan.date, plan); },
+      resetJournal: async () => {
+        const ids = trades.items.map(trade => trade.id);
+        trades.items = [];
+        noTradeDays.items = [];
+        settings.value = 0;
+        plans.clear();
+        return ids;
+      },
+    },
     settings,
     screenshots,
     pending,
@@ -197,180 +212,58 @@ describe('createJournalService', () => {
     );
   });
 
-  it('salva mais de seis operações sem aviso de limite', async () => {
-    const { trades, service } = setup();
-    seedTrade(trades, { date: '2026-10-21' });
-    seedTrade(trades, { date: '2026-10-21' });
-    seedTrade(trades, { date: '2026-10-21' });
-    seedTrade(trades, { date: '2026-10-21' });
-    seedTrade(trades, { date: '2026-10-21' });
-    seedTrade(trades, { date: '2026-10-21' });
+  const input = { date: '2026-10-21', asset: 'EURUSD', type: 'Compra' as const, lots: 1, pnl: 0 };
 
-    const result = await service.saveTrade({
-      date: '2026-10-21',
-      asset: 'EURUSD',
-      type: 'Compra',
-      lots: 1,
-      pnl: 5,
-    });
-
-    expect(result.synced).toBe(true);
-    expect(result.warnings).toEqual([]);
-    expect(trades.items).toHaveLength(7);
-  });
-
-  it('não avisa do limite da sessão quando a operação é break even', async () => {
-    const { trades, service } = setup();
-    seedTrade(trades, { date: '2026-10-21' });
-    seedTrade(trades, { date: '2026-10-21' });
-    seedTrade(trades, { date: '2026-10-21' });
-    seedTrade(trades, { date: '2026-10-21' });
-    seedTrade(trades, { date: '2026-10-21' });
-    seedTrade(trades, { date: '2026-10-21' });
-
-    const result = await service.saveTrade({
-      date: '2026-10-21',
-      asset: 'EURUSD',
-      type: 'Compra',
-      lots: 1,
-      pnl: 0,
-    });
-
-    expect(result.synced).toBe(true);
-    expect(result.warnings.join(' ').toLowerCase()).not.toContain('limite');
-    expect(trades.items).toHaveLength(7);
-  });
-
-  it('avisa que o quarto stop é o último antes de parar de operar', async () => {
-    const { trades, service } = setup();
-    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
-    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
-    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
-
-    const result = await service.saveTrade({
-      date: '2026-10-21',
-      asset: 'EURUSD',
-      type: 'Compra',
-      lots: 1,
-      pnl: -5,
-    });
-
-    expect(result.warnings.join(' ').toLowerCase()).toContain('4º stop');
-  });
-
-  it('avisa ao atingir o limite de quatro stops na sessão', async () => {
-    const { trades, service } = setup();
-    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
-    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
-    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
-    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
-
-    const result = await service.saveTrade({
-      date: '2026-10-21',
-      asset: 'EURUSD',
-      type: 'Compra',
-      lots: 1,
-      pnl: -5,
-    });
-
-    expect(result.synced).toBe(true);
-    expect(result.warnings.join(' ').toLowerCase()).toContain('stop');
-    expect(trades.items).toHaveLength(5);
-  });
-
-  it('avisa para parar de operar após quatro stops mesmo em uma operação vencedora', async () => {
-    const { trades, service } = setup();
-    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
-    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
-    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
-    seedTrade(trades, { date: '2026-10-21', pnl: -10 });
-
-    const result = await service.saveTrade({
-      date: '2026-10-21',
-      asset: 'EURUSD',
-      type: 'Compra',
-      lots: 1,
-      pnl: 30,
-    });
-
-    expect(result.warnings.join(' ').toLowerCase()).toContain('parar de operar');
-  });
-
-  it('não mistura os stops da sessão do dia com os da noite', async () => {
-    const { trades, service } = setup();
-    seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'day' });
-    seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'day' });
-    seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'day' });
-    seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'day' });
-
-    const result = await service.saveTrade({
-      date: '2026-10-21',
-      asset: 'EURUSD',
-      type: 'Compra',
-      session: 'night',
-      lots: 1,
-      pnl: -5,
-    });
-
-    expect(result.warnings).toEqual([]);
-  });
-
-  it('avisa o quarto stop da sessão da noite', async () => {
-    const { trades, service } = setup();
-    seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'night' });
-    seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'night' });
-    seedTrade(trades, { date: '2026-10-21', pnl: -10, session: 'night' });
-
-    const result = await service.saveTrade({
-      date: '2026-10-21',
-      asset: 'EURUSD',
-      type: 'Compra',
-      session: 'night',
-      lots: 1,
-      pnl: -5,
-    });
-
-    expect(result.warnings.join(' ').toLowerCase()).toContain('4º stop');
-    expect(result.warnings.join(' ')).toContain('Noite');
-  });
-
-  it('avisa quando a perda individual passa de 25% do saldo inicial do dia', async () => {
+  it('bloqueia a terceira operação mesmo quando as duas primeiras são break even', async () => {
     const { service } = setup();
-
-    const result = await service.saveTrade({
-      date: '2026-10-21',
-      asset: 'EURUSD',
-      type: 'Compra',
-      lots: 1,
-      pnl: -250.01,
-    });
-
-    expect(result.warnings.join(' ')).toContain('25%');
+    await service.saveTrade({ ...input, id: 'one' });
+    await service.saveTrade({ ...input, id: 'two' });
+    await expect(service.saveTrade(input)).rejects.toThrow('duas operações');
+    await expect(service.saveTrade({ ...input, id: 'one', pnl: 1 })).resolves.toMatchObject({ synced: true });
+    expect((await service.list()).trades).toHaveLength(2);
   });
 
-  it('usa o saldo de abertura do dia no aviso de perda', async () => {
-    const { service, trades } = setup();
-    trades.items = [
-      createTrade({
-        id: 'gain',
-        date: '2026-10-20',
-        asset: 'EURUSD',
-        type: 'Compra',
-        lots: 1,
-        pnl: 1000,
-      }),
-    ];
+  it.each([['day', 'night'], ['night', 'day']] as const)('impede misturar %s e %s na mesma data', async (first, second) => {
+    const { service } = setup();
+    await service.saveTrade({ ...input, session: first });
+    await expect(service.saveTrade({ ...input, session: second })).rejects.toThrow('mesma sessão');
+  });
 
-    const result = await service.saveTrade({
-      date: '2026-10-21',
-      asset: 'EURUSD',
-      type: 'Compra',
-      lots: 1,
-      pnl: -300,
-    });
+  it('exige confirmação de operação feita no fim de semana e reinicia a ofensiva', async () => {
+    const { service } = setup();
+    await service.saveTrade(input);
+    const saturday = { ...input, date: '2026-10-24' };
+    await expect(service.saveTrade(saturday)).rejects.toThrow('Sábado e domingo');
+    await service.saveTrade({ ...saturday, weekendBreach: true });
+    expect((await service.list()).discipline.streak).toBe(0);
+    await service.registerNoTradeDay('2026-10-26');
+    expect((await service.list()).discipline.streak).toBe(1);
+  });
 
-    // O dia 21 abre com 2000, então o limite é 500. A perda de 300 não gera aviso.
-    expect(result.warnings.join(' ')).not.toContain('saldo inicial do dia');
+  it('salva o checklist por dia e bloqueia nova operação ao atingir o limite salvo', async () => {
+    const { service } = setup();
+    await service.saveDailyPlan({ date: input.date, lossLimit: 10, answers: { sleep: true, trend: 'Alta' } });
+    await service.saveDailyPlan({ date: '2026-10-22', lossLimit: 20, answers: { sleep: false } });
+    const first = await service.saveTrade({ ...input, pnl: -10 });
+    expect(first.warnings[0]).toMatch(/Limite de perda diária atingido/);
+    await expect(service.saveTrade(input)).rejects.toThrow('limite de perda diária');
+    await service.saveTrade({ ...input, date: '2026-10-22', pnl: -10 });
+    expect((await service.list()).dailyPlans).toEqual([
+      { date: input.date, lossLimit: 10, answers: { sleep: true, trend: 'Alta' } },
+      { date: '2026-10-22', lossLimit: 20, answers: { sleep: false } },
+    ]);
+  });
+
+  it('zera saldo, histórico, checklist e pendências', async () => {
+    const { service, pending, screenshots } = setup();
+    const result = await service.saveTrade(input);
+    await service.saveDailyPlan({ date: input.date, lossLimit: 10, answers: { sleep: true } });
+    await service.registerNoTradeDay('2026-10-22');
+    pending.jobs.push({ op: 'setInitialBalance', value: 500 });
+    await service.resetJournal();
+    expect(await service.list()).toMatchObject({ initialBalance: 0, trades: [], noTradeDays: [], dailyPlans: [], discipline: { streak: 0 } });
+    expect(pending.jobs).toEqual([]);
+    expect(screenshots.removed).toContain(result.trade.id);
   });
 
   it('enfileira a operação quando o repositório está offline', async () => {
@@ -389,7 +282,7 @@ describe('createJournalService', () => {
     expect(result.synced).toBe(false);
     expect(result.trade.id).toBe('offline');
     expect(await service.pendingCount()).toBe(1);
-    expect(pending.jobs[0]).toEqual({ op: 'upsertTrade', trade: result.trade });
+    expect(pending.jobs[0]).toMatchObject({ op: 'upsertTrade', trade: result.trade });
   });
 
   it('anexa o print ao salvar a operação', async () => {
@@ -441,7 +334,7 @@ describe('createJournalService', () => {
 
     expect(result.synced).toBe(false);
     expect(result.trade.screenshotPath).toBe('');
-    expect(pending.jobs[0]).toEqual({
+    expect(pending.jobs[0]).toMatchObject({
       op: 'upsertTrade',
       trade: result.trade,
       screenshotDataUrl: dataUrl,
@@ -493,7 +386,7 @@ describe('createJournalService', () => {
     const result = await service.deleteTrade('trade-1');
 
     expect(result.synced).toBe(false);
-    expect(pending.jobs[0]).toEqual({ op: 'deleteTrade', id: 'trade-1' });
+    expect(pending.jobs[0]).toMatchObject({ op: 'deleteTrade', id: 'trade-1' });
   });
 
   it('exclui uma operação online', async () => {
@@ -552,7 +445,7 @@ describe('createJournalService', () => {
     const result = await service.saveInitialBalance(3000);
 
     expect(result.synced).toBe(false);
-    expect(pending.jobs[0]).toEqual({ op: 'setInitialBalance', value: 3000 });
+    expect(pending.jobs[0]).toMatchObject({ op: 'setInitialBalance', value: 3000 });
   });
 
   it('envia a fila pendente em ordem', async () => {

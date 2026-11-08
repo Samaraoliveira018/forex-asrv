@@ -103,6 +103,17 @@ describe('createBff', () => {
     expect(client.tables.trades[0]).toMatchObject({ id: 'offline-1', user_id: 'user-1' });
   });
 
+  it('descarta uma operação offline anterior ao reset feito em outro dispositivo', async () => {
+    const { client, bff } = setup();
+    await bff.auth.signIn('samara@example.com', 'segredo');
+    client.offline = true;
+    await bff.journal.saveTrade({ id: 'old', date: '2026-10-21', asset: 'EURUSD', type: 'Compra', lots: 1, pnl: 10 });
+    client.offline = false;
+    client.tables.settings.push({ user_id: 'user-1', initial_balance: 0, reset_at: new Date().toISOString() });
+    expect(await bff.journal.flush()).toEqual({ pending: 0, flushed: 0 });
+    expect(client.tables.trades).toEqual([]);
+  });
+
   it('propaga credenciais inválidas', async () => {
     const { bff } = setup();
 

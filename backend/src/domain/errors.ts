@@ -8,6 +8,8 @@ export type DomainErrorCode =
   | 'INVALID_BALANCE'
   | 'INVALID_CREDENTIALS'
   | 'NO_TRADE_WITH_TRADES'
+  | 'TRADE_RULE'
+  | 'INVALID_DAILY_PLAN'
   | 'AUTH_REQUIRED';
 
 export class DomainError extends Error {

@@ -37,6 +37,16 @@ mobile (Expo) ────┘          │
 
 Ainda falta apenas: **Authentication → Settings → Password Security → Enable leaked password protection**.
 
+## Migração do checklist e limites diários
+
+Antes de publicar o app com o novo Plano Operacional, aplique
+[`20261108_daily_plan.sql`](./migrations/20261108_daily_plan.sql) no SQL Editor do projeto,
+após o schema base. A migração mantém o histórico existente e cria o checklist com RLS,
+a validação de operações e a função de reset restrita à conta autenticada.
+
+Após a migração, **Resetar Todos os Dados** no diário apaga as operações, os dias sem operar
+e os checklists da conta conectada, além de gravar o saldo inicial como zero.
+
 ## Passo a passo (uma vez só)
 
 ### 1. Rodar o schema

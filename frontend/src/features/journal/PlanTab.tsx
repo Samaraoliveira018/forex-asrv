@@ -1,71 +1,91 @@
-import { MAX_STOPS_PER_SESSION } from '@asrv/backend';
-import { Checkbox, Card } from '@asrv/design-system';
+import { useState } from 'react';
+import { CHECKLIST_SECTIONS, type DailyPlan } from '@asrv/backend';
+import { Alert, Button, Card, Checkbox } from '@asrv/design-system';
+import { today } from './format';
 
-const checklistItems = [
-  'Verificar calendário de notícias',
-  `Respeitar o limite de ${MAX_STOPS_PER_SESSION} stops por sessão (dia/noite)`,
-  `Parar de operar na sessão após ${MAX_STOPS_PER_SESSION} stops`,
-  'Mover o Stop para Break Even ao atingir a primeira parcial',
-  'Se a oportunidade passou, registrar o dia sem operação',
-];
-
-export function PlanTab({
-  checklist,
-  onToggle,
-}: {
-  checklist: readonly boolean[];
-  onToggle: (index: number, checked: boolean) => void;
+export function PlanTab({ plans, onSave }: {
+  plans: readonly DailyPlan[];
+  onSave: (plan: DailyPlan) => Promise<void>;
 }) {
+  const [date, setDate] = useState(today);
   return (
-    <div className="space-y-6">
-      <h1 className="asrv-page-title">Plano Operacional & Disciplina</h1>
-
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <Card>
-          <h2 className="asrv-section-title mb-3">Regras de Ouro da Plataforma</h2>
-          <div className="asrv-alert asrv-alert--danger space-y-2 text-xs leading-relaxed">
-            <p>
-              ⚡ <strong>Operações sem limite:</strong> O contador inclui todas as operações, inclusive break even.
-            </p>
-            <p>
-              🛑 <strong>Stops:</strong> Máximo de {MAX_STOPS_PER_SESSION} stops por sessão. Ao
-              atingir {MAX_STOPS_PER_SESSION} stops no dia ou {MAX_STOPS_PER_SESSION} na noite, pare
-              de operar naquela sessão para não perder a ofensiva.
-            </p>
-            <p>
-              🛑 <strong>Perda Individual Máxima:</strong> Nenhuma operação pode ter um prejuízo
-              superior a 25% do saldo inicial do dia — capital inicial mais o resultado acumulado
-              dos dias anteriores (taxas de spread mínimas são tratadas como Break Even).
-            </p>
-            <p>
-              ⚖️ <strong>Break Even (0x0):</strong> Posições encerradas no zero a zero ou com
-              pequenas variações de spread preservam o capital e contam no total de operações, mas não como stops.
-            </p>
-            <p>
-              🛡️ <strong>Saber Ficar de Fora:</strong> Registrar dias em que você não operou
-              mantém a sua ofensiva ativa!
-            </p>
-            <p>
-              🔥 <strong>Ofensiva &amp; Metas:</strong> Acumule dias de disciplina para alcançar
-              os níveis de 3, 7, 14, 30 e 60 dias.
-            </p>
-          </div>
-        </Card>
-
-        <Card>
-          <h2 className="asrv-section-title mb-3">Checklist Operacional</h2>
-          <div className="space-y-3">
-            {checklistItems.map((item, index) => (
-              <Checkbox
-                key={item}
-                label={item}
-                checked={checklist[index] ?? false}
-                onChange={(checked) => onToggle(index, checked)}
-              />
-            ))}
-          </div>
-        </Card>
-      </div>
+    <div className="space-y-4">
+      <h1 className="asrv-page-title">Plano Operacional</h1>
+      <p className="asrv-page-subtitle">Até duas operações por dia, incluindo break even, em uma única sessão. Sábado e domingo são dias sem operar.</p>
+      <label className="flex flex-wrap items-center gap-3">Data do checklist
+        <input type="date" value={date} max={today()} onChange={event => { if (event.target.value) setDate(event.target.value); }} className="asrv-field__input" />
+      </label>
+      <DailyChecklist key={date} date={date} saved={plans.find(plan => plan.date === date)} onSave={onSave} />
     </div>
+  );
+}
+
+function DailyChecklist({ date, saved, onSave }: {
+  date: string;
+  saved?: DailyPlan;
+  onSave: (plan: DailyPlan) => Promise<void>;
+}) {
+  const [answers, setAnswers] = useState(saved?.answers ?? {});
+  const [limit, setLimit] = useState(saved?.lossLimit?.toString() ?? '');
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState('');
+  const [error, setError] = useState('');
+
+  function answer(id: string, value: boolean | string) {
+    setAnswers(current => ({ ...current, [id]: value }));
+    setStatus('Alterações pendentes de salvar.');
+  }
+
+  async function save() {
+    setSaving(true);
+    setStatus('');
+    setError('');
+    try {
+      await onSave({ date, answers, lossLimit: limit.trim() ? Number(limit.replace(',', '.')) : null });
+      setStatus('Checklist e limite salvos para esta data.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Falha ao salvar o checklist.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card ariaLabel="Checklist operacional diário">
+      <div className="space-y-5">
+        <h2 className="asrv-section-title">Checklist Operacional Diário</h2>
+        <label className="block">Limite de perda diária ($ / R$)
+          <input className="asrv-field__input" inputMode="decimal" value={limit} onChange={event => { setLimit(event.target.value); setStatus('Alterações pendentes de salvar.'); }} placeholder="Ex.: 10,00" />
+        </label>
+        <p className="asrv-page-subtitle">Defina o valor máximo de perda para esta data. O limite soma os resultados negativos, inclusive taxas registradas no break even.</p>
+        <Button disabled={saving} onClick={save}>Salvar checklist e limite</Button>
+        {CHECKLIST_SECTIONS.map(section => (
+          <fieldset key={section.title} className="space-y-3 border-t border-slate-700 pt-3">
+            <legend className="asrv-section-title">{section.title}</legend>
+            {'hint' in section && <p className="asrv-page-subtitle">{section.hint}</p>}
+            {section.fields.map(field => {
+              const value = String(answers[field.id] ?? '');
+              if ('kind' in field) return (
+                <label key={field.id} className="block">{field.label}
+                  <textarea className="asrv-field__input" maxLength={2000} value={value} onChange={event => answer(field.id, event.target.value)} />
+                </label>
+              );
+              if (field.options) return (
+                <label key={field.id} className="block">{field.label}
+                  <select className="asrv-field__input" value={value} onChange={event => answer(field.id, event.target.value)}>
+                    <option value="">Selecione</option>
+                    {field.options.map(option => <option key={option}>{option}</option>)}
+                  </select>
+                </label>
+              );
+              return <Checkbox key={field.id} label={field.label} checked={answers[field.id] === true} onChange={checked => answer(field.id, checked)} />;
+            })}
+          </fieldset>
+        ))}
+        <p role="status">{status || (saved ? 'Checklist salvo para esta data.' : 'Checklist pendente para esta data.')}</p>
+        {error && <Alert tone="danger">{error}</Alert>}
+        <Button disabled={saving} onClick={save}>Salvar checklist e limite</Button>
+      </div>
+    </Card>
   );
 }

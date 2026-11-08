@@ -5,6 +5,7 @@ import {
   evaluateDiscipline,
   type AuthSession,
   type Bff,
+  type DailyPlan,
   type JournalSnapshot,
   type Trade,
   type TradeInput,
@@ -22,6 +23,7 @@ export function emptySnapshot(trades: Trade[] = [], noTradeDays: string[] = []):
   return {
     trades,
     noTradeDays,
+    dailyPlans: [],
     initialBalance,
     stats: calculateStats({ trades, initialBalance, today }),
     discipline: evaluateDiscipline({ trades, noTradeDays, initialBalance }),
@@ -82,6 +84,14 @@ export function createFakeBff(options: FakeBffOptions = {}) {
     return { synced: true };
   });
 
+  const saveDailyPlan = vi.fn(async (plan: DailyPlan) => {
+    state.snapshot.dailyPlans = [...state.snapshot.dailyPlans.filter(item => item.date !== plan.date), plan];
+  });
+  const resetJournal = vi.fn(async () => {
+    state.snapshot = { ...emptySnapshot(), initialBalance: 0, stats: calculateStats({ trades: [], initialBalance: 0, today: localToday() }) };
+    return { failedScreenshots: 0 };
+  });
+
   const pendingCount = vi.fn(async () => 0);
   const flush = vi.fn(async () => ({ pending: 0, flushed: 0 }));
 
@@ -94,6 +104,8 @@ export function createFakeBff(options: FakeBffOptions = {}) {
       registerNoTradeDay,
       removeNoTradeDay,
       saveInitialBalance,
+      saveDailyPlan,
+      resetJournal,
       pendingCount,
       flush,
     },
@@ -114,6 +126,8 @@ export function createFakeBff(options: FakeBffOptions = {}) {
       registerNoTradeDay,
       removeNoTradeDay,
       saveInitialBalance,
+      saveDailyPlan,
+      resetJournal,
       pendingCount,
       flush,
     },

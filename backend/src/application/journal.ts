@@ -1,19 +1,16 @@
 import { DomainError } from '../domain/errors';
 import {
-  MAX_LOSS_RATIO,
-  MAX_STOPS_PER_SESSION,
   createTrade,
-  isBreakEven,
   isIsoDate,
-  isStop,
-  sessionLabel,
   type Trade,
   type TradeInput,
 } from '../domain/trade';
+import { CHECKLIST_SECTIONS, grossLoss, isWeekend, MAX_TRADES_PER_DAY, type DailyPlan } from '../domain/dailyPlan';
 import { evaluateDiscipline, type DisciplineResult } from '../domain/discipline';
 import { calculateStats, type Stats } from '../domain/stats';
 import type {
   Clock,
+  DailyPlanRepository,
   NoTradeDayRepository,
   PendingJob,
   PendingJobStorage,
@@ -25,6 +22,7 @@ import type {
 export interface JournalSnapshot {
   trades: Trade[];
   noTradeDays: string[];
+  dailyPlans: DailyPlan[];
   initialBalance: number;
   stats: Stats;
   discipline: DisciplineResult;
@@ -56,6 +54,8 @@ export interface JournalService {
   registerNoTradeDay(day: string): Promise<{ synced: boolean }>;
   removeNoTradeDay(day: string): Promise<{ synced: boolean }>;
   saveInitialBalance(value: number): Promise<{ synced: boolean }>;
+  saveDailyPlan(plan: DailyPlan): Promise<void>;
+  resetJournal(): Promise<{ failedScreenshots: number }>;
   pendingCount(): Promise<number>;
   flush(): Promise<SyncResult>;
 }
@@ -63,6 +63,7 @@ export interface JournalService {
 export interface JournalDeps {
   trades: TradeRepository;
   noTradeDays: NoTradeDayRepository;
+  dailyPlans: DailyPlanRepository;
   settings: SettingsRepository;
   screenshots: ScreenshotStorage;
   pending: PendingJobStorage;
@@ -70,11 +71,11 @@ export interface JournalDeps {
 }
 
 export function createJournalService(deps: JournalDeps): JournalService {
-  const { trades, noTradeDays, settings, screenshots, pending, clock } = deps;
+  const { trades, noTradeDays, dailyPlans, settings, screenshots, pending, clock } = deps;
 
   async function enqueue(job: PendingJob): Promise<void> {
     const jobs = await pending.read();
-    jobs.push(job);
+    jobs.push({ ...job, queuedAt: Date.now() });
     await pending.write(jobs);
   }
 
@@ -104,19 +105,6 @@ export function createJournalService(deps: JournalDeps): JournalService {
     }
   }
 
-  async function saveWithPendingScreenshot(
-    trade: Trade,
-    screenshotDataUrl: string,
-  ): Promise<SaveTradeResult> {
-    const [existingTrades, knownBalance] = await Promise.all([
-      trades.list().catch(() => [] as Trade[]),
-      settings.getInitialBalance().catch(() => null),
-    ]);
-
-    await enqueue({ op: 'upsertTrade', trade, screenshotDataUrl });
-    return { trade, synced: false, warnings: buildWarnings(trade, existingTrades, knownBalance) };
-  }
-
   async function signScreenshots(list: readonly Trade[]): Promise<Record<string, string>> {
     const paths = list
       .map((trade) => trade.screenshotPath)
@@ -140,10 +128,11 @@ export function createJournalService(deps: JournalDeps): JournalService {
 
   return {
     async list() {
-      const [tradeList, noTradeDayList, initialBalance] = await Promise.all([
+      const [tradeList, noTradeDayList, initialBalance, planList] = await Promise.all([
         trades.list(),
         noTradeDays.list(),
         settings.getInitialBalance(),
+        dailyPlans.list(),
       ]);
 
       const sortedTrades = [...tradeList].sort((a, b) => a.date.localeCompare(b.date));
@@ -153,6 +142,7 @@ export function createJournalService(deps: JournalDeps): JournalService {
       return {
         trades: sortedTrades,
         noTradeDays: [...noTradeDayList].sort(),
+        dailyPlans: planList,
         initialBalance,
         stats: calculateStats({
           trades: sortedTrades,
@@ -162,6 +152,7 @@ export function createJournalService(deps: JournalDeps): JournalService {
         discipline: evaluateDiscipline({
           trades: sortedTrades,
           noTradeDays: noTradeDayList,
+          dailyPlans: planList,
           initialBalance,
         }),
         screenshotUrls,
@@ -171,33 +162,57 @@ export function createJournalService(deps: JournalDeps): JournalService {
     async saveTrade(input, screenshotDataUrl) {
       const trade = createTrade(input);
 
+      const [storedTrades, plans, jobs] = await Promise.all([
+        trades.list().catch(() => [] as Trade[]),
+        dailyPlans.list().catch(() => [] as DailyPlan[]),
+        pending.read(),
+      ]);
+      const existingTrades = new Map(storedTrades.map(item => [item.id, item]));
+      for (const job of jobs) {
+        if (job.op === 'upsertTrade') existingTrades.set(job.trade.id, job.trade);
+        if (job.op === 'deleteTrade') existingTrades.delete(job.id);
+      }
+      const previous = existingTrades.get(trade.id);
+      const sameDay = [...existingTrades.values()].filter(item => item.date === trade.date && item.id !== trade.id);
+      const addsToDay = previous?.date !== trade.date;
+      const limit = plans.find(plan => plan.date === trade.date)?.lossLimit;
+      if (isWeekend(trade.date) && addsToDay && !input.weekendBreach) {
+        throw new DomainError('TRADE_RULE', 'Sábado e domingo são dias sem operar. Para registrar uma operação já feita, confirme a quebra de regra.');
+      }
+      if (addsToDay && sameDay.length >= MAX_TRADES_PER_DAY) {
+        throw new DomainError('TRADE_RULE', 'Você já registrou duas operações nessa data, incluindo break even.');
+      }
+      if ((addsToDay || previous?.session !== trade.session) && sameDay.some(item => item.session !== trade.session)) {
+        throw new DomainError('TRADE_RULE', 'As duas operações devem ser da mesma sessão.');
+      }
+      if (addsToDay && limit != null && grossLoss(sameDay) >= limit) {
+        throw new DomainError('TRADE_RULE', 'O limite de perda diária já foi atingido.');
+      }
+
+      const warnings: string[] = [];
+      if (isWeekend(trade.date)) warnings.push('Operação de fim de semana registrada. A ofensiva reinicia após esta data.');
+      if (limit != null && grossLoss([...sameDay, trade]) >= limit) {
+        warnings.push('Limite de perda diária atingido. Encerre as operações do dia.');
+      }
+      if (sameDay.length + 1 === MAX_TRADES_PER_DAY) warnings.push('Duas operações registradas. Encerre as operações do dia.');
+
       if (typeof screenshotDataUrl === 'string') {
         try {
           trade.screenshotPath = await screenshots.upload(trade.id, screenshotDataUrl);
         } catch {
-          // Sem conexão: guarda a imagem na fila para subir junto com a operação.
-          return saveWithPendingScreenshot(trade, screenshotDataUrl);
+          await enqueue({ op: 'upsertTrade', trade, screenshotDataUrl });
+          return { trade, synced: false, warnings };
         }
       } else if (screenshotDataUrl === null) {
         trade.screenshotPath = '';
-        try {
-          await screenshots.remove(trade.id);
-        } catch {
-          // A remoção do print é best-effort; a operação continua válida sem ele.
-        }
       }
-
-      const [existingTrades, knownBalance] = await Promise.all([
-        trades.list().catch(() => [] as Trade[]),
-        settings.getInitialBalance().catch(() => null),
-      ]);
-
-      const warnings = buildWarnings(trade, existingTrades, knownBalance);
 
       try {
         await trades.upsert(trade);
+        if (screenshotDataUrl === null) await screenshots.remove(trade.id).catch(() => undefined);
         return { trade, synced: true, warnings };
-      } catch {
+      } catch (error) {
+        if (error instanceof DomainError) throw error;
         await enqueue({ op: 'upsertTrade', trade });
         return { trade, synced: false, warnings };
       }
@@ -264,13 +279,47 @@ export function createJournalService(deps: JournalDeps): JournalService {
       }
     },
 
+    async saveDailyPlan(plan) {
+      const limit = plan.lossLimit === null ? null : Number(plan.lossLimit.toFixed(2));
+      if (!isIsoDate(plan.date) || (limit !== null && (!Number.isFinite(limit) || limit <= 0 || limit >= 1e12))) {
+        throw new DomainError('INVALID_DAILY_PLAN', 'Informe uma data válida e um limite maior que zero.');
+      }
+      const answers: DailyPlan['answers'] = {};
+      for (const section of CHECKLIST_SECTIONS) {
+        for (const field of section.fields) {
+          const value = plan.answers[field.id];
+          if (typeof value === 'boolean') answers[field.id] = value;
+          else if (typeof value === 'string') answers[field.id] = value.trim().slice(0, 2000);
+        }
+      }
+      await dailyPlans.save({ date: plan.date, lossLimit: limit, answers });
+    },
+
+    async resetJournal() {
+      const ids = await dailyPlans.resetJournal();
+      await pending.write([]);
+      const deleted = await Promise.allSettled(ids.map(id => screenshots.remove(id)));
+      return { failedScreenshots: deleted.filter(result => result.status === 'rejected').length };
+    },
+
     async pendingCount() {
       const jobs = await pending.read();
       return jobs.length;
     },
 
     async flush() {
-      const jobs = await pending.read();
+      let jobs = await pending.read();
+      if (jobs.length === 0) return { pending: 0, flushed: 0 };
+      let resetAt: number | null;
+      try {
+        resetAt = await dailyPlans.resetAt();
+      } catch {
+        return { pending: jobs.length, flushed: 0 };
+      }
+      if (resetAt !== null) {
+        jobs = jobs.filter(job => (job.queuedAt ?? 0) > resetAt);
+        await pending.write(jobs);
+      }
       let flushed = 0;
 
       while (jobs.length > 0) {
@@ -292,55 +341,4 @@ export function createJournalService(deps: JournalDeps): JournalService {
       return { pending: 0, flushed };
     },
   };
-}
-
-function buildWarnings(
-  trade: Trade,
-  existingTrades: readonly Trade[],
-  initialBalance: number | null,
-): string[] {
-  const warnings: string[] = [];
-
-  const session = sessionLabel(trade.session);
-  const sameSessionStops = existingTrades.filter(
-    (item) =>
-      item.date === trade.date && item.session === trade.session && item.id !== trade.id && isStop(item.pnl),
-  );
-  if (isStop(trade.pnl) && sameSessionStops.length === MAX_STOPS_PER_SESSION - 1) {
-    warnings.push(
-      `Este é o ${MAX_STOPS_PER_SESSION}º stop da sessão ${session}. Pare de operar nessa sessão após esta operação para preservar a ofensiva.`,
-    );
-  } else if (isStop(trade.pnl) && sameSessionStops.length >= MAX_STOPS_PER_SESSION) {
-    warnings.push(
-      `Limite de ${MAX_STOPS_PER_SESSION} stops na sessão ${session} atingido. Pare de operar nessa sessão para não zerar a ofensiva.`,
-    );
-  } else if (!isBreakEven(trade.pnl) && sameSessionStops.length >= MAX_STOPS_PER_SESSION) {
-    warnings.push(
-      `Você já tem ${MAX_STOPS_PER_SESSION} stops na sessão ${session}. O ideal é parar de operar nessa sessão para preservar a ofensiva.`,
-    );
-  }
-
-  if (initialBalance === null) return warnings;
-
-  const openingBalance =
-    initialBalance +
-    existingTrades
-      .filter((item) => item.date < trade.date)
-      .reduce((sum, item) => sum + item.pnl, 0);
-
-  if (
-    trade.pnl < 0 &&
-    !isBreakEven(trade.pnl) &&
-    Math.abs(trade.pnl) > openingBalance * MAX_LOSS_RATIO
-  ) {
-    warnings.push(`Perda acima de ${MAX_LOSS_RATIO * 100}% do saldo inicial do dia.`);
-  }
-
-  const balance =
-    initialBalance + existingTrades.reduce((sum, item) => sum + item.pnl, 0) + trade.pnl;
-  if (balance <= 0) {
-    warnings.push('Atenção: o patrimônio ficou zerado ou negativo.');
-  }
-
-  return warnings;
 }

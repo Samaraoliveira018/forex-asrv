@@ -176,7 +176,7 @@ describe('JournalScreen (mobile)', () => {
     fake.mocks.saveTrade.mockResolvedValueOnce({
       trade,
       synced: true,
-      warnings: ['Limite de 4 stops na sessão Dia atingido.'],
+      warnings: ['Duas operações registradas. Encerre as operações do dia.'],
     });
 
     await openNewTradeModal();
@@ -184,7 +184,7 @@ describe('JournalScreen (mobile)', () => {
     await fireEvent.changeText(screen.getByLabelText('Resultado'), '10');
     await fireEvent.press(screen.getByRole('button', { name: 'Salvar Operação' }));
 
-    expect(await screen.findByText('Limite de 4 stops na sessão Dia atingido.')).toBeTruthy();
+    expect(await screen.findByText('Duas operações registradas. Encerre as operações do dia.')).toBeTruthy();
   });
 
   it('exclui uma operação pelo histórico após confirmação', async () => {
@@ -289,7 +289,7 @@ describe('JournalScreen (mobile)', () => {
     expect(await screen.findByText('Dashboard Geral')).toBeTruthy();
 
     await fireEvent.press(screen.getByRole('tab', { name: 'Plano' }));
-    expect(await screen.findByText('Plano Operacional & Disciplina')).toBeTruthy();
+    expect(await screen.findByText('Checklist Operacional Diário')).toBeTruthy();
 
     await fireEvent.press(screen.getByRole('tab', { name: 'Estatísticas' }));
     expect(await screen.findByText('Dados Estatísticos Detalhados')).toBeTruthy();
@@ -344,7 +344,7 @@ describe('JournalScreen (mobile)', () => {
     await fireEvent.press(screen.getByLabelText('Mais ações'));
     await fireEvent.press(screen.getByRole('button', { name: 'Resetar Todos os Dados' }));
 
-    await waitFor(() => expect(fake.mocks.deleteTrade).toHaveBeenCalledWith('t1'));
+    await waitFor(() => expect(fake.mocks.resetJournal).toHaveBeenCalled());
     await waitFor(() => expect(screen.queryByText('EURUSD')).toBeNull());
   });
 

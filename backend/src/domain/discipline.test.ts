@@ -1,278 +1,40 @@
 import { describe, expect, it } from 'vitest';
-import { createTrade, type Trade } from './trade';
-import { calculateStreak, evaluateDiscipline } from './discipline';
+import { evaluateDiscipline } from './discipline';
+import { offensiveMilestones } from './dailyPlan';
+import { createTrade, type TradeInput } from './trade';
 
-let sequence = 0;
-
-function trade(overrides: Partial<Parameters<typeof createTrade>[0]> = {}): Trade {
-  sequence += 1;
-  return createTrade({
-    id: `trade-${sequence}`,
-    date: '2026-10-01',
-    asset: 'EURUSD',
-    type: 'Compra',
-    lots: 1,
-    pnl: 10,
-    ...overrides,
-  });
+function trade(overrides: Partial<TradeInput> = {}) {
+  return createTrade({ date: '2026-10-23', asset: 'EURUSD', type: 'Compra', lots: 1, pnl: 10, ...overrides });
 }
 
-describe('evaluateDiscipline', () => {
-  it('conta dias distintos com operação ou sem operação', () => {
-    const result = evaluateDiscipline({
-      trades: [
-        trade({ date: '2026-10-01' }),
-        trade({ date: '2026-10-01' }),
-        trade({ date: '2026-10-02' }),
-      ],
-      noTradeDays: ['2026-10-03'],
-      initialBalance: 1000,
-    });
-
-    expect(result.violations).toEqual([]);
-    expect(result.streak).toBe(3);
+describe('ofensiva', () => {
+  it('conta dias úteis distintos e deixa o fim de semana sem operação como descanso', () => {
+    const result = evaluateDiscipline({ trades: [trade(), trade({ pnl: 0 })], noTradeDays: ['2026-10-22', '2026-10-22', '2026-10-24'], initialBalance: 100 });
+    expect(result).toEqual({ streak: 2, violations: [] });
   });
 
-  it('não conta o mesmo dia sem operação duas vezes', () => {
-    const result = evaluateDiscipline({
-      trades: [],
-      noTradeDays: ['2026-10-01', '2026-10-01', '2026-10-02'],
-      initialBalance: 1000,
-    });
-
-    expect(result.streak).toBe(2);
-  });
-
-  it.each(['day', 'night'] as const)('permite muitas operações na sessão %s', (session) => {
-    const result = evaluateDiscipline({ trades: Array.from({ length: 30 }, (_, i) => trade({ session, pnl: i % 2 ? 0 : 10 })), noTradeDays: [], initialBalance: 1000 });
-    expect(result.violations).toEqual([]);
-    expect(result.streak).toBe(1);
-  });
-
-  it('permite operações break even sem limite', () => {
-    const result = evaluateDiscipline({
-      trades: [
-        trade({ date: '2026-10-01' }),
-        trade({ date: '2026-10-01' }),
-        trade({ date: '2026-10-01' }),
-        trade({ date: '2026-10-01' }),
-        trade({ date: '2026-10-01' }),
-        trade({ date: '2026-10-01' }),
-        trade({ date: '2026-10-01', pnl: 0 }),
-        trade({ date: '2026-10-01', pnl: 0.2 }),
-        trade({ date: '2026-10-01', pnl: -0.3 }),
-      ],
-      noTradeDays: [],
-      initialBalance: 1000,
-    });
-
-    expect(result.violations).toEqual([]);
-    expect(result.streak).toBe(1);
-  });
-
-  it('viola ao passar de quatro stops no mesmo dia', () => {
-    const result = evaluateDiscipline({
-      trades: [
-        trade({ date: '2026-10-01', pnl: -10 }),
-        trade({ date: '2026-10-01', pnl: -15 }),
-        trade({ date: '2026-10-01', pnl: -5 }),
-        trade({ date: '2026-10-01', pnl: -7 }),
-        trade({ date: '2026-10-01', pnl: -7 }),
-      ],
-      noTradeDays: [],
-      initialBalance: 1000,
-    });
-
+  it('detecta terceira operação e mistura de sessões, incluindo break even', () => {
+    const result = evaluateDiscipline({ trades: [trade(), trade({ pnl: 0 }), trade({ pnl: 0, session: 'night' })], noTradeDays: [], initialBalance: 100 });
     expect(result.streak).toBe(0);
-    expect(result.violations).toContainEqual(
-      expect.objectContaining({ kind: 'TOO_MANY_STOPS', date: '2026-10-01', session: 'day' }),
-    );
+    expect(result.violations.map(item => item.kind)).toEqual(['TOO_MANY_TRADES', 'MIXED_SESSIONS']);
   });
 
-  it('permite 4 stops de dia e 4 stops de noite no mesmo dia', () => {
-    const result = evaluateDiscipline({
-      trades: [
-        trade({ date: '2026-10-01', pnl: -10, session: 'day' }),
-        trade({ date: '2026-10-01', pnl: -15, session: 'day' }),
-        trade({ date: '2026-10-01', pnl: -5, session: 'day' }),
-        trade({ date: '2026-10-01', pnl: -5, session: 'night' }),
-        trade({ date: '2026-10-01', pnl: -8, session: 'night' }),
-        trade({ date: '2026-10-01', pnl: -6, session: 'night' }),
-        trade({ date: '2026-10-01', pnl: -6, session: 'night' }),
-        trade({ date: '2026-10-01', pnl: -6, session: 'day' }),
-      ],
-      noTradeDays: [],
-      initialBalance: 1000,
-    });
-
-    expect(result.violations).toEqual([]);
+  it('zera a ofensiva no domingo e conta apenas os dias úteis após a violação', () => {
+    const result = evaluateDiscipline({ trades: [trade(), trade({ date: '2026-10-25' })], noTradeDays: ['2026-10-22', '2026-10-26'], initialBalance: 100 });
     expect(result.streak).toBe(1);
+    expect(result.violations).toContainEqual(expect.objectContaining({ date: '2026-10-25', kind: 'WEEKEND_TRADE' }));
   });
 
-  it('viola ao passar de quatro stops na sessão da noite', () => {
-    const result = evaluateDiscipline({
-      trades: [
-        trade({ date: '2026-10-01', pnl: -10, session: 'night' }),
-        trade({ date: '2026-10-01', pnl: -15, session: 'night' }),
-        trade({ date: '2026-10-01', pnl: -5, session: 'night' }),
-        trade({ date: '2026-10-01', pnl: -7, session: 'night' }),
-        trade({ date: '2026-10-01', pnl: -7, session: 'night' }),
-      ],
-      noTradeDays: [],
-      initialBalance: 1000,
-    });
-
+  it('soma perdas da data, incluindo taxas do break even, e aceita o limite exato', () => {
+    const input = { trades: [trade({ pnl: -9.9 }), trade({ pnl: -0.1 })], noTradeDays: [], initialBalance: 100 };
+    expect(evaluateDiscipline({ ...input, dailyPlans: [{ date: '2026-10-23', lossLimit: 10, answers: {} }] }).streak).toBe(1);
+    const result = evaluateDiscipline({ ...input, dailyPlans: [{ date: '2026-10-23', lossLimit: 9.95, answers: {} }] });
     expect(result.streak).toBe(0);
-    expect(result.violations).toContainEqual(
-      expect.objectContaining({ kind: 'TOO_MANY_STOPS', date: '2026-10-01', session: 'night' }),
-    );
+    expect(result.violations[0]?.kind).toBe('LOSS_OVER_LIMIT');
   });
 
-  it('permite 6 trades de dia e 6 trades de noite no mesmo dia', () => {
-    const result = evaluateDiscipline({
-      trades: [
-        trade({ date: '2026-10-01', session: 'day' }),
-        trade({ date: '2026-10-01', session: 'day' }),
-        trade({ date: '2026-10-01', session: 'day' }),
-        trade({ date: '2026-10-01', session: 'day' }),
-        trade({ date: '2026-10-01', session: 'day' }),
-        trade({ date: '2026-10-01', session: 'day' }),
-        trade({ date: '2026-10-01', session: 'night' }),
-        trade({ date: '2026-10-01', session: 'night' }),
-        trade({ date: '2026-10-01', session: 'night' }),
-        trade({ date: '2026-10-01', session: 'night' }),
-        trade({ date: '2026-10-01', session: 'night' }),
-        trade({ date: '2026-10-01', session: 'night' }),
-      ],
-      noTradeDays: [],
-      initialBalance: 1000,
-    });
-
-    expect(result.violations).toEqual([]);
-    expect(result.streak).toBe(1);
-  });
-
-  it.each(['day', 'night'] as const)('permite muitas operações na sessão %s', (session) => {
-    const result = evaluateDiscipline({ trades: Array.from({ length: 30 }, (_, i) => trade({ session, pnl: i % 2 ? 0 : 10 })), noTradeDays: [], initialBalance: 1000 });
-    expect(result.violations).toEqual([]);
-    expect(result.streak).toBe(1);
-  });
-
-  it('não conta break even como stop', () => {
-    const result = evaluateDiscipline({
-      trades: [
-        trade({ date: '2026-10-01', pnl: -10 }),
-        trade({ date: '2026-10-01', pnl: -15 }),
-        trade({ date: '2026-10-01', pnl: 0 }),
-        trade({ date: '2026-10-01', pnl: 0.3 }),
-        trade({ date: '2026-10-01', pnl: 40 }),
-      ],
-      noTradeDays: [],
-      initialBalance: 1000,
-    });
-
-    expect(result.violations).toEqual([]);
-    expect(result.streak).toBe(1);
-  });
-
-  it('viola quando a perda individual passa de 25% do saldo inicial do dia', () => {
-    const result = evaluateDiscipline({
-      trades: [trade({ date: '2026-10-01', pnl: -250.01 })],
-      noTradeDays: [],
-      initialBalance: 1000,
-    });
-
-    expect(result.streak).toBe(0);
-    expect(result.violations).toContainEqual(
-      expect.objectContaining({ kind: 'LOSS_OVER_LIMIT', date: '2026-10-01' }),
-    );
-  });
-
-  it('não viola quando a perda é exatamente 25% do saldo inicial do dia', () => {
-    const result = evaluateDiscipline({
-      trades: [trade({ date: '2026-10-01', pnl: -250 })],
-      noTradeDays: [],
-      initialBalance: 1000,
-    });
-
-    expect(result.violations).toEqual([]);
-    expect(result.streak).toBe(1);
-  });
-
-  it('usa o saldo de abertura do dia como base (resultado dos dias anteriores)', () => {
-    const result = evaluateDiscipline({
-      trades: [
-        trade({ date: '2026-10-01', pnl: 500 }),
-        trade({ date: '2026-10-02', pnl: -300 }),
-      ],
-      noTradeDays: [],
-      initialBalance: 1000,
-    });
-
-    // O dia 02 abre com 1500, então o limite é 375. A perda de 300 está dentro.
-    expect(result.violations).toEqual([]);
-    expect(result.streak).toBe(2);
-  });
-
-  it('viola quando a perda passa de 25% do saldo de abertura do dia', () => {
-    const result = evaluateDiscipline({
-      trades: [
-        trade({ date: '2026-10-01', pnl: 500 }),
-        trade({ date: '2026-10-02', pnl: -375.01 }),
-      ],
-      noTradeDays: [],
-      initialBalance: 1000,
-    });
-
-    expect(result.streak).toBe(0);
-    expect(result.violations).toContainEqual(
-      expect.objectContaining({ kind: 'LOSS_OVER_LIMIT', date: '2026-10-02' }),
-    );
-  });
-
-  it('não trata perda dentro do empate técnico como violação', () => {
-    const result = evaluateDiscipline({
-      trades: [trade({ date: '2026-10-01', pnl: -0.3 })],
-      noTradeDays: [],
-      initialBalance: 1,
-    });
-
-    expect(result.violations).toEqual([]);
-    expect(result.streak).toBe(1);
-  });
-
-  it('viola quando o patrimônio fica zerado ou negativo', () => {
-    const result = evaluateDiscipline({
-      trades: [
-        trade({ date: '2026-10-01', pnl: -400 }),
-        trade({ date: '2026-10-02', pnl: -100 }),
-      ],
-      noTradeDays: [],
-      initialBalance: 500,
-    });
-
-    expect(result.streak).toBe(0);
-    expect(result.violations).toContainEqual(
-      expect.objectContaining({ kind: 'BALANCE_DEPLETED' }),
-    );
-  });
-
-  it('mantém a ofensiva vazia quando não há registros', () => {
-    const result = evaluateDiscipline({
-      trades: [],
-      noTradeDays: [],
-      initialBalance: 1000,
-    });
-
-    expect(result.streak).toBe(0);
-    expect(result.violations).toEqual([]);
-  });
-});
-
-describe('calculateStreak', () => {
-  it('delega para a avaliação de disciplina', () => {
-    const trades = [trade({ date: '2026-10-01' }), trade({ date: '2026-10-02' })];
-
-    expect(calculateStreak({ trades, noTradeDays: [], initialBalance: 1000 })).toBe(2);
+  it('continua mostrando metas de 30 em 30 depois de 150 dias', () => {
+    expect(offensiveMilestones(0)).toEqual([30, 60, 90, 120, 150]);
+    expect(offensiveMilestones(151)).toEqual([180, 210, 240, 270, 300]);
   });
 });

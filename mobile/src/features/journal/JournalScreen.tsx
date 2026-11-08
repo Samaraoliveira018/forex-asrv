@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { JournalSnapshot, Trade, TradeInput } from '@asrv/backend';
+import { isWeekend, type DailyPlan, type JournalSnapshot, type Trade, type TradeInput } from '@asrv/backend';
 import {
   Alert,
   Badge,
@@ -59,7 +59,6 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
   const [noTradeError, setNoTradeError] = useState('');
   const [pending, setPending] = useState(0);
   const [syncing, setSyncing] = useState(false);
-  const [checklist, setChecklist] = useState<boolean[]>(() => [false, false, false, false, false]);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importDraft, setImportDraft] = useState('');
@@ -207,6 +206,7 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
       {
         trades: snapshot.trades,
         noTradeDays: snapshot.noTradeDays,
+        dailyPlans: snapshot.dailyPlans,
         initialBalance: snapshot.initialBalance,
       },
       null,
@@ -239,6 +239,7 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
       const parsed = JSON.parse(importDraft) as {
         trades?: Trade[];
         noTradeDays?: string[];
+        dailyPlans?: DailyPlan[];
         initialBalance?: number;
       };
 
@@ -247,7 +248,7 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
       }
 
       for (const trade of parsed.trades) {
-        await bff.journal.saveTrade(trade);
+        await bff.journal.saveTrade({ ...trade, weekendBreach: isWeekend(trade.date) });
       }
       for (const day of parsed.noTradeDays ?? []) {
         try {
@@ -256,6 +257,7 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
           // Dia já existente ou com operação: a importação continua.
         }
       }
+      for (const plan of parsed.dailyPlans ?? []) await bff.journal.saveDailyPlan(plan);
       if (Number.isFinite(parsed.initialBalance)) {
         await bff.journal.saveInitialBalance(Number(parsed.initialBalance));
       }
@@ -278,19 +280,15 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
 
     confirmDestructive(
       'Resetar dados',
-      'Tem a certeza de que deseja resetar todo o histórico e a sua ofensiva?',
+      'Apagar as operações, os dias sem operar e os checklists desta conta e zerar o saldo inicial?',
       async () => {
         setError('');
         try {
-          for (const trade of snapshot.trades) {
-            await bff.journal.deleteTrade(trade.id);
-          }
-          for (const day of snapshot.noTradeDays) {
-            await bff.journal.removeNoTradeDay(day);
-          }
+          const { failedScreenshots } = await bff.journal.resetJournal();
+          setPending(0);
+          setWarnings(failedScreenshots ? [`Diário zerado. ${failedScreenshots} prints não puderam ser removidos.`] : ['Dados resetados.']);
           await load();
           setActionsOpen(false);
-          setWarnings(['Dados resetados.']);
         } catch (cause) {
           setError(messageOf(cause));
         }
@@ -305,6 +303,11 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
     } finally {
       onSignedOut();
     }
+  }
+
+  async function handleSaveDailyPlan(plan: DailyPlan) {
+    await bff.journal.saveDailyPlan(plan);
+    await load();
   }
 
   function openNewTrade() {
@@ -414,14 +417,7 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
         {tab === 'dashboard' ? <DashboardTab snapshot={snapshot} hidden={hidden} /> : null}
 
         {tab === 'plan' ? (
-          <PlanTab
-            checklist={checklist}
-            onToggle={(index, checked) =>
-              setChecklist((current) =>
-                current.map((value, position) => (position === index ? checked : value)),
-              )
-            }
-          />
+          <PlanTab plans={snapshot.dailyPlans} onSave={handleSaveDailyPlan} />
         ) : null}
 
         {tab === 'stats' ? <StatsTab snapshot={snapshot} /> : null}

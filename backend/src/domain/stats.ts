@@ -185,3 +185,18 @@ function startOfWeek(iso: string): string {
   date.setUTCDate(date.getUTCDate() - offset);
   return date.toISOString().slice(0, 10);
 }
+
+export type HistoryPeriod = 'day' | 'week' | 'month';
+
+export function historyRange(date: string, period: HistoryPeriod): { start: string; end: string } {
+  if (period === 'day') return { start: date, end: date };
+  if (period === 'week') {
+    const start = startOfWeek(date);
+    const end = new Date(`${start}T00:00:00Z`);
+    end.setUTCDate(end.getUTCDate() + 6);
+    return { start, end: end.toISOString().slice(0, 10) };
+  }
+  const [year, month] = date.split('-').map(Number);
+  const end = new Date(Date.UTC(year!, month!, 0)).toISOString().slice(0, 10);
+  return { start: `${date.slice(0, 7)}-01`, end };
+}

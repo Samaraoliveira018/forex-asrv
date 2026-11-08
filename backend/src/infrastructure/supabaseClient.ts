@@ -24,6 +24,7 @@ export interface SupabaseStorageBucketLike {
  */
 export interface SupabaseClientLike {
   from(table: string): any;
+  rpc(name: string): PromiseLike<{ data: unknown; error: SupabaseErrorLike | null }>;
   storage: {
     from(bucket: string): SupabaseStorageBucketLike;
   };

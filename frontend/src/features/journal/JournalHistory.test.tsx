@@ -9,6 +9,8 @@ const trades = [
   ['loss', '2026-10-20', 'GBPUSD', -7],
   ['be', '2026-10-20', 'USDJPY', -0.1],
   ['other', '2026-10-21', 'XAUUSD', 50],
+  ['later', '2026-10-30', 'AUDUSD', 5],
+  ['next-month', '2026-11-02', 'USDCAD', 10],
 ].map(([id, date, asset, pnl]) => createTrade({ id: String(id), date: String(date), asset: String(asset), pnl: Number(pnl), type: 'Compra', lots: 0.01 }));
 
 function setup(hidden = false, view: 'grid' | 'list' = 'grid') {
@@ -46,6 +48,20 @@ describe('Consulta do diário por data', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Todos os dias' }));
     expect(screen.getByText('XAUUSD')).toBeInTheDocument();
     expect(screen.getByText('EURUSD')).toBeInTheDocument();
+  });
+
+  it('mostra os resultados completos da semana e do mês da data selecionada', () => {
+    setup();
+    const summary = within(screen.getByLabelText('Resumo do histórico'));
+    fireEvent.click(screen.getByRole('tab', { name: 'Semana' }));
+    expect(summary.getByText('Resultado semanal')).toBeInTheDocument();
+    expect(summary.getByText('+ $ 62.90')).toBeInTheDocument();
+    expect(screen.queryByText('AUDUSD')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Mês' }));
+    expect(summary.getByText('Resultado mensal')).toBeInTheDocument();
+    expect(summary.getByText('+ $ 67.90')).toBeInTheDocument();
+    expect(screen.getByText('AUDUSD')).toBeInTheDocument();
+    expect(screen.queryByText('USDCAD')).not.toBeInTheDocument();
   });
 
   it('oculta os valores financeiros também no resumo da data', () => {
