@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
-  MAX_TRADES_PER_DAY,
+  consecutiveLossStopIndex,
   OFFENSIVE_INTERVAL,
   grossLoss,
   historyRange,
@@ -89,7 +89,9 @@ export function JournalTab({
   }
   const currentDay = today();
   const plan = snapshot.dailyPlans.find(item => item.date === currentDay);
-  const lossesToday = grossLoss(snapshot.trades.filter(trade => trade.date === currentDay));
+  const todayTrades = snapshot.trades.filter(trade => trade.date === currentDay);
+  const lossesToday = grossLoss(todayTrades);
+  const lossStopReached = consecutiveLossStopIndex(todayTrades) >= 0;
   const filteredSnapshot = {
     ...snapshot,
     trades: datedTrades.filter(t => resultFilter === 'all' || (resultFilter === 'be' ? isBreakEven(t.pnl) : resultFilter === 'win' ? t.pnl > 0 && !isBreakEven(t.pnl) : t.pnl < 0 && !isBreakEven(t.pnl))),
@@ -120,16 +122,8 @@ export function JournalTab({
       </View>
 
       <View style={styles.actions}>
-        <Text>Operações hoje: {stats.todayCount} de {MAX_TRADES_PER_DAY} (inclui BE)</Text>
-        {(['day', 'night'] as const).map((session) => {
-          const counters = stats.todayBySession[session];
-          return (
-            <Badge key={session} pill tone="neutral">
-              {sessionLabel(session)}: {counters.totalTrades} operações ·{' '}
-              {counters.stops} stops
-            </Badge>
-          );
-        })}
+        <Badge tone="neutral" pill>Operações hoje: {stats.todayCount} (inclui BE)</Badge>
+        {lossStopReached && <Badge tone="danger" pill>Stop do dia: duas perdas consecutivas</Badge>}
         <Button variant="success" size="sm" onPress={onNoTradeDay}>
           Dia sem operar
         </Button>
@@ -180,7 +174,7 @@ export function JournalTab({
       <View>
         <Text style={styles.pageTitle}>Diário de Trading</Text>
         <Text style={styles.pageSubtitle}>
-          Até duas operações por dia, incluindo break even. Escolha manhã ou noite. Sábado e domingo são dias sem operar.
+          Conte todas as operações, incluindo break even. Encerre o dia após duas perdas consecutivas. Ganho ou break even interrompe a sequência. Escolha manhã ou noite. Sábado e domingo são dias sem operar.
         </Text>
       </View>
 

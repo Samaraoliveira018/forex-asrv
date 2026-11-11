@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  MAX_TRADES_PER_DAY,
+  consecutiveLossStopIndex,
   OFFENSIVE_INTERVAL,
   grossLoss,
   historyRange,
@@ -81,7 +81,9 @@ export function JournalTab({
   }
   const currentDay = today();
   const plan = snapshot.dailyPlans.find(item => item.date === currentDay);
-  const lossesToday = grossLoss(snapshot.trades.filter(trade => trade.date === currentDay));
+  const todayTrades = snapshot.trades.filter(trade => trade.date === currentDay);
+  const lossesToday = grossLoss(todayTrades);
+  const lossStopReached = consecutiveLossStopIndex(todayTrades) >= 0;
   const filteredSnapshot = {
     ...snapshot,
     trades: datedTrades.filter(t => resultFilter === 'all' || (resultFilter === 'be' ? isBreakEven(t.pnl) : resultFilter === 'win' ? t.pnl > 0 && !isBreakEven(t.pnl) : t.pnl < 0 && !isBreakEven(t.pnl))),
@@ -111,25 +113,8 @@ export function JournalTab({
         />
 
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone="neutral" pill>Operações hoje: {stats.todayCount} de {MAX_TRADES_PER_DAY} (inclui BE)</Badge>
-          {(['day', 'night'] as const).map((session) => {
-            const counters = stats.todayBySession[session];
-            return (
-              <span
-                key={session}
-                title={`Sessão ${sessionLabel(session)}: operações incluindo break even`}
-              >
-                <Badge tone="neutral" pill>
-                  <i
-                    className={`fa-solid ${session === 'day' ? 'fa-sun' : 'fa-moon'} mr-1.5`}
-                    aria-hidden="true"
-                  />
-                  {sessionLabel(session)}: {counters.totalTrades} operações ·{' '}
-                  {counters.stops} stops
-                </Badge>
-              </span>
-            );
-          })}
+          <Badge tone="neutral" pill>Operações hoje: {stats.todayCount} (inclui BE)</Badge>
+          {lossStopReached && <Badge tone="danger" pill>Stop do dia: duas perdas consecutivas</Badge>}
 
           <Button variant="success" size="sm" onClick={onNoTradeDay}>
             <i className="fa-solid fa-calendar-check" aria-hidden="true" />
@@ -185,7 +170,7 @@ export function JournalTab({
       <div>
         <h1 className="asrv-page-title">Diário de Trading</h1>
         <p className="asrv-page-subtitle">
-          Regras: Até duas operações por dia, incluindo break even. Escolha manhã ou noite. Sábado e domingo são dias sem operar.
+          Regras: Conte todas as operações, incluindo break even. Encerre o dia após duas perdas consecutivas. Ganho ou break even interrompe a sequência. Escolha manhã ou noite. Sábado e domingo são dias sem operar.
         </p>
       </div>
 

@@ -1,7 +1,7 @@
-import { grossLoss, isWeekend, MAX_TRADES_PER_DAY, type DailyPlan } from './dailyPlan';
-import type { Trade, TradeSession } from './trade';
+import { grossLoss, isWeekend, type DailyPlan } from './dailyPlan';
+import { consecutiveLossStopIndex, type Trade, type TradeSession } from './trade';
 
-export type ViolationKind = 'TOO_MANY_TRADES' | 'MIXED_SESSIONS' | 'WEEKEND_TRADE' | 'LOSS_OVER_LIMIT' | 'BALANCE_DEPLETED';
+export type ViolationKind = 'TRADE_AFTER_LOSS_STOP' | 'MIXED_SESSIONS' | 'WEEKEND_TRADE' | 'LOSS_OVER_LIMIT' | 'BALANCE_DEPLETED';
 
 export interface Violation {
   kind: ViolationKind;
@@ -37,8 +37,9 @@ export function evaluateDiscipline(input: DisciplineInput): DisciplineResult {
     if (isWeekend(date)) {
       violations.push({ kind: 'WEEKEND_TRADE', date, message: `Operação de fim de semana registrada em ${date}.` });
     }
-    if (trades.length > MAX_TRADES_PER_DAY) {
-      violations.push({ kind: 'TOO_MANY_TRADES', date, message: `Limite de duas operações excedido em ${date}.` });
+    const stopIndex = consecutiveLossStopIndex(trades);
+    if (stopIndex >= 0 && stopIndex < trades.length - 1) {
+      violations.push({ kind: 'TRADE_AFTER_LOSS_STOP', date, message: `Operação após o stop de duas perdas consecutivas em ${date}.` });
     }
     if (new Set(trades.map(trade => trade.session)).size > 1) {
       violations.push({ kind: 'MIXED_SESSIONS', date, message: `Operações em duas sessões no mesmo dia (${date}).` });

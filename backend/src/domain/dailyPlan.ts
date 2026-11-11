@@ -1,4 +1,3 @@
-export const MAX_TRADES_PER_DAY = 2;
 export const OFFENSIVE_INTERVAL = 30;
 
 export const CHECKLIST_SECTIONS = [

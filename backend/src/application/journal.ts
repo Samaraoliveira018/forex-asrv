@@ -1,11 +1,12 @@
 import { DomainError } from '../domain/errors';
 import {
   createTrade,
+  consecutiveLossStopIndex,
   isIsoDate,
   type Trade,
   type TradeInput,
 } from '../domain/trade';
-import { CHECKLIST_SECTIONS, grossLoss, isWeekend, MAX_TRADES_PER_DAY, type DailyPlan } from '../domain/dailyPlan';
+import { CHECKLIST_SECTIONS, grossLoss, isWeekend, type DailyPlan } from '../domain/dailyPlan';
 import { evaluateDiscipline, type DisciplineResult } from '../domain/discipline';
 import { calculateStats, type Stats } from '../domain/stats';
 import type {
@@ -169,7 +170,11 @@ export function createJournalService(deps: JournalDeps): JournalService {
       ]);
       const existingTrades = new Map(storedTrades.map(item => [item.id, item]));
       for (const job of jobs) {
-        if (job.op === 'upsertTrade') existingTrades.set(job.trade.id, job.trade);
+        if (job.op === 'upsertTrade') {
+          const previous = existingTrades.get(job.trade.id);
+          if (previous && previous.date !== job.trade.date) existingTrades.delete(job.trade.id);
+          existingTrades.set(job.trade.id, job.trade);
+        }
         if (job.op === 'deleteTrade') existingTrades.delete(job.id);
       }
       const previous = existingTrades.get(trade.id);
@@ -179,11 +184,11 @@ export function createJournalService(deps: JournalDeps): JournalService {
       if (isWeekend(trade.date) && addsToDay && !input.weekendBreach) {
         throw new DomainError('TRADE_RULE', 'Sábado e domingo são dias sem operar. Para registrar uma operação já feita, confirme a quebra de regra.');
       }
-      if (addsToDay && sameDay.length >= MAX_TRADES_PER_DAY) {
-        throw new DomainError('TRADE_RULE', 'Você já registrou duas operações nessa data, incluindo break even.');
+      if (addsToDay && consecutiveLossStopIndex(sameDay) >= 0) {
+        throw new DomainError('TRADE_RULE', 'Stop do dia atingido após duas perdas consecutivas.');
       }
       if ((addsToDay || previous?.session !== trade.session) && sameDay.some(item => item.session !== trade.session)) {
-        throw new DomainError('TRADE_RULE', 'As duas operações devem ser da mesma sessão.');
+        throw new DomainError('TRADE_RULE', 'As operações do dia devem ser da mesma sessão.');
       }
       if (addsToDay && limit != null && grossLoss(sameDay) >= limit) {
         throw new DomainError('TRADE_RULE', 'O limite de perda diária já foi atingido.');
@@ -194,7 +199,13 @@ export function createJournalService(deps: JournalDeps): JournalService {
       if (limit != null && grossLoss([...sameDay, trade]) >= limit) {
         warnings.push('Limite de perda diária atingido. Encerre as operações do dia.');
       }
-      if (sameDay.length + 1 === MAX_TRADES_PER_DAY) warnings.push('Duas operações registradas. Encerre as operações do dia.');
+      const updatedDay = addsToDay
+        ? [...sameDay, trade]
+        : [...existingTrades.values()].filter(item => item.date === trade.date)
+            .map(item => item.id === trade.id ? trade : item);
+      if (consecutiveLossStopIndex(updatedDay) >= 0) {
+        warnings.push('Duas perdas consecutivas. Encerre as operações do dia.');
+      }
 
       if (typeof screenshotDataUrl === 'string') {
         try {

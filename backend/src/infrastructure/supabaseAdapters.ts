@@ -38,7 +38,9 @@ export function createSupabaseTradeRepository(
           .from('trades')
           .select('id,date,asset,type,session,lots,pnl,notes,screenshot_path')
           .eq('user_id', getUserId())
-          .order('date', { ascending: true });
+          .order('date', { ascending: true })
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true });
 
         if (error) throw new BackendError('TRADES_READ_FAILED', error.message);
         return ((data ?? []) as TradeRow[]).map(toTrade);

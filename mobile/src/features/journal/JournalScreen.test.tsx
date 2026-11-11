@@ -90,8 +90,7 @@ describe('JournalScreen (mobile)', () => {
     expect(await screen.findByText('EURUSD')).toBeTruthy();
     expect(screen.getAllByText('US$ 1.100,00').length).toBeGreaterThan(0);
     expect(screen.getByText('Metas de Ofensiva (Disciplina Trader)')).toBeTruthy();
-    expect(screen.getByText(/Dia: 0 operações/)).toBeTruthy();
-    expect(screen.getByText(/Noite: 0 operações/)).toBeTruthy();
+    expect(screen.getByText(/Operações hoje: 0/)).toBeTruthy();
   });
 
   it('registra uma nova operação pelo modal e atualiza a lista', async () => {
@@ -176,7 +175,7 @@ describe('JournalScreen (mobile)', () => {
     fake.mocks.saveTrade.mockResolvedValueOnce({
       trade,
       synced: true,
-      warnings: ['Duas operações registradas. Encerre as operações do dia.'],
+      warnings: ['Duas perdas consecutivas. Encerre as operações do dia.'],
     });
 
     await openNewTradeModal();
@@ -184,7 +183,7 @@ describe('JournalScreen (mobile)', () => {
     await fireEvent.changeText(screen.getByLabelText('Resultado'), '10');
     await fireEvent.press(screen.getByRole('button', { name: 'Salvar Operação' }));
 
-    expect(await screen.findByText('Duas operações registradas. Encerre as operações do dia.')).toBeTruthy();
+    expect(await screen.findByText('Duas perdas consecutivas. Encerre as operações do dia.')).toBeTruthy();
   });
 
   it('exclui uma operação pelo histórico após confirmação', async () => {

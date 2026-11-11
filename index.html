@@ -186,16 +186,8 @@
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
-            <!-- Limites da sessão do dia -->
-            <div class="asrv-badge asrv-badge--neutral asrv-badge--pill">Operações hoje: <span id="today-total-trades">0</span> de 2 (inclui BE)</div>
-            <div id="today-day-badge" class="asrv-badge asrv-badge--neutral asrv-badge--pill" title="Sessão Dia: operações incluindo break even">
-              <i class="fa-solid fa-sun"></i> Dia: <span id="today-day-trades">0</span> operações · <span id="today-day-stops">0</span> stops
-            </div>
-
-            <!-- Limites da sessão da noite -->
-            <div id="today-night-badge" class="asrv-badge asrv-badge--neutral asrv-badge--pill" title="Sessão Noite: operações incluindo break even">
-              <i class="fa-solid fa-moon"></i> Noite: <span id="today-night-trades">0</span> operações · <span id="today-night-stops">0</span> stops
-            </div>
+            <div class="asrv-badge asrv-badge--neutral asrv-badge--pill">Operações hoje: <span id="today-total-trades">0</span> (inclui BE)</div>
+            <div id="today-loss-stop" class="asrv-badge asrv-badge--danger asrv-badge--pill hidden" role="status">Stop do dia: duas perdas consecutivas</div>
 
             <!-- Botão Marcar Dia Sem Operar -->
             <button onclick="markNoTradeDay()" class="asrv-btn asrv-btn--success asrv-btn--sm">
@@ -231,7 +223,7 @@
         <!-- Section Title -->
         <div>
           <h2 class="asrv-page-title">Diário de Trading</h2>
-          <p class="asrv-page-subtitle">Regras: Até duas operações por dia, incluindo break even. Escolha manhã ou noite. Sábado e domingo são dias sem operar.</p>
+          <p class="asrv-page-subtitle">Regras: Conte todas as operações, incluindo break even. Encerre o dia após duas perdas consecutivas. Ganho ou break even interrompe a sequência. Escolha manhã ou noite. Sábado e domingo são dias sem operar.</p>
         </div>
 
         <p id="today-plan-status" class="asrv-page-subtitle"></p>
@@ -404,7 +396,7 @@
       <!-- TAB 3: PLANO OPERACIONAL -->
       <section id="tab-plan" class="tab-content hidden space-y-6">
         <h2 class="asrv-page-title">Plano Operacional</h2>
-        <p class="asrv-page-subtitle">Até duas operações por dia, incluindo break even, em uma única sessão. Sábado e domingo são dias sem operar.</p>
+        <p class="asrv-page-subtitle">Conte todas as operações, incluindo break even. Encerre o dia após duas perdas consecutivas. Ganho ou break even interrompe a sequência. Escolha manhã ou noite. Sábado e domingo são dias sem operar.</p>
         <form id="daily-plan-form" class="asrv-card space-y-4" onsubmit="saveDailyPlan(event)">
           <h3 class="asrv-section-title">Checklist Operacional Diário</h3>
           <label class="block">Data do checklist
@@ -861,7 +853,6 @@
     let currentView = 'grid';
     let isValueHidden = false;
 
-    const MAX_TRADES_PER_DAY = 2;
 
     let equityChartInstance = null;
     let assetChartInstance = null;
@@ -1120,7 +1111,7 @@
       if (!cloudEnabled()) return;
 
       const [tradesRes, noTradeRes, settingsRes, plansRes] = await Promise.all([
-        sb.from('trades').select('id,date,asset,type,session,lots,pnl,notes,screenshot_path').order('date', { ascending: true }),
+        sb.from('trades').select('id,date,asset,type,session,lots,pnl,notes,screenshot_path').order('date', { ascending: true }).order('created_at', { ascending: true }).order('id', { ascending: true }),
         sb.from('no_trade_days').select('day'),
         sb.from('settings').select('initial_balance,reset_at').maybeSingle(),
         sb.from('daily_plans').select('day,loss_limit,answers')
@@ -1404,11 +1395,11 @@
       const byDate = new Map();
       for (const trade of trades) {
         const day = byDate.get(trade.date) || [];
+        if (day.some(item => item.session !== trade.session) || consecutiveLossStopIndex(day) >= 0) {
+          throw new Error('O backup tem sessões misturadas ou operações após duas perdas consecutivas.');
+        }
         day.push(trade);
         byDate.set(trade.date, day);
-        if (day.length > MAX_TRADES_PER_DAY || day.some(item => item.session !== trade.session)) {
-          throw new Error('O backup tem uma data com mais de duas operações ou com sessões misturadas.');
-        }
       }
       const { error: e1 } = await sb.from('trades').delete().eq('user_id', uid);
       if (e1) throw e1;
@@ -1655,6 +1646,12 @@
       return day === 0 || day === 6;
     }
 
+    function consecutiveLossStopIndex(dayTrades) {
+      return dayTrades.findIndex((trade, index) =>
+        index > 0 && isStop(dayTrades[index - 1].pnl) && isStop(trade.pnl)
+      );
+    }
+
     function grossDailyLoss(dayTrades) {
       return dayTrades.reduce((sum, t) => sum + Math.round(Math.max(0, -t.pnl) * 100), 0) / 100;
     }
@@ -1668,7 +1665,9 @@
         const lossLimit = dailyPlans.find(plan => plan.date === date)?.lossLimit;
         const before = balance;
         balance += dayTrades.reduce((sum, t) => sum + t.pnl, 0);
-        const broken = dayTrades.length > 0 && (isWeekend(date) || dayTrades.length > MAX_TRADES_PER_DAY ||
+        const stopIndex = consecutiveLossStopIndex(dayTrades);
+        const tradedAfterStop = stopIndex >= 0 && stopIndex < dayTrades.length - 1;
+        const broken = dayTrades.length > 0 && (isWeekend(date) || tradedAfterStop ||
           new Set(dayTrades.map(t => t.session)).size > 1 ||
           (lossLimit != null && grossDailyLoss(dayTrades) > lossLimit) ||
           (balance <= 0 && (before > 0 || dayTrades.some(t => t.pnl < 0))));
@@ -1947,8 +1946,8 @@
       const previous = trades.find(t => t.id === editId);
       const addsToDay = previous?.date !== date;
       const tradesOnDate = trades.filter(t => t.date === date && t.id !== editId);
-      if (addsToDay && tradesOnDate.length >= MAX_TRADES_PER_DAY) { alert('Você já registrou duas operações nessa data, incluindo break even.'); return; }
-      if ((addsToDay || previous?.session !== session) && tradesOnDate.some(t => t.session !== session)) { alert('As duas operações devem ser da mesma sessão.'); return; }
+      if (addsToDay && consecutiveLossStopIndex(tradesOnDate) >= 0) { alert('Stop do dia atingido após duas perdas consecutivas.'); return; }
+      if ((addsToDay || previous?.session !== session) && tradesOnDate.some(t => t.session !== session)) { alert('As operações do dia devem ser da mesma sessão.'); return; }
       const limit = dailyPlans.find(plan => plan.date === date)?.lossLimit;
       if (addsToDay && limit != null && grossDailyLoss(tradesOnDate) >= limit) { alert('O limite de perda diária já foi atingido.'); return; }
       if (isWeekend(date) && addsToDay && !confirm('Sábado e domingo são dias sem operar. Se já executou esta operação, deseja registrar a quebra e zerar a ofensiva?')) return;
@@ -1972,8 +1971,15 @@
       }
 
       await queueCloud('upsertTrade', savedTrade);
-      if (previous) trades = trades.map(t => t.id === editId ? savedTrade : t);
-      else trades.push(savedTrade);
+      if (addsToDay) {
+        trades = trades.filter(t => t.id !== editId);
+        trades.push(savedTrade);
+      } else {
+        trades = trades.map(t => t.id === editId ? savedTrade : t);
+      }
+      if (consecutiveLossStopIndex(trades.filter(t => t.date === date)) >= 0) {
+        alert('Duas perdas consecutivas. Encerre as operações do dia.');
+      }
       if (noTradeDays.includes(date)) {
         noTradeDays = noTradeDays.filter(d => d !== date);
         await queueCloud('deleteNoTrade', date);
@@ -2152,19 +2158,11 @@
       const returnPct = initialBalance > 0 ? ((totalPnl / initialBalance) * 100).toFixed(2) : 0;
 
       const todayStr = getLocalDateStr();
-      // O contador inclui todas as operações, inclusive break even.
-      document.getElementById("today-total-trades").innerText = trades.filter(t => t.date === todayStr).length;
-      ['day', 'night'].forEach(session => {
-        const sessionTrades = trades.filter(t => t.date === todayStr && t.session === session);
-        const todayCount = sessionTrades.length;
-        const todayStops = sessionTrades.filter(t => isStop(t.pnl)).length;
-
-        document.getElementById(`today-${session}-trades`).innerText = todayCount;
-        document.getElementById(`today-${session}-stops`).innerText = todayStops;
-
-      });
+      const todayTrades = trades.filter(t => t.date === todayStr);
+      document.getElementById('today-total-trades').innerText = todayTrades.length;
+      document.getElementById('today-loss-stop').classList.toggle('hidden', consecutiveLossStopIndex(todayTrades) < 0);
       const plan = dailyPlans.find(item => item.date === todayStr);
-      const loss = grossDailyLoss(trades.filter(t => t.date === todayStr));
+      const loss = grossDailyLoss(todayTrades);
       const limitStatus = plan?.lossLimit == null ? 'Limite de perda ainda sem configuração.' :
         isValueHidden ? 'Limite de perda configurado.' : `Perda hoje: ${loss.toFixed(2)} de ${plan.lossLimit.toFixed(2)}.`;
       document.getElementById('today-plan-status').innerText = `${plan ? 'Checklist de hoje salvo.' : 'Checklist de hoje pendente no Plano Operacional.'} ${limitStatus}`;

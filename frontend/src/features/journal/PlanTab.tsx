@@ -11,7 +11,7 @@ export function PlanTab({ plans, onSave }: {
   return (
     <div className="space-y-4">
       <h1 className="asrv-page-title">Plano Operacional</h1>
-      <p className="asrv-page-subtitle">Até duas operações por dia, incluindo break even, em uma única sessão. Sábado e domingo são dias sem operar.</p>
+      <p className="asrv-page-subtitle">Conte todas as operações, incluindo break even. Encerre o dia após duas perdas consecutivas. Ganho ou break even interrompe a sequência. Escolha manhã ou noite. Sábado e domingo são dias sem operar.</p>
       <label className="flex flex-wrap items-center gap-3">Data do checklist
         <input type="date" value={date} max={today()} onChange={event => { if (event.target.value) setDate(event.target.value); }} className="asrv-field__input" />
       </label>

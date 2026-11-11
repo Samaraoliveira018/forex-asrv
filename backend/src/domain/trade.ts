@@ -65,6 +65,14 @@ export function isStop(pnl: number): boolean {
   return Number.isFinite(pnl) && pnl < 0 && !isBreakEven(pnl);
 }
 
+/** Índice da segunda perda do primeiro par consecutivo, na ordem de registro do dia. */
+export function consecutiveLossStopIndex(trades: readonly Pick<Trade, 'pnl'>[]): number {
+  return trades.findIndex((trade, index) => {
+    const previous = trades[index - 1];
+    return previous !== undefined && isStop(previous.pnl) && isStop(trade.pnl);
+  });
+}
+
 /** Nome curto da sessão para exibição. */
 export function sessionLabel(session: TradeSession): string {
   return session === 'night' ? 'Noite' : 'Dia';

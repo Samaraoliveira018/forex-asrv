@@ -13,10 +13,10 @@ describe('ofensiva', () => {
     expect(result).toEqual({ streak: 2, violations: [] });
   });
 
-  it('detecta terceira operação e mistura de sessões, incluindo break even', () => {
-    const result = evaluateDiscipline({ trades: [trade(), trade({ pnl: 0 }), trade({ pnl: 0, session: 'night' })], noTradeDays: [], initialBalance: 100 });
+  it('detecta operação após duas perdas consecutivas e mistura de sessões', () => {
+    const result = evaluateDiscipline({ trades: [trade({ pnl: -5 }), trade({ pnl: -5 }), trade({ pnl: 0, session: 'night' })], noTradeDays: [], initialBalance: 100 });
     expect(result.streak).toBe(0);
-    expect(result.violations.map(item => item.kind)).toEqual(['TOO_MANY_TRADES', 'MIXED_SESSIONS']);
+    expect(result.violations.map(item => item.kind)).toEqual(['TRADE_AFTER_LOSS_STOP', 'MIXED_SESSIONS']);
   });
 
   it('zera a ofensiva no domingo e conta apenas os dias úteis após a violação', () => {

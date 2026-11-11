@@ -130,8 +130,7 @@ export class FakeSupabase implements SupabaseClientLike {
 export class FakeQuery {
   private op: 'select' | 'delete' | 'upsert' = 'select';
   private filters: Filter[] = [];
-  private orderColumn: string | null = null;
-  private ascending = true;
+  private orders: { column: string; ascending: boolean }[] = [];
   private payload: Row | Row[] | null = null;
   private options: QueryOptions | undefined;
 
@@ -151,8 +150,7 @@ export class FakeQuery {
   }
 
   order(column: string, options?: { ascending?: boolean }): this {
-    this.orderColumn = column;
-    this.ascending = options?.ascending ?? true;
+    this.orders.push({ column, ascending: options?.ascending ?? true });
     return this;
   }
 
@@ -222,11 +220,14 @@ export class FakeQuery {
       return { data: null, error: null };
     }
 
-    if (this.orderColumn) {
+    if (this.orders.length) {
       matches.sort((a, b) => {
-        const left = String(a[this.orderColumn as string] ?? '');
-        const right = String(b[this.orderColumn as string] ?? '');
-        return (left < right ? -1 : left > right ? 1 : 0) * (this.ascending ? 1 : -1);
+        for (const { column, ascending } of this.orders) {
+          const left = String(a[column] ?? '');
+          const right = String(b[column] ?? '');
+          if (left !== right) return (left < right ? -1 : 1) * (ascending ? 1 : -1);
+        }
+        return 0;
       });
     }
 
