@@ -4,6 +4,7 @@ export type { DomainErrorCode } from './domain/errors';
 export {
   BREAK_EVEN_TOLERANCE,
   createTrade,
+  consecutiveLossCount,
   consecutiveLossStopIndex,
   isBreakEven,
   isIsoDate,

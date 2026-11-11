@@ -187,7 +187,7 @@
 
           <div class="flex flex-wrap items-center gap-2">
             <div class="asrv-badge asrv-badge--neutral asrv-badge--pill">Operações hoje: <span id="today-total-trades">0</span> (inclui BE)</div>
-            <div id="today-loss-stop" class="asrv-badge asrv-badge--danger asrv-badge--pill hidden" role="status">Stop do dia: duas perdas consecutivas</div>
+            <div id="today-loss-stop" class="asrv-badge asrv-badge--neutral asrv-badge--pill" role="status">Loss seguidos: 0/2</div>
 
             <!-- Botão Marcar Dia Sem Operar -->
             <button onclick="markNoTradeDay()" class="asrv-btn asrv-btn--success asrv-btn--sm">
@@ -2160,7 +2160,13 @@
       const todayStr = getLocalDateStr();
       const todayTrades = trades.filter(t => t.date === todayStr);
       document.getElementById('today-total-trades').innerText = todayTrades.length;
-      document.getElementById('today-loss-stop').classList.toggle('hidden', consecutiveLossStopIndex(todayTrades) < 0);
+      const lossCount = consecutiveLossStopIndex(todayTrades) >= 0
+        ? 2
+        : isStop(todayTrades.at(-1)?.pnl ?? 0) ? 1 : 0;
+      const lossBadge = document.getElementById('today-loss-stop');
+      const lossTone = lossCount === 2 ? 'danger' : lossCount === 1 ? 'warning' : 'neutral';
+      lossBadge.className = 'asrv-badge asrv-badge--' + lossTone + ' asrv-badge--pill';
+      lossBadge.innerText = 'Loss seguidos: ' + lossCount + '/2' + (lossCount === 2 ? ' · Stop do dia' : '');
       const plan = dailyPlans.find(item => item.date === todayStr);
       const loss = grossDailyLoss(todayTrades);
       const limitStatus = plan?.lossLimit == null ? 'Limite de perda ainda sem configuração.' :

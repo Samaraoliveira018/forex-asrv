@@ -73,6 +73,12 @@ export function consecutiveLossStopIndex(trades: readonly Pick<Trade, 'pnl'>[]):
   });
 }
 
+export function consecutiveLossCount(trades: readonly Pick<Trade, 'pnl'>[]): 0 | 1 | 2 {
+  if (consecutiveLossStopIndex(trades) >= 0) return 2;
+  const latestTrade = trades.at(-1);
+  return latestTrade && isStop(latestTrade.pnl) ? 1 : 0;
+}
+
 /** Nome curto da sessão para exibição. */
 export function sessionLabel(session: TradeSession): string {
   return session === 'night' ? 'Noite' : 'Dia';

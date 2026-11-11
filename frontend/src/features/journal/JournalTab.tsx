@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  consecutiveLossStopIndex,
+  consecutiveLossCount,
   OFFENSIVE_INTERVAL,
   grossLoss,
   historyRange,
@@ -83,7 +83,8 @@ export function JournalTab({
   const plan = snapshot.dailyPlans.find(item => item.date === currentDay);
   const todayTrades = snapshot.trades.filter(trade => trade.date === currentDay);
   const lossesToday = grossLoss(todayTrades);
-  const lossStopReached = consecutiveLossStopIndex(todayTrades) >= 0;
+  const lossCount = consecutiveLossCount(todayTrades);
+  const lossTone = lossCount === 2 ? 'danger' : lossCount === 1 ? 'warning' : 'neutral';
   const filteredSnapshot = {
     ...snapshot,
     trades: datedTrades.filter(t => resultFilter === 'all' || (resultFilter === 'be' ? isBreakEven(t.pnl) : resultFilter === 'win' ? t.pnl > 0 && !isBreakEven(t.pnl) : t.pnl < 0 && !isBreakEven(t.pnl))),
@@ -114,7 +115,7 @@ export function JournalTab({
 
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone="neutral" pill>Operações hoje: {stats.todayCount} (inclui BE)</Badge>
-          {lossStopReached && <Badge tone="danger" pill>Stop do dia: duas perdas consecutivas</Badge>}
+          <Badge tone={lossTone} pill>Loss seguidos: {lossCount}/2{lossCount === 2 ? ' · Stop do dia' : ''}</Badge>
 
           <Button variant="success" size="sm" onClick={onNoTradeDay}>
             <i className="fa-solid fa-calendar-check" aria-hidden="true" />
