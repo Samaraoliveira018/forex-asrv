@@ -1,4 +1,9 @@
 export const OFFENSIVE_INTERVAL = 30;
+export const MAX_DAILY_TRADES = 2;
+
+export function dailyLossLimit(openingBalance: number): number {
+  return Math.round(Math.max(0, openingBalance) * 10 + 1e-8) / 100;
+}
 
 export const CHECKLIST_SECTIONS = [
   { title: 'Estado mental', fields: [

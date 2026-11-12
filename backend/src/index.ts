@@ -69,7 +69,7 @@ export type { SupabaseClientLike, SupabaseErrorLike } from './infrastructure/sup
 export { PENDING_QUEUE_KEY, createKeyValueQueue } from './infrastructure/storage';
 export type { KeyValueStorage } from './infrastructure/storage';
 
-export { CHECKLIST_SECTIONS, OFFENSIVE_INTERVAL, grossLoss, isWeekend, offensiveMilestones } from './domain/dailyPlan';
+export { CHECKLIST_SECTIONS, MAX_DAILY_TRADES, OFFENSIVE_INTERVAL, grossLoss, isWeekend, offensiveMilestones } from './domain/dailyPlan';
 export type { DailyPlan } from './domain/dailyPlan';
 export { historyRange } from './domain/stats';
 export type { HistoryPeriod } from './domain/stats';

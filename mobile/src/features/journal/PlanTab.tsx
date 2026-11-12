@@ -13,7 +13,7 @@ export function PlanTab({ plans, onSave }: {
   return (
     <View style={{ gap: spacing.md }}>
       <Text style={{ color: colors.text, fontSize: typography.hero }}>Plano Operacional</Text>
-      <Text style={{ color: colors.text }}>Conte todas as operações, incluindo break even. Encerre o dia após duas perdas consecutivas. Ganho ou break even interrompe a sequência. Escolha manhã ou noite. Sábado e domingo são dias sem operar.</Text>
+      <Text style={{ color: colors.text }}>Máximo de duas operações por dia, incluindo break even, na mesma sessão. Pare ao atingir 10% de perda sobre o saldo de abertura do dia. Sábado e domingo são dias sem operar.</Text>
       <Input label="Data do checklist" value={dateDraft} onChangeText={value => setDateDraft(maskDateInput(value))} keyboardType="numeric" />
       {date && date <= today() && <DailyChecklist key={date} date={date} saved={plans.find(plan => plan.date === date)} onSave={onSave} />}
     </View>
@@ -26,7 +26,6 @@ function DailyChecklist({ date, saved, onSave }: {
   onSave: (plan: DailyPlan) => Promise<void>;
 }) {
   const [answers, setAnswers] = useState(saved?.answers ?? {});
-  const [limit, setLimit] = useState(saved?.lossLimit?.toString() ?? '');
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
@@ -41,8 +40,8 @@ function DailyChecklist({ date, saved, onSave }: {
     setStatus('');
     setError('');
     try {
-      await onSave({ date, answers, lossLimit: limit.trim() ? Number(limit.replace(',', '.')) : null });
-      setStatus('Checklist e limite salvos para esta data.');
+      await onSave({ date, answers, lossLimit: saved?.lossLimit ?? null });
+      setStatus('Checklist salvo para esta data.');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Falha ao salvar o checklist.');
     } finally {
@@ -54,9 +53,8 @@ function DailyChecklist({ date, saved, onSave }: {
     <Card>
       <View style={{ gap: spacing.md }}>
         <Text style={{ color: colors.text, fontSize: typography.subtitle }}>Checklist Operacional Diário</Text>
-        <Input label="Limite de perda diária ($ / R$)" value={limit} onChangeText={value => { setLimit(value); setStatus('Alterações pendentes de salvar.'); }} keyboardType="decimal-pad" placeholder="Ex.: 10,00" />
         <Text style={{ color: colors.text }}>O limite soma os resultados negativos desta data, inclusive taxas registradas no break even.</Text>
-        <Button disabled={saving} onPress={save}>Salvar checklist e limite</Button>
+        <Button disabled={saving} onPress={save}>Salvar checklist</Button>
         {CHECKLIST_SECTIONS.map(section => (
           <View key={section.title} style={{ gap: spacing.sm }}>
             <Text style={{ color: colors.text, fontSize: typography.subtitle }}>{section.title}</Text>
@@ -76,7 +74,7 @@ function DailyChecklist({ date, saved, onSave }: {
         ))}
         <Text accessibilityLiveRegion="polite" style={{ color: colors.text }}>{status || (saved ? 'Checklist salvo para esta data.' : 'Checklist pendente para esta data.')}</Text>
         {error && <Alert tone="danger">{error}</Alert>}
-        <Button disabled={saving} onPress={save}>Salvar checklist e limite</Button>
+        <Button disabled={saving} onPress={save}>Salvar checklist</Button>
       </View>
     </Card>
   );

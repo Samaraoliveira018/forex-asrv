@@ -214,23 +214,12 @@ describe('createJournalService', () => {
 
   const input = { date: '2026-10-21', asset: 'EURUSD', type: 'Compra' as const, lots: 1, pnl: 0 };
 
-  it.each([-0.99, 0, 5])('permite mais de duas operações quando %s interrompe a sequência de perdas', async (pnl) => {
+  it.each([-0.99, 0, 5])('bloqueia a terceira operação mesmo quando o resultado anterior é %s', async (pnl) => {
     const { service } = setup();
-    await service.saveTrade({ ...input, pnl: -5 });
+    await service.saveTrade({ ...input, id: 'first', pnl: -5 });
     await service.saveTrade({ ...input, pnl });
-    const third = await service.saveTrade({ ...input, pnl: -5 });
-    expect(third.warnings).toEqual([]);
-    expect((await service.list()).trades).toHaveLength(3);
-  });
-
-  it('avisa na segunda perda consecutiva e bloqueia novos registros apenas na mesma data', async () => {
-    const { service } = setup();
-    await service.saveTrade({ ...input, pnl: 5 });
-    await service.saveTrade({ ...input, id: 'loss-one', pnl: -1 });
-    const stop = await service.saveTrade({ ...input, pnl: -1 });
-    expect(stop.warnings).toContain('Duas perdas consecutivas. Encerre as operações do dia.');
-    await expect(service.saveTrade(input)).rejects.toThrow('duas perdas consecutivas');
-    await expect(service.saveTrade({ ...input, id: 'loss-one', pnl: -6 })).resolves.toMatchObject({ synced: true });
+    await expect(service.saveTrade(input)).rejects.toThrow('duas operações');
+    await expect(service.saveTrade({ ...input, id: 'first', pnl: -6 })).resolves.toMatchObject({ synced: true });
     await expect(service.saveTrade({ ...input, date: '2026-10-22' })).resolves.toMatchObject({ synced: true });
   });
 
@@ -251,14 +240,17 @@ describe('createJournalService', () => {
     expect((await service.list()).discipline.streak).toBe(1);
   });
 
-  it('salva o checklist por dia e bloqueia nova operação ao atingir o limite salvo', async () => {
+  it('salva o checklist por dia e bloqueia ao atingir 10% do saldo de abertura', async () => {
     const { service } = setup();
     await service.saveDailyPlan({ date: input.date, lossLimit: 10, answers: { sleep: true, trend: 'Alta' } });
     await service.saveDailyPlan({ date: '2026-10-22', lossLimit: 20, answers: { sleep: false } });
-    const first = await service.saveTrade({ ...input, pnl: -10 });
+    await service.saveTrade({ ...input, date: '2026-10-20', pnl: 200 });
+    const first = await service.saveTrade({ ...input, pnl: -120 });
     expect(first.warnings[0]).toMatch(/Limite de perda diária atingido/);
     await expect(service.saveTrade(input)).rejects.toThrow('limite de perda diária');
-    await service.saveTrade({ ...input, date: '2026-10-22', pnl: -10 });
+    const nextDay = await service.saveTrade({ ...input, date: '2026-10-22', pnl: -108 });
+    expect(nextDay.warnings[0]).toMatch(/Limite de perda diária atingido/);
+    await expect(service.saveTrade({ ...input, date: '2026-10-22' })).rejects.toThrow('limite de perda diária');
     expect((await service.list()).dailyPlans).toEqual([
       { date: input.date, lossLimit: 10, answers: { sleep: true, trend: 'Alta' } },
       { date: '2026-10-22', lossLimit: 20, answers: { sleep: false } },

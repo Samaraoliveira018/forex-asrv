@@ -1,14 +1,13 @@
 import { DomainError } from '../domain/errors';
 import {
   createTrade,
-  consecutiveLossStopIndex,
   isIsoDate,
   type Trade,
   type TradeInput,
 } from '../domain/trade';
-import { CHECKLIST_SECTIONS, grossLoss, isWeekend, type DailyPlan } from '../domain/dailyPlan';
+import { CHECKLIST_SECTIONS, MAX_DAILY_TRADES, dailyLossLimit, grossLoss, isWeekend, type DailyPlan } from '../domain/dailyPlan';
 import { evaluateDiscipline, type DisciplineResult } from '../domain/discipline';
-import { calculateStats, type Stats } from '../domain/stats';
+import { calculateStats, openingBalanceOn, type Stats } from '../domain/stats';
 import type {
   Clock,
   DailyPlanRepository,
@@ -153,7 +152,6 @@ export function createJournalService(deps: JournalDeps): JournalService {
         discipline: evaluateDiscipline({
           trades: sortedTrades,
           noTradeDays: noTradeDayList,
-          dailyPlans: planList,
           initialBalance,
         }),
         screenshotUrls,
@@ -163,13 +161,15 @@ export function createJournalService(deps: JournalDeps): JournalService {
     async saveTrade(input, screenshotDataUrl) {
       const trade = createTrade(input);
 
-      const [storedTrades, plans, jobs] = await Promise.all([
+      const [storedTrades, storedBalance, jobs] = await Promise.all([
         trades.list().catch(() => [] as Trade[]),
-        dailyPlans.list().catch(() => [] as DailyPlan[]),
+        settings.getInitialBalance().catch(() => null),
         pending.read(),
       ]);
       const existingTrades = new Map(storedTrades.map(item => [item.id, item]));
+      let initialBalance = storedBalance;
       for (const job of jobs) {
+        if (job.op === 'setInitialBalance') initialBalance = job.value;
         if (job.op === 'upsertTrade') {
           const previous = existingTrades.get(job.trade.id);
           if (previous && previous.date !== job.trade.date) existingTrades.delete(job.trade.id);
@@ -178,14 +178,17 @@ export function createJournalService(deps: JournalDeps): JournalService {
         if (job.op === 'deleteTrade') existingTrades.delete(job.id);
       }
       const previous = existingTrades.get(trade.id);
-      const sameDay = [...existingTrades.values()].filter(item => item.date === trade.date && item.id !== trade.id);
+      const otherTrades = [...existingTrades.values()].filter(item => item.id !== trade.id);
+      const sameDay = otherTrades.filter(item => item.date === trade.date);
       const addsToDay = previous?.date !== trade.date;
-      const limit = plans.find(plan => plan.date === trade.date)?.lossLimit;
+      const limit = initialBalance === null
+        ? null
+        : dailyLossLimit(openingBalanceOn(otherTrades, initialBalance, trade.date));
       if (isWeekend(trade.date) && addsToDay && !input.weekendBreach) {
         throw new DomainError('TRADE_RULE', 'Sábado e domingo são dias sem operar. Para registrar uma operação já feita, confirme a quebra de regra.');
       }
-      if (addsToDay && consecutiveLossStopIndex(sameDay) >= 0) {
-        throw new DomainError('TRADE_RULE', 'Stop do dia atingido após duas perdas consecutivas.');
+      if (addsToDay && sameDay.length >= MAX_DAILY_TRADES) {
+        throw new DomainError('TRADE_RULE', 'O limite de duas operações no dia já foi atingido.');
       }
       if ((addsToDay || previous?.session !== trade.session) && sameDay.some(item => item.session !== trade.session)) {
         throw new DomainError('TRADE_RULE', 'As operações do dia devem ser da mesma sessão.');
@@ -198,13 +201,6 @@ export function createJournalService(deps: JournalDeps): JournalService {
       if (isWeekend(trade.date)) warnings.push('Operação de fim de semana registrada. A ofensiva reinicia após esta data.');
       if (limit != null && grossLoss([...sameDay, trade]) >= limit) {
         warnings.push('Limite de perda diária atingido. Encerre as operações do dia.');
-      }
-      const updatedDay = addsToDay
-        ? [...sameDay, trade]
-        : [...existingTrades.values()].filter(item => item.date === trade.date)
-            .map(item => item.id === trade.id ? trade : item);
-      if (consecutiveLossStopIndex(updatedDay) >= 0) {
-        warnings.push('Duas perdas consecutivas. Encerre as operações do dia.');
       }
 
       if (typeof screenshotDataUrl === 'string') {

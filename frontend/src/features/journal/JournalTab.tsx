@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   consecutiveLossCount,
+  MAX_DAILY_TRADES,
   OFFENSIVE_INTERVAL,
   grossLoss,
   historyRange,
@@ -115,7 +116,7 @@ export function JournalTab({
         />
 
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone="neutral" pill>Operações hoje: {stats.todayCount} (inclui BE)</Badge>
+          <Badge tone="neutral" pill>Operações hoje: {stats.todayCount}/{MAX_DAILY_TRADES} (inclui BE)</Badge>
           <Badge tone={lossTone} pill>Loss seguidos: {lossCount}/2{lossCount === 2 ? ' · Stop do dia' : ''}</Badge>
 
           <Button variant="success" size="sm" onClick={onNoTradeDay}>
@@ -172,13 +173,13 @@ export function JournalTab({
       <div>
         <h1 className="asrv-page-title">Diário de Trading</h1>
         <p className="asrv-page-subtitle">
-          Regras: Conte todas as operações, incluindo break even. Encerre o dia após duas perdas consecutivas. Ganho ou break even interrompe a sequência. Escolha manhã ou noite. Sábado e domingo são dias sem operar.
+          Regras: Máximo de duas operações por dia, incluindo break even, na mesma sessão. Pare ao atingir 10% de perda sobre o saldo de abertura do dia. Sábado e domingo são dias sem operar.
         </p>
       </div>
 
       <p className="asrv-page-subtitle">
         {plan ? 'Checklist de hoje salvo.' : 'Checklist de hoje pendente no Plano Operacional.'}{' '}
-        {plan?.lossLimit == null ? 'Limite de perda ainda sem configuração.' : `Perda hoje: ${historyMoney(lossesToday)} de ${historyMoney(plan.lossLimit)}.`}
+        {`Perda hoje: ${historyMoney(lossesToday)} de ${historyMoney(stats.dailyLossLimit)}.${lossesToday >= stats.dailyLossLimit ? ' · Stop diário atingido.' : ''}`}
       </p>
 
       <Card ariaLabel="Consultar diário por data">

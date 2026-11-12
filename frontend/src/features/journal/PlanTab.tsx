@@ -11,7 +11,7 @@ export function PlanTab({ plans, onSave }: {
   return (
     <div className="space-y-4">
       <h1 className="asrv-page-title">Plano Operacional</h1>
-      <p className="asrv-page-subtitle">Conte todas as operações, incluindo break even. Encerre o dia após duas perdas consecutivas. Ganho ou break even interrompe a sequência. Escolha manhã ou noite. Sábado e domingo são dias sem operar.</p>
+      <p className="asrv-page-subtitle">Máximo de duas operações por dia, incluindo break even, na mesma sessão. Pare ao atingir 10% de perda sobre o saldo de abertura do dia. Sábado e domingo são dias sem operar.</p>
       <label className="flex flex-wrap items-center gap-3">Data do checklist
         <input type="date" value={date} max={today()} onChange={event => { if (event.target.value) setDate(event.target.value); }} className="asrv-field__input" />
       </label>
@@ -26,7 +26,6 @@ function DailyChecklist({ date, saved, onSave }: {
   onSave: (plan: DailyPlan) => Promise<void>;
 }) {
   const [answers, setAnswers] = useState(saved?.answers ?? {});
-  const [limit, setLimit] = useState(saved?.lossLimit?.toString() ?? '');
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
@@ -41,8 +40,8 @@ function DailyChecklist({ date, saved, onSave }: {
     setStatus('');
     setError('');
     try {
-      await onSave({ date, answers, lossLimit: limit.trim() ? Number(limit.replace(',', '.')) : null });
-      setStatus('Checklist e limite salvos para esta data.');
+      await onSave({ date, answers, lossLimit: saved?.lossLimit ?? null });
+      setStatus('Checklist salvo para esta data.');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Falha ao salvar o checklist.');
     } finally {
@@ -54,11 +53,8 @@ function DailyChecklist({ date, saved, onSave }: {
     <Card ariaLabel="Checklist operacional diário">
       <div className="space-y-5">
         <h2 className="asrv-section-title">Checklist Operacional Diário</h2>
-        <label className="block">Limite de perda diária ($ / R$)
-          <input className="asrv-field__input" inputMode="decimal" value={limit} onChange={event => { setLimit(event.target.value); setStatus('Alterações pendentes de salvar.'); }} placeholder="Ex.: 10,00" />
-        </label>
-        <p className="asrv-page-subtitle">Defina o valor máximo de perda para esta data. O limite soma os resultados negativos, inclusive taxas registradas no break even.</p>
-        <Button disabled={saving} onClick={save}>Salvar checklist e limite</Button>
+        <p className="asrv-page-subtitle">O limite soma os resultados negativos, inclusive taxas de breakeven.</p>
+        <Button disabled={saving} onClick={save}>Salvar checklist</Button>
         {CHECKLIST_SECTIONS.map(section => (
           <fieldset key={section.title} className="space-y-3 border-t border-slate-700 pt-3">
             <legend className="asrv-section-title">{section.title}</legend>
@@ -84,7 +80,7 @@ function DailyChecklist({ date, saved, onSave }: {
         ))}
         <p role="status">{status || (saved ? 'Checklist salvo para esta data.' : 'Checklist pendente para esta data.')}</p>
         {error && <Alert tone="danger">{error}</Alert>}
-        <Button disabled={saving} onClick={save}>Salvar checklist e limite</Button>
+        <Button disabled={saving} onClick={save}>Salvar checklist</Button>
       </div>
     </Card>
   );

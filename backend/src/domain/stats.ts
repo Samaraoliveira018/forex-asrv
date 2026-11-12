@@ -1,3 +1,4 @@
+import { dailyLossLimit } from './dailyPlan';
 import { isBreakEven, isStop, type Trade, type TradeSession } from './trade';
 
 export interface StatsInput {
@@ -55,6 +56,7 @@ export interface Stats {
   todayStops: number;
   /** Contadores de hoje separados por sessão (dia/noite). */
   todayBySession: Record<TradeSession, SessionCounters>;
+  dailyLossLimit: number;
   /** Resultado diário, semanal (desde segunda) e mensal. */
   periods: PeriodResults;
 }
@@ -115,6 +117,8 @@ export function calculateStats(input: StatsInput): Stats {
 
   const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Number.POSITIVE_INFINITY : 0;
 
+  const periods = calculatePeriodResults(trades, initialBalance, today);
+
   return {
     totalTrades: trades.length,
     wins,
@@ -133,7 +137,8 @@ export function calculateStats(input: StatsInput): Stats {
     todayCountedTrades,
     todayStops,
     todayBySession,
-    periods: calculatePeriodResults(trades, initialBalance, today),
+    dailyLossLimit: dailyLossLimit(periods.daily.openingBalance),
+    periods,
   };
 }
 
@@ -157,10 +162,7 @@ function periodResult(
 ): PeriodResult {
   const inPeriod = trades.filter((trade) => trade.date >= start && trade.date <= end);
   const pnl = inPeriod.reduce((sum, trade) => sum + trade.pnl, 0);
-  const previousPnl = trades
-    .filter((trade) => trade.date < start)
-    .reduce((sum, trade) => sum + trade.pnl, 0);
-  const openingBalance = initialBalance + previousPnl;
+  const openingBalance = openingBalanceOn(trades, initialBalance, start);
   const pct = openingBalance > 0 ? (pnl / openingBalance) * 100 : 0;
   const lossPct =
     pnl < 0 && openingBalance > 0
@@ -175,6 +177,14 @@ function periodResult(
     trades: inPeriod.length,
     stops: inPeriod.filter((trade) => isStop(trade.pnl)).length,
   };
+}
+
+export function openingBalanceOn(trades: Iterable<Pick<Trade, 'date' | 'pnl'>>, initialBalance: number, date: string): number {
+  let balance = initialBalance;
+  for (const trade of trades) {
+    if (trade.date < date) balance += trade.pnl;
+  }
+  return balance;
 }
 
 /** Segunda-feira da semana que contém a data informada (ISO YYYY-MM-DD). */

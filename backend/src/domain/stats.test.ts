@@ -36,6 +36,7 @@ describe('calculateStats', () => {
       buyCount: 0,
       sellCount: 0,
       todayCount: 0,
+      dailyLossLimit: 100,
       todayCountedTrades: 0,
       todayStops: 0,
       todayBySession: {

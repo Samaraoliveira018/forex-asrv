@@ -13,10 +13,10 @@ describe('ofensiva', () => {
     expect(result).toEqual({ streak: 2, violations: [] });
   });
 
-  it('detecta operação após duas perdas consecutivas e mistura de sessões', () => {
+  it('detecta mais de duas operações e mistura de sessões', () => {
     const result = evaluateDiscipline({ trades: [trade({ pnl: -5 }), trade({ pnl: -5 }), trade({ pnl: 0, session: 'night' })], noTradeDays: [], initialBalance: 100 });
     expect(result.streak).toBe(0);
-    expect(result.violations.map(item => item.kind)).toEqual(['TRADE_AFTER_LOSS_STOP', 'MIXED_SESSIONS']);
+    expect(result.violations.map(item => item.kind)).toEqual(['DAILY_TRADE_LIMIT', 'MIXED_SESSIONS', 'LOSS_OVER_LIMIT']);
   });
 
   it('zera a ofensiva no domingo e conta apenas os dias úteis após a violação', () => {
@@ -27,8 +27,8 @@ describe('ofensiva', () => {
 
   it('soma perdas da data, incluindo taxas do break even, e aceita o limite exato', () => {
     const input = { trades: [trade({ pnl: -9.9 }), trade({ pnl: -0.1 })], noTradeDays: [], initialBalance: 100 };
-    expect(evaluateDiscipline({ ...input, dailyPlans: [{ date: '2026-10-23', lossLimit: 10, answers: {} }] }).streak).toBe(1);
-    const result = evaluateDiscipline({ ...input, dailyPlans: [{ date: '2026-10-23', lossLimit: 9.95, answers: {} }] });
+    expect(evaluateDiscipline(input).streak).toBe(1);
+    const result = evaluateDiscipline({ ...input, initialBalance: 99.5 });
     expect(result.streak).toBe(0);
     expect(result.violations[0]?.kind).toBe('LOSS_OVER_LIMIT');
   });
