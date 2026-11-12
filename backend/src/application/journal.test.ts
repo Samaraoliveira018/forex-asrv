@@ -214,7 +214,7 @@ describe('createJournalService', () => {
 
   const input = { date: '2026-10-21', asset: 'EURUSD', type: 'Compra' as const, lots: 1, pnl: 0 };
 
-  it.each([0, 5])('permite mais de duas operações quando %s interrompe a sequência de perdas', async (pnl) => {
+  it.each([-0.99, 0, 5])('permite mais de duas operações quando %s interrompe a sequência de perdas', async (pnl) => {
     const { service } = setup();
     await service.saveTrade({ ...input, pnl: -5 });
     await service.saveTrade({ ...input, pnl });
@@ -226,8 +226,8 @@ describe('createJournalService', () => {
   it('avisa na segunda perda consecutiva e bloqueia novos registros apenas na mesma data', async () => {
     const { service } = setup();
     await service.saveTrade({ ...input, pnl: 5 });
-    await service.saveTrade({ ...input, id: 'loss-one', pnl: -5 });
-    const stop = await service.saveTrade({ ...input, pnl: -5 });
+    await service.saveTrade({ ...input, id: 'loss-one', pnl: -1 });
+    const stop = await service.saveTrade({ ...input, pnl: -1 });
     expect(stop.warnings).toContain('Duas perdas consecutivas. Encerre as operações do dia.');
     await expect(service.saveTrade(input)).rejects.toThrow('duas perdas consecutivas');
     await expect(service.saveTrade({ ...input, id: 'loss-one', pnl: -6 })).resolves.toMatchObject({ synced: true });

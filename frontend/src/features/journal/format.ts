@@ -1,12 +1,7 @@
-export const BREAK_EVEN_TOLERANCE = 0.3;
-
-export function isBreakEven(value: number): boolean {
-  return Math.abs(value) <= BREAK_EVEN_TOLERANCE;
-}
+import { isBreakEven } from '@asrv/backend';
 
 export function money(value: number, hidden = false): string {
   if (hidden) return '••••••';
-  if (isBreakEven(value)) return '$ 0.00';
   const sign = value < 0 ? '- ' : '';
   return `${sign}$ ${Math.abs(value).toLocaleString('en-US', {
     minimumFractionDigits: 2,
@@ -16,7 +11,7 @@ export function money(value: number, hidden = false): string {
 
 export function signedMoney(value: number, hidden = false): string {
   if (hidden) return '••••••';
-  if (isBreakEven(value)) return '$ 0.00';
+  if (value === 0) return '$ 0.00';
   return `${value > 0 ? '+ ' : '- '}$ ${Math.abs(value).toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

@@ -15,7 +15,7 @@ function loadHistory() {
   api.seed([
     { id: 'win', date: '2026-10-20', asset: 'EURUSD', pnl: 20, session: 'day', type: 'Compra', lots: 1 },
     { id: 'loss', date: '2026-10-20', asset: 'GBPUSD', pnl: -7, session: 'day', type: 'Venda', lots: 1 },
-    { id: 'be', date: '2026-10-20', asset: 'USDJPY', pnl: -0.1, session: 'night', type: 'Compra', lots: 1 },
+    { id: 'be', date: '2026-10-20', asset: 'USDJPY', pnl: -0.99, session: 'night', type: 'Compra', lots: 1 },
     { id: 'other', date: '2026-10-21', asset: 'XAUUSD', pnl: 50, session: 'day', type: 'Compra', lots: 1 },
   ], ['2026-10-19']);
   return api;
@@ -31,18 +31,18 @@ describe('Histórico da página estática', () => {
     expect(grid).toHaveTextContent('EURUSD');
     expect(grid).not.toHaveTextContent('XAUUSD');
     expect(list).not.toHaveTextContent('XAUUSD');
-    expect(summary).toHaveTextContent('- $ 7.10');
-    expect(summary).toHaveTextContent('+ $ 12.90');
+    expect(summary).toHaveTextContent('- $ 7.99');
+    expect(summary).toHaveTextContent('+ $ 12.01');
     api.filter('loss');
     expect(grid).toHaveTextContent('GBPUSD');
     expect(grid).not.toHaveTextContent('USDJPY');
     expect(list).not.toHaveTextContent('EURUSD');
-    expect(summary).toHaveTextContent('+ $ 12.90');
+    expect(summary).toHaveTextContent('+ $ 12.01');
     api.filter('be');
     expect(grid).toHaveTextContent('USDJPY');
     expect(list).not.toHaveTextContent('GBPUSD');
     api.hide();
-    expect(summary).not.toHaveTextContent('12.90');
+    expect(summary).not.toHaveTextContent('12.01');
     expect(summary).toHaveTextContent('••••••');
   });
 

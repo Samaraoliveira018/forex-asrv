@@ -57,7 +57,7 @@ export function isIsoDate(value: string): boolean {
 }
 
 export function isBreakEven(pnl: number): boolean {
-  return Number.isFinite(pnl) && Math.abs(pnl) <= BREAK_EVEN_TOLERANCE;
+  return Number.isFinite(pnl) && pnl > -1 && pnl <= BREAK_EVEN_TOLERANCE;
 }
 
 /** Stop = perda real (fora da tolerância de break even). */

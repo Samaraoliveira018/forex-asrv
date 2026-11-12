@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BREAK_EVEN_TOLERANCE,
   createTrade,
   isBreakEven,
   isIsoDate,
@@ -133,13 +132,13 @@ describe('isIsoDate', () => {
 
 describe('isBreakEven', () => {
   it('considera empate técnico dentro da tolerância', () => {
-    expect(isBreakEven(-BREAK_EVEN_TOLERANCE)).toBe(true);
-    expect(isBreakEven(BREAK_EVEN_TOLERANCE)).toBe(true);
+    expect(isBreakEven(-0.99)).toBe(true);
+    expect(isBreakEven(0.3)).toBe(true);
     expect(isBreakEven(0)).toBe(true);
   });
 
   it('não considera empate fora da tolerância', () => {
-    expect(isBreakEven(-0.31)).toBe(false);
+    expect(isBreakEven(-1)).toBe(false);
     expect(isBreakEven(0.31)).toBe(false);
   });
 
@@ -152,16 +151,10 @@ describe('isBreakEven', () => {
 describe('isStop', () => {
   it('considera stop apenas perda real fora da tolerância', () => {
     expect(isStop(-10)).toBe(true);
-    expect(isStop(-0.31)).toBe(true);
-    expect(isStop(-0.3)).toBe(false);
+    expect(isStop(-1)).toBe(true);
+    expect(isStop(-0.99)).toBe(false);
     expect(isStop(0)).toBe(false);
     expect(isStop(10)).toBe(false);
     expect(isStop(Number.NaN)).toBe(false);
-  });
-});
-
-describe('regras de disciplina', () => {
-  it('mantém a tolerância de break even usada pelo app', () => {
-    expect(BREAK_EVEN_TOLERANCE).toBe(0.3);
   });
 });

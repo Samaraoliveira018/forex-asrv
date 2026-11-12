@@ -11,6 +11,7 @@ export interface TradeCardProps {
   session?: 'day' | 'night';
   lots: number;
   pnl: number;
+  breakEven?: boolean;
   notes?: string;
   /** URL assinada do print da operação (opcional). */
   screenshotUrl?: string;
@@ -29,6 +30,7 @@ export function TradeCard({
   session,
   lots,
   pnl,
+  breakEven = Math.abs(pnl) <= 0.3,
   notes,
   screenshotUrl,
   hidden = false,
@@ -38,7 +40,6 @@ export function TradeCard({
   deleteLabel = 'Eliminar',
   className,
 }: TradeCardProps) {
-  const breakEven = Math.abs(pnl) <= 0.3;
   const tone = breakEven ? 'muted' : pnl > 0 ? 'success' : 'danger';
   const pnlText = hidden
     ? '••••••'

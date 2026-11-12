@@ -4,6 +4,7 @@ import {
   OFFENSIVE_INTERVAL,
   grossLoss,
   historyRange,
+  isBreakEven,
   offensiveMilestones,
   isWeekend,
   type HistoryPeriod,
@@ -22,7 +23,7 @@ import {
   TradeCard,
 } from '@asrv/design-system';
 import { EquityChart } from './charts';
-import { formatDate, isBreakEven, money, signedMoney, signedPercent, signedValue, today } from './format';
+import { formatDate, money, signedMoney, signedPercent, signedValue, today } from './format';
 
 export type JournalView = 'grid' | 'list';
 export type Market = 'nacional' | 'internacional';
@@ -389,6 +390,7 @@ function JournalGrid({
             session={item.trade.session}
             lots={item.trade.lots}
             pnl={item.trade.pnl}
+            breakEven={isBreakEven(item.trade.pnl)}
             notes={item.trade.notes}
             screenshotUrl={snapshot.screenshotUrls[item.trade.id]}
             hidden={hidden}
