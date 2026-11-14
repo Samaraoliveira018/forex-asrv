@@ -223,7 +223,7 @@
         <!-- Section Title -->
         <div>
           <h2 class="asrv-page-title">Diário de Trading</h2>
-          <p class="asrv-page-subtitle">Regras: Máximo de duas operações por dia, incluindo break even, na mesma sessão. Pare ao atingir 10% de perda sobre o saldo de abertura do dia. Sábado e domingo são dias sem operar.</p>
+          <p class="asrv-page-subtitle">Regras: Máximo de duas operações por dia, incluindo break even, na mesma sessão. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</p>
         </div>
 
         <p id="today-plan-status" class="asrv-page-subtitle"></p>
@@ -396,7 +396,7 @@
       <!-- TAB 3: PLANO OPERACIONAL -->
       <section id="tab-plan" class="tab-content hidden space-y-6">
         <h2 class="asrv-page-title">Plano Operacional</h2>
-        <p class="asrv-page-subtitle">Máximo de duas operações por dia, incluindo break even, na mesma sessão. Pare ao atingir 10% de perda sobre o saldo de abertura do dia. Sábado e domingo são dias sem operar.</p>
+        <p class="asrv-page-subtitle">Máximo de duas operações por dia, incluindo break even, na mesma sessão. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</p>
         <form id="daily-plan-form" class="asrv-card space-y-4" onsubmit="saveDailyPlan(event)">
           <h3 class="asrv-section-title">Checklist Operacional Diário</h3>
           <label class="block">Data do checklist
@@ -1166,7 +1166,6 @@
             pnl: Number(t.pnl) || 0,
             notes: t.notes || '',
             screenshot_path: t.screenshot_path || '',
-            weekend_breach: isWeekend(t.date)
           }, { onConflict: 'user_id,id' });
           if (error) throw error;
           return;
@@ -1423,7 +1422,6 @@
           pnl: Number(t.pnl) || 0,
           notes: t.notes || '',
           screenshot_path: t.screenshot_path || '',
-          weekend_breach: isWeekend(t.date)
         }));
         const { error } = await sb.from('trades').upsert(rows, { onConflict: 'user_id,id' });
         if (error) throw error;
@@ -1671,12 +1669,12 @@
         const lossLimit = dailyLossLimit(balance);
         const before = balance;
         balance += dayTrades.reduce((sum, t) => sum + t.pnl, 0);
-        const broken = dayTrades.length > 0 && (isWeekend(date) || dayTrades.length > 2 ||
+        const broken = dayTrades.length > 0 && (dayTrades.length > 2 ||
           new Set(dayTrades.map(t => t.session)).size > 1 ||
           (grossDailyLoss(dayTrades) > lossLimit || (dayTrades.length > 1 && grossDailyLoss(dayTrades.slice(0, -1)) >= lossLimit)) ||
           (balance <= 0 && (before > 0 || dayTrades.some(t => t.pnl < 0))));
         if (broken) streakDays = 0;
-        else if (!isWeekend(date)) streakDays += 1;
+        else if (dayTrades.length > 0 || !isWeekend(date)) streakDays += 1;
       }
       updateStreakUI();
     }
@@ -1951,7 +1949,6 @@
       if ((addsToDay || previous?.session !== session) && tradesOnDate.some(t => t.session !== session)) { alert('As operações do dia devem ser da mesma sessão.'); return; }
       const limit = lossLimitOn(date, editId);
       if (addsToDay && grossDailyLoss(tradesOnDate) >= limit) { alert('O limite de perda diária já foi atingido.'); return; }
-      if (isWeekend(date) && addsToDay && !confirm('Sábado e domingo são dias sem operar. Se já executou esta operação, deseja registrar a quebra e zerar a ofensiva?')) return;
       const savedTrade = { id: previous?.id ?? newTradeId(), date, asset, type, session, lots, pnl, notes,
         screenshot_path: previous?.screenshot_path ?? '' };
 

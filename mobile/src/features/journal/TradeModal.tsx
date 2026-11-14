@@ -2,11 +2,10 @@ import { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
-import { isWeekend, type Trade, type TradeInput, type TradeSession, type TradeType } from '@asrv/backend';
+import { type Trade, type TradeInput, type TradeSession, type TradeType } from '@asrv/backend';
 import {
   Alert,
   Button,
-  Checkbox,
   Input,
   Modal,
   SegmentedControl,
@@ -57,17 +56,12 @@ export function TradeModal({
   const [readingPhoto, setReadingPhoto] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [confirmedWeekendDate, setConfirmedWeekendDate] = useState<string | null>(null);
-  const formDate = parseDateInput(form.date);
-  const weekendBreach = formDate !== null && confirmedWeekendDate === formDate;
-  const weekendEntry = formDate !== null && formDate !== trade?.date && isWeekend(formDate);
 
   const preview = photoDataUrl ?? (photoRemoved ? null : (screenshotUrl ?? null));
 
   useEffect(() => {
     if (!open) return;
     setForm(formFor(trade));
-    setConfirmedWeekendDate(null);
     setPhotoDataUrl(null);
     setPhotoRemoved(false);
     setReadingPhoto(false);
@@ -154,7 +148,6 @@ export function TradeModal({
         {
           ...(trade ? { id: trade.id } : {}),
           date: isoDate,
-          ...(weekendEntry ? { weekendBreach } : {}),
           asset: form.asset,
           type: form.type,
           session: form.session,
@@ -189,13 +182,6 @@ export function TradeModal({
         </>
       }
     >
-      {weekendEntry && (
-        <Checkbox
-          label="Já operei no fim de semana. Registrar como quebra e zerar a ofensiva."
-          checked={weekendBreach}
-          onChange={checked => setConfirmedWeekendDate(checked ? formDate : null)}
-        />
-      )}
       <Input
         label="Data da Operação"
         value={form.date}

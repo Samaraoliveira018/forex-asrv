@@ -7,7 +7,7 @@ import type {
   SettingsRepository,
   TradeRepository,
 } from '../application/ports';
-import { isWeekend, type DailyPlan } from '../domain/dailyPlan';
+import { type DailyPlan } from '../domain/dailyPlan';
 import { DomainError } from '../domain/errors';
 import type { Trade } from '../domain/trade';
 import { BackendError, type BackendErrorCode } from './errors';
@@ -61,7 +61,6 @@ export function createSupabaseTradeRepository(
             pnl: trade.pnl,
             notes: trade.notes,
             screenshot_path: trade.screenshotPath,
-            weekend_breach: isWeekend(trade.date),
           },
           { onConflict: 'user_id,id' },
         );

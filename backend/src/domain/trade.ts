@@ -23,8 +23,6 @@ export interface Trade {
 
 export interface TradeInput {
   id?: string;
-  /** Confirma o registro de uma operação de fim de semana já executada. */
-  weekendBreach?: boolean;
   date: string;
   asset: string;
   type: TradeType;

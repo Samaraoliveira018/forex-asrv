@@ -6,7 +6,7 @@ import {
   type ChangeEvent,
   type KeyboardEvent,
 } from 'react';
-import { isWeekend, type DailyPlan, type JournalSnapshot, type Trade, type TradeInput } from '@asrv/backend';
+import { type DailyPlan, type JournalSnapshot, type Trade, type TradeInput } from '@asrv/backend';
 import {
   Alert,
   Button,
@@ -220,7 +220,7 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
       }
 
       for (const trade of parsed.trades) {
-        await bff.journal.saveTrade({ ...trade, weekendBreach: isWeekend(trade.date) });
+        await bff.journal.saveTrade(trade);
       }
       for (const day of parsed.noTradeDays ?? []) {
         try {

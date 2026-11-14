@@ -229,15 +229,13 @@ describe('createJournalService', () => {
     await expect(service.saveTrade({ ...input, session: second })).rejects.toThrow('mesma sessão');
   });
 
-  it('exige confirmação de operação feita no fim de semana e reinicia a ofensiva', async () => {
+  it.each(['2026-10-24', '2026-10-25'])('aceita operações em %s dentro dos limites e conta o dia na ofensiva', async (date) => {
     const { service } = setup();
     await service.saveTrade(input);
-    const saturday = { ...input, date: '2026-10-24' };
-    await expect(service.saveTrade(saturday)).rejects.toThrow('Sábado e domingo');
-    await service.saveTrade({ ...saturday, weekendBreach: true });
-    expect((await service.list()).discipline.streak).toBe(0);
-    await service.registerNoTradeDay('2026-10-26');
-    expect((await service.list()).discipline.streak).toBe(1);
+    await expect(service.saveTrade({ ...input, date })).resolves.toMatchObject({ synced: true, warnings: [] });
+    await service.saveTrade({ ...input, date });
+    await expect(service.saveTrade({ ...input, date })).rejects.toThrow('duas operações');
+    expect((await service.list()).discipline).toEqual({ streak: 2, violations: [] });
   });
 
   it('salva o checklist por dia e bloqueia ao atingir 10% do saldo de abertura', async () => {

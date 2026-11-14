@@ -19,10 +19,13 @@ describe('ofensiva', () => {
     expect(result.violations.map(item => item.kind)).toEqual(['DAILY_TRADE_LIMIT', 'MIXED_SESSIONS', 'LOSS_OVER_LIMIT']);
   });
 
-  it('zera a ofensiva no domingo e conta apenas os dias úteis após a violação', () => {
-    const result = evaluateDiscipline({ trades: [trade(), trade({ date: '2026-10-25' })], noTradeDays: ['2026-10-22', '2026-10-26'], initialBalance: 100 });
-    expect(result.streak).toBe(1);
-    expect(result.violations).toContainEqual(expect.objectContaining({ date: '2026-10-25', kind: 'WEEKEND_TRADE' }));
+  it('conta operações do sábado e domingo na ofensiva', () => {
+    const result = evaluateDiscipline({
+      trades: [trade(), trade({ date: '2026-10-24' }), trade({ date: '2026-10-25' })],
+      noTradeDays: ['2026-10-22', '2026-10-26'],
+      initialBalance: 100,
+    });
+    expect(result).toEqual({ streak: 5, violations: [] });
   });
 
   it('soma perdas da data, incluindo taxas do break even, e aceita o limite exato', () => {

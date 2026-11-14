@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { isWeekend, type DailyPlan, type JournalSnapshot, type Trade, type TradeInput } from '@asrv/backend';
+import { type DailyPlan, type JournalSnapshot, type Trade, type TradeInput } from '@asrv/backend';
 import {
   Alert,
   Badge,
@@ -248,7 +248,7 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
       }
 
       for (const trade of parsed.trades) {
-        await bff.journal.saveTrade({ ...trade, weekendBreach: isWeekend(trade.date) });
+        await bff.journal.saveTrade(trade);
       }
       for (const day of parsed.noTradeDays ?? []) {
         try {

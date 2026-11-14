@@ -1,7 +1,7 @@
 import { MAX_DAILY_TRADES, dailyLossLimit, grossLoss, isWeekend } from './dailyPlan';
 import { type Trade, type TradeSession } from './trade';
 
-export type ViolationKind = 'DAILY_TRADE_LIMIT' | 'MIXED_SESSIONS' | 'WEEKEND_TRADE' | 'LOSS_OVER_LIMIT' | 'BALANCE_DEPLETED';
+export type ViolationKind = 'DAILY_TRADE_LIMIT' | 'MIXED_SESSIONS' | 'LOSS_OVER_LIMIT' | 'BALANCE_DEPLETED';
 
 export interface Violation {
   kind: ViolationKind;
@@ -32,9 +32,6 @@ export function evaluateDiscipline(input: DisciplineInput): DisciplineResult {
 
   let balance = input.initialBalance;
   for (const [date, trades] of [...tradesByDate].sort(([a], [b]) => a.localeCompare(b))) {
-    if (isWeekend(date)) {
-      violations.push({ kind: 'WEEKEND_TRADE', date, message: `Operação de fim de semana registrada em ${date}.` });
-    }
     if (trades.length > MAX_DAILY_TRADES) {
       violations.push({ kind: 'DAILY_TRADE_LIMIT', date, message: `Mais de duas operações registradas em ${date}.` });
     }
@@ -54,7 +51,7 @@ export function evaluateDiscipline(input: DisciplineInput): DisciplineResult {
 
   const lastViolation = violations.at(-1)?.date ?? '';
   const days = new Set([...tradesByDate.keys(), ...input.noTradeDays]);
-  const streak = [...days].filter(date => date > lastViolation && !isWeekend(date)).length;
+  const streak = [...days].filter(date => date > lastViolation && (tradesByDate.has(date) || !isWeekend(date))).length;
   return { streak, violations };
 }
 
