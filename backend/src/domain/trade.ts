@@ -1,6 +1,6 @@
 import { DomainError } from './errors';
 
-export const BREAK_EVEN_TOLERANCE = 0.3;
+export const BREAK_EVEN_TOLERANCE = 2;
 
 export type TradeType = 'Compra' | 'Venda';
 
@@ -55,26 +55,12 @@ export function isIsoDate(value: string): boolean {
 }
 
 export function isBreakEven(pnl: number): boolean {
-  return Number.isFinite(pnl) && pnl > -1 && pnl <= BREAK_EVEN_TOLERANCE;
+  return Number.isFinite(pnl) && Math.abs(pnl) < BREAK_EVEN_TOLERANCE;
 }
 
 /** Stop = perda real (fora da tolerância de break even). */
 export function isStop(pnl: number): boolean {
   return Number.isFinite(pnl) && pnl < 0 && !isBreakEven(pnl);
-}
-
-/** Índice da segunda perda do primeiro par consecutivo, na ordem de registro do dia. */
-export function consecutiveLossStopIndex(trades: readonly Pick<Trade, 'pnl'>[]): number {
-  return trades.findIndex((trade, index) => {
-    const previous = trades[index - 1];
-    return previous !== undefined && isStop(previous.pnl) && isStop(trade.pnl);
-  });
-}
-
-export function consecutiveLossCount(trades: readonly Pick<Trade, 'pnl'>[]): 0 | 1 | 2 {
-  if (consecutiveLossStopIndex(trades) >= 0) return 2;
-  const latestTrade = trades.at(-1);
-  return latestTrade && isStop(latestTrade.pnl) ? 1 : 0;
 }
 
 /** Nome curto da sessão para exibição. */

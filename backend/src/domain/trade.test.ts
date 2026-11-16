@@ -132,14 +132,14 @@ describe('isIsoDate', () => {
 
 describe('isBreakEven', () => {
   it('considera empate técnico dentro da tolerância', () => {
-    expect(isBreakEven(-0.99)).toBe(true);
-    expect(isBreakEven(0.3)).toBe(true);
+    expect(isBreakEven(-1.99)).toBe(true);
+    expect(isBreakEven(1.99)).toBe(true);
     expect(isBreakEven(0)).toBe(true);
   });
 
   it('não considera empate fora da tolerância', () => {
-    expect(isBreakEven(-1)).toBe(false);
-    expect(isBreakEven(0.31)).toBe(false);
+    expect(isBreakEven(-2)).toBe(false);
+    expect(isBreakEven(2)).toBe(false);
   });
 
   it('não considera NaN ou infinito como empate', () => {
@@ -151,8 +151,8 @@ describe('isBreakEven', () => {
 describe('isStop', () => {
   it('considera stop apenas perda real fora da tolerância', () => {
     expect(isStop(-10)).toBe(true);
-    expect(isStop(-1)).toBe(true);
-    expect(isStop(-0.99)).toBe(false);
+    expect(isStop(-2)).toBe(true);
+    expect(isStop(-1.99)).toBe(false);
     expect(isStop(0)).toBe(false);
     expect(isStop(10)).toBe(false);
     expect(isStop(Number.NaN)).toBe(false);

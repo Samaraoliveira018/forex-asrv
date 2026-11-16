@@ -63,7 +63,7 @@ describe('JournalScreen (mobile)', () => {
     const entries = [
       createTrade({ ...trade, id: 'gain', date: day, asset: 'EURUSD', pnl: 20 }),
       createTrade({ ...trade, id: 'loss', date: day, asset: 'GBPUSD', pnl: -7 }),
-      createTrade({ ...trade, id: 'be', date: day, asset: 'USDJPY', pnl: -0.99 }),
+      createTrade({ ...trade, id: 'be', date: day, asset: 'USDJPY', pnl: -1.99 }),
       createTrade({ ...trade, id: 'other', date: otherDay, asset: 'XAUUSD', pnl: 50 }),
     ];
     await renderJournal({ trades: entries });
@@ -72,12 +72,14 @@ describe('JournalScreen (mobile)', () => {
     await fireEvent.press(screen.getByRole('button', { name: `${formatted}, com registros` }));
     expect(screen.queryByText('XAUUSD')).toBeNull();
     expect(screen.getByText('EURUSD')).toBeTruthy();
-    expect(screen.getByText('+ US$ 12,01')).toBeTruthy();
+    expect(screen.getByText('+ US$ 11,01')).toBeTruthy();
     await fireEvent.press(screen.getByRole('tab', { name: 'Perdas' }));
     expect(screen.getByText('GBPUSD')).toBeTruthy();
     expect(screen.queryByText('EURUSD')).toBeNull();
     expect(screen.queryByText('USDJPY')).toBeNull();
     await fireEvent.press(screen.getByRole('tab', { name: 'BE' }));
+    await fireEvent.press(screen.getByRole('tab', { name: 'Lista' }));
+    expect(screen.getByText('BREAK EVEN')).toBeTruthy();
     expect(screen.getByText('USDJPY')).toBeTruthy();
     await fireEvent.press(screen.getByRole('tab', { name: 'Todos' }));
     await fireEvent.press(screen.getByRole('button', { name: 'Todos os dias' }));

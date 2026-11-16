@@ -13,10 +13,10 @@ describe('ofensiva', () => {
     expect(result).toEqual({ streak: 2, violations: [] });
   });
 
-  it('detecta que os limites de operações e perdas valem para o dia inteiro', () => {
+  it('detecta operação após o stop de perda, mesmo em outra sessão', () => {
     const result = evaluateDiscipline({ trades: [trade({ pnl: -5 }), trade({ pnl: -5 }), trade({ pnl: 0, session: 'night' }), trade(), trade()], noTradeDays: [], initialBalance: 100 });
     expect(result.streak).toBe(0);
-    expect(result.violations.map(item => item.kind)).toEqual(['DAILY_TRADE_LIMIT', 'LOSS_OVER_LIMIT']);
+    expect(result.violations.map(item => item.kind)).toEqual(['LOSS_OVER_LIMIT']);
   });
 
   it('conta operações do sábado e domingo na ofensiva', () => {

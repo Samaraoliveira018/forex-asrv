@@ -214,15 +214,13 @@ describe('createJournalService', () => {
 
   const input = { date: '2026-10-21', asset: 'EURUSD', type: 'Compra' as const, lots: 1, pnl: 0 };
 
-  it.each([-0.99, 0, 5])('bloqueia a quinta operação mesmo quando o resultado anterior é %s', async (pnl) => {
+  it('aceita mais de quatro operações, inclusive após perdas seguidas abaixo do stop diário', async () => {
     const { service } = setup();
-    await service.saveTrade({ ...input, id: 'first', pnl: -5 });
-    await service.saveTrade({ ...input, pnl });
-    await service.saveTrade(input);
-    await service.saveTrade(input);
-    await expect(service.saveTrade(input)).rejects.toThrow('4 operações');
-    await expect(service.saveTrade({ ...input, id: 'first', pnl: -6 })).resolves.toMatchObject({ synced: true });
-    await expect(service.saveTrade({ ...input, date: '2026-10-22' })).resolves.toMatchObject({ synced: true });
+    for (const pnl of [-5, -5, -1.99, 0, 5, 0]) {
+      await expect(service.saveTrade({ ...input, pnl })).resolves.toMatchObject({ synced: true, warnings: [] });
+    }
+    expect((await service.list()).trades).toHaveLength(6);
+    expect((await service.list()).discipline).toEqual({ streak: 1, violations: [] });
   });
 
   it.each([['day', 'night'], ['night', 'day']] as const)('salva %s e %s no mesmo dia dentro dos limites', async (first, second) => {
@@ -231,7 +229,7 @@ describe('createJournalService', () => {
     await expect(service.saveTrade({ ...input, session: second })).resolves.toMatchObject({ synced: true });
     await service.saveTrade({ ...input, session: second });
     await service.saveTrade({ ...input, session: second });
-    await expect(service.saveTrade({ ...input, session: second })).rejects.toThrow('4 operações');
+    await expect(service.saveTrade({ ...input, session: second })).resolves.toMatchObject({ synced: true });
     expect((await service.list()).discipline).toEqual({ streak: 1, violations: [] });
   });
 
@@ -242,7 +240,7 @@ describe('createJournalService', () => {
     await service.saveTrade({ ...input, date });
     await service.saveTrade({ ...input, date });
     await service.saveTrade({ ...input, date });
-    await expect(service.saveTrade({ ...input, date })).rejects.toThrow('4 operações');
+    await expect(service.saveTrade({ ...input, date })).resolves.toMatchObject({ synced: true });
     expect((await service.list()).discipline).toEqual({ streak: 2, violations: [] });
   });
 
