@@ -183,7 +183,7 @@ export function JournalTab({
       <View>
         <Text style={styles.pageTitle}>Diário de Trading</Text>
         <Text style={styles.pageSubtitle}>
-          Máximo de {MAX_DAILY_TRADES} operações por dia, incluindo breakeven. Encerre após 2 losses. Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 25% de perda sobre o saldo de abertura do dia.
+          Máximo de {MAX_DAILY_TRADES} operações por dia, incluindo breakeven. Encerre após 2 losses. Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.
         </Text>
       </View>
 
