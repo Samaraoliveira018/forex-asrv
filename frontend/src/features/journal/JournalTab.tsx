@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
+  MAX_DAILY_TRADES,
   OFFENSIVE_INTERVAL,
   formatBalanceInBrl,
   grossLoss,
@@ -122,7 +123,7 @@ export function JournalTab({
         />
 
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone="neutral" pill>Operações hoje: {stats.todayCount} (inclui BE)</Badge>
+          <Badge tone="neutral" pill>Operações hoje: {stats.todayCount}/{MAX_DAILY_TRADES} (inclui BE)</Badge>
 
           <Button variant="success" size="sm" onClick={onNoTradeDay}>
             <i className="fa-solid fa-calendar-check" aria-hidden="true" />
@@ -178,7 +179,7 @@ export function JournalTab({
       <div>
         <h1 className="asrv-page-title">Diário de Trading</h1>
         <p className="asrv-page-subtitle">
-          Regras: Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 25% de perda sobre o saldo de abertura do dia.
+          Regras: Máximo de {MAX_DAILY_TRADES} operações por dia, incluindo breakeven. Encerre após 2 losses. Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 25% de perda sobre o saldo de abertura do dia.
         </p>
       </div>
 

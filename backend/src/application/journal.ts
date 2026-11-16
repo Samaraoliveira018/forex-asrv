@@ -2,10 +2,11 @@ import { DomainError } from '../domain/errors';
 import {
   createTrade,
   isIsoDate,
+  isStop,
   type Trade,
   type TradeInput,
 } from '../domain/trade';
-import { CHECKLIST_SECTIONS, dailyLossLimit, grossLoss, type DailyPlan } from '../domain/dailyPlan';
+import { CHECKLIST_SECTIONS, MAX_DAILY_TRADES, dailyLossLimit, grossLoss, type DailyPlan } from '../domain/dailyPlan';
 import { evaluateDiscipline, type DisciplineResult } from '../domain/discipline';
 import { calculateStats, openingBalanceOn, type Stats } from '../domain/stats';
 import type {
@@ -188,9 +189,15 @@ export function createJournalService(deps: JournalDeps): JournalService {
         throw new DomainError('TRADE_RULE', 'O limite de perda diária já foi atingido.');
       }
 
+      if (addsToDay && sameDay.length >= MAX_DAILY_TRADES) {
+        throw new DomainError('TRADE_RULE', `O limite de ${MAX_DAILY_TRADES} operações no dia já foi atingido.`);
+      }
+
       const warnings: string[] = [];
       if (limit != null && grossLoss([...sameDay, trade]) >= limit) {
         warnings.push('Limite de perda diária atingido. Encerre as operações do dia.');
+      } else if (addsToDay && sameDay.length === MAX_DAILY_TRADES - 1 && isStop(trade.pnl) && sameDay.every(item => isStop(item.pnl))) {
+        warnings.push('Dois losses registrados. Encerre as operações do dia.');
       }
 
       if (typeof screenshotDataUrl === 'string') {

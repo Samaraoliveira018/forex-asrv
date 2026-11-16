@@ -214,33 +214,28 @@ describe('createJournalService', () => {
 
   const input = { date: '2026-10-21', asset: 'EURUSD', type: 'Compra' as const, lots: 1, pnl: 0 };
 
-  it('aceita mais de quatro operações, inclusive após perdas seguidas abaixo do stop diário', async () => {
+  it('encerra após dois losses mesmo abaixo do stop financeiro', async () => {
     const { service } = setup();
-    for (const pnl of [-5, -5, -1.99, 0, 5, 0]) {
-      await expect(service.saveTrade({ ...input, pnl })).resolves.toMatchObject({ synced: true, warnings: [] });
-    }
-    expect((await service.list()).trades).toHaveLength(6);
+    await service.saveTrade({ ...input, pnl: -5, session: 'day' });
+    const second = await service.saveTrade({ ...input, pnl: -5, session: 'night' });
+    expect(second.warnings).toContain('Dois losses registrados. Encerre as operações do dia.');
+    await expect(service.saveTrade(input)).rejects.toThrow('2 operações');
     expect((await service.list()).discipline).toEqual({ streak: 1, violations: [] });
   });
 
-  it.each([['day', 'night'], ['night', 'day']] as const)('salva %s e %s no mesmo dia dentro dos limites', async (first, second) => {
+  it.each([['day', 'night'], ['night', 'day']] as const)('conta breakeven em %s e %s no limite diário', async (first, second) => {
     const { service } = setup();
-    await service.saveTrade({ ...input, session: first });
-    await expect(service.saveTrade({ ...input, session: second })).resolves.toMatchObject({ synced: true });
-    await service.saveTrade({ ...input, session: second });
-    await service.saveTrade({ ...input, session: second });
-    await expect(service.saveTrade({ ...input, session: second })).resolves.toMatchObject({ synced: true });
-    expect((await service.list()).discipline).toEqual({ streak: 1, violations: [] });
+    await service.saveTrade({ ...input, session: first, pnl: -1.99 });
+    await expect(service.saveTrade({ ...input, session: second })).resolves.toMatchObject({ synced: true, warnings: [] });
+    await expect(service.saveTrade({ ...input, session: second })).rejects.toThrow('2 operações');
   });
 
   it.each(['2026-10-24', '2026-10-25'])('aceita operações em %s dentro dos limites e conta o dia na ofensiva', async (date) => {
     const { service } = setup();
     await service.saveTrade(input);
+    await service.saveTrade({ ...input, date });
     await expect(service.saveTrade({ ...input, date })).resolves.toMatchObject({ synced: true, warnings: [] });
-    await service.saveTrade({ ...input, date });
-    await service.saveTrade({ ...input, date });
-    await service.saveTrade({ ...input, date });
-    await expect(service.saveTrade({ ...input, date })).resolves.toMatchObject({ synced: true });
+    await expect(service.saveTrade({ ...input, date })).rejects.toThrow('2 operações');
     expect((await service.list()).discipline).toEqual({ streak: 2, violations: [] });
   });
 

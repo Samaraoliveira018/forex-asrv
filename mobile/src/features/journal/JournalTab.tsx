@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
+  MAX_DAILY_TRADES,
   OFFENSIVE_INTERVAL,
   formatBalanceInBrl,
   grossLoss,
@@ -131,7 +132,7 @@ export function JournalTab({
       </View>
 
       <View style={styles.actions}>
-        <Badge tone="neutral" pill>Operações hoje: {stats.todayCount} (inclui BE)</Badge>
+        <Badge tone="neutral" pill>Operações hoje: {stats.todayCount}/{MAX_DAILY_TRADES} (inclui BE)</Badge>
         <Button variant="success" size="sm" onPress={onNoTradeDay}>
           Dia sem operar
         </Button>
@@ -182,7 +183,7 @@ export function JournalTab({
       <View>
         <Text style={styles.pageTitle}>Diário de Trading</Text>
         <Text style={styles.pageSubtitle}>
-          Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 25% de perda sobre o saldo de abertura do dia.
+          Máximo de {MAX_DAILY_TRADES} operações por dia, incluindo breakeven. Encerre após 2 losses. Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 25% de perda sobre o saldo de abertura do dia.
         </Text>
       </View>
 
