@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createTrade } from '@asrv/backend';
 import { emptySnapshot } from '../../test/fakeBff';
 import { JournalTab } from './JournalTab';
+import { today } from './format';
 
 const trades = [
   ['win', '2026-10-20', 'EURUSD', 20],
@@ -13,12 +14,24 @@ const trades = [
   ['next-month', '2026-11-02', 'USDCAD', 10],
 ].map(([id, date, asset, pnl]) => createTrade({ id: String(id), date: String(date), asset: String(asset), pnl: Number(pnl), type: 'Compra', lots: 0.01 }));
 
-function setup(hidden = false, view: 'grid' | 'list' = 'grid') {
-  render(<JournalTab snapshot={emptySnapshot(trades, ['2026-10-19'])} hidden={hidden} market="internacional" view={view} onMarketChange={vi.fn()} onViewChange={vi.fn()} onToggleHidden={vi.fn()} onNewTrade={vi.fn()} onEditTrade={vi.fn()} onDeleteTrade={vi.fn()} onNoTradeDay={vi.fn()} onDeleteNoTradeDay={vi.fn()} />);
+function setup(hidden = false, view: 'grid' | 'list' = 'grid', entries = trades) {
+  render(<JournalTab snapshot={emptySnapshot(entries, ['2026-10-19'])} hidden={hidden} market="internacional" view={view} onMarketChange={vi.fn()} onViewChange={vi.fn()} onToggleHidden={vi.fn()} onNewTrade={vi.fn()} onEditTrade={vi.fn()} onDeleteTrade={vi.fn()} onNoTradeDay={vi.fn()} onDeleteNoTradeDay={vi.fn()} />);
   fireEvent.change(screen.getByLabelText('Data do diário'), { target: { value: '2026-10-20' } });
 }
 
 describe('Consulta do diário por data', () => {
+  it('conta no Stop Loss apenas as perdas do dia fora do breakeven', () => {
+    const entries = trades.map(trade => {
+      if (trade.id === 'loss') return { ...trade, date: today(), pnl: -2 };
+      if (trade.id === 'be') return { ...trade, date: today(), pnl: -1.99 };
+      return trade;
+    });
+    setup(false, 'grid', entries);
+    const operations = screen.getByText('Operações hoje: 2/2 (inclui BE)');
+    expect(operations.nextElementSibling).toHaveTextContent('Stop Loss: 1/2');
+    expect(operations.nextElementSibling).toHaveAttribute('data-tone', 'warning');
+  });
+
   it('mostra apenas as operações da data e soma ganhos, perdas e BE no resultado', () => {
     setup();
     expect(screen.getByText('EURUSD')).toBeInTheDocument();

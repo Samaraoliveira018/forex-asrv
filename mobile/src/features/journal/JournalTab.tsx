@@ -133,6 +133,7 @@ export function JournalTab({
 
       <View style={styles.actions}>
         <Badge tone="neutral" pill>Operações hoje: {stats.todayCount}/{MAX_DAILY_TRADES} (inclui BE)</Badge>
+        <Badge tone={stats.todayStops >= MAX_DAILY_TRADES ? 'danger' : stats.todayStops > 0 ? 'warning' : 'neutral'} pill>Stop Loss: {stats.todayStops}/{MAX_DAILY_TRADES}</Badge>
         <Button variant="success" size="sm" onPress={onNoTradeDay}>
           Dia sem operar
         </Button>

@@ -187,6 +187,7 @@
 
           <div class="flex flex-wrap items-center gap-2">
             <div class="asrv-badge asrv-badge--neutral asrv-badge--pill">Operações hoje: <span id="today-total-trades">0</span>/<span data-daily-trade-cap>2</span> (inclui BE)</div>
+            <div id="today-stop-loss" class="asrv-badge asrv-badge--neutral asrv-badge--pill" aria-live="polite">Stop Loss: 0/2</div>
 
             <!-- Botão Marcar Dia Sem Operar -->
             <button onclick="markNoTradeDay()" class="asrv-btn asrv-btn--success asrv-btn--sm">
@@ -2195,6 +2196,11 @@ US$ 1 = R$ ${rateFormatter.format(rate)} · ${quoteDateFormatter.format(timestam
       const todayStr = getLocalDateStr();
       const todayTrades = trades.filter(t => t.date === todayStr);
       document.getElementById('today-total-trades').innerText = todayTrades.length;
+      const stops = todayTrades.filter(trade => isStop(trade.pnl)).length;
+      const stopBadge = document.getElementById('today-stop-loss');
+      const stopTone = stops >= MAX_DAILY_TRADES ? 'danger' : stops > 0 ? 'warning' : 'neutral';
+      stopBadge.className = `asrv-badge asrv-badge--${stopTone} asrv-badge--pill`;
+      stopBadge.textContent = `Stop Loss: ${stops}/${MAX_DAILY_TRADES}`;
       const plan = dailyPlans.find(item => item.date === todayStr);
       const loss = grossDailyLoss(todayTrades);
       const limit = lossLimitOn(todayStr);
