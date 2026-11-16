@@ -13,7 +13,7 @@ export function PlanTab({ plans, onSave }: {
   return (
     <View style={{ gap: spacing.md }}>
       <Text style={{ color: colors.text, fontSize: typography.hero }}>Plano Operacional</Text>
-      <Text style={{ color: colors.text }}>Máximo de {MAX_DAILY_TRADES} operações por dia, incluindo breakeven. Encerre após 2 losses. Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</Text>
+      <Text style={{ color: colors.text }}>Máximo de {MAX_DAILY_TRADES} operações por dia, incluindo breakeven. Registros acima do limite zeram a ofensiva. Encerre após 2 losses. Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</Text>
       <Input label="Data do checklist" value={dateDraft} onChangeText={value => setDateDraft(maskDateInput(value))} keyboardType="numeric" />
       {date && date <= today() && <DailyChecklist key={date} date={date} saved={plans.find(plan => plan.date === date)} onSave={onSave} />}
     </View>

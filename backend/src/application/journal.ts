@@ -185,15 +185,15 @@ export function createJournalService(deps: JournalDeps): JournalService {
       const limit = initialBalance === null
         ? null
         : dailyLossLimit(openingBalanceOn(otherTrades, initialBalance, trade.date));
-      if (addsToDay && sameDay.length >= MAX_DAILY_TRADES) {
-        throw new DomainError('TRADE_RULE', `O limite de ${MAX_DAILY_TRADES} operações no dia já foi atingido.`);
-      }
-
       const warnings: string[] = [];
       if (limit != null && grossLoss([...sameDay, trade]) >= limit) {
         warnings.push('Limite de perda diária atingido. Encerre as operações do dia.');
       } else if (addsToDay && sameDay.length === MAX_DAILY_TRADES - 1 && isStop(trade.pnl) && sameDay.every(item => isStop(item.pnl))) {
         warnings.push('Dois losses registrados. Encerre as operações do dia.');
+      }
+
+      if (addsToDay && sameDay.length >= MAX_DAILY_TRADES) {
+        warnings.push(`Limite de ${MAX_DAILY_TRADES} operações ultrapassado. A ofensiva reinicia no próximo dia válido.`);
       }
 
       if (typeof screenshotDataUrl === 'string') {

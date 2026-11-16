@@ -1,7 +1,7 @@
-import { dailyLossLimit, grossLoss, isWeekend } from './dailyPlan';
+import { MAX_DAILY_TRADES, dailyLossLimit, grossLoss, isWeekend } from './dailyPlan';
 import { type Trade, type TradeSession } from './trade';
 
-export type ViolationKind = 'LOSS_OVER_LIMIT' | 'BALANCE_DEPLETED';
+export type ViolationKind = 'DAILY_TRADE_LIMIT' | 'LOSS_OVER_LIMIT' | 'BALANCE_DEPLETED';
 
 export interface Violation {
   kind: ViolationKind;
@@ -32,6 +32,9 @@ export function evaluateDiscipline(input: DisciplineInput): DisciplineResult {
 
   let balance = input.initialBalance;
   for (const [date, trades] of [...tradesByDate].sort(([a], [b]) => a.localeCompare(b))) {
+    if (trades.length > MAX_DAILY_TRADES) {
+      violations.push({ kind: 'DAILY_TRADE_LIMIT', date, message: `Mais de ${MAX_DAILY_TRADES} operações registradas em ${date}.` });
+    }
     const limit = dailyLossLimit(balance);
     if (grossLoss(trades) > limit || (trades.length > 1 && grossLoss(trades.slice(0, -1)) >= limit)) {
       violations.push({ kind: 'LOSS_OVER_LIMIT', date, message: `Limite de perda diária descumprido em ${date}.` });

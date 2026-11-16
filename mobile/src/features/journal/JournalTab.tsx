@@ -132,7 +132,7 @@ export function JournalTab({
       </View>
 
       <View style={styles.actions}>
-        <Badge tone="neutral" pill>Operações hoje: {stats.todayCount}/{MAX_DAILY_TRADES} (inclui BE)</Badge>
+        <Badge tone={stats.todayCount > MAX_DAILY_TRADES ? 'danger' : 'neutral'} pill>Operações hoje: {stats.todayCount}/{MAX_DAILY_TRADES} (inclui BE)</Badge>
         <Badge tone={stats.todayStops >= MAX_DAILY_TRADES ? 'danger' : stats.todayStops > 0 ? 'warning' : 'neutral'} pill>Stop Loss: {stats.todayStops}/{MAX_DAILY_TRADES}</Badge>
         <Button variant="success" size="sm" onPress={onNoTradeDay}>
           Dia sem operar
@@ -184,7 +184,7 @@ export function JournalTab({
       <View>
         <Text style={styles.pageTitle}>Diário de Trading</Text>
         <Text style={styles.pageSubtitle}>
-          Máximo de {MAX_DAILY_TRADES} operações por dia, incluindo breakeven. Encerre após 2 losses. Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.
+          Máximo de {MAX_DAILY_TRADES} operações por dia, incluindo breakeven. Registros acima do limite zeram a ofensiva. Encerre após 2 losses. Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.
         </Text>
       </View>
 

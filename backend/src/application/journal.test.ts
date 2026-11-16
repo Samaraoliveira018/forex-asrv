@@ -219,15 +219,21 @@ describe('createJournalService', () => {
     await service.saveTrade({ ...input, pnl: -5, session: 'day' });
     const second = await service.saveTrade({ ...input, pnl: -5, session: 'night' });
     expect(second.warnings).toContain('Dois losses registrados. Encerre as operações do dia.');
-    await expect(service.saveTrade(input)).rejects.toThrow('2 operações');
     expect((await service.list()).discipline).toEqual({ streak: 1, violations: [] });
+    const third = await service.saveTrade({ ...input, asset: 'UKOUSD', pnl: -9.39 });
+    expect(third).toMatchObject({ synced: true, trade: { asset: 'UKOUSD', pnl: -9.39 } });
+    expect(third.warnings).toContain('Limite de 2 operações ultrapassado. A ofensiva reinicia no próximo dia válido.');
+    expect((await service.list()).discipline).toMatchObject({ streak: 0, violations: [{ kind: 'DAILY_TRADE_LIMIT', date: input.date }] });
+    await service.saveTrade({ ...input, date: '2026-10-22' });
+    expect((await service.list()).discipline.streak).toBe(1);
   });
 
   it.each([['day', 'night'], ['night', 'day']] as const)('conta breakeven em %s e %s no limite diário', async (first, second) => {
     const { service } = setup();
     await service.saveTrade({ ...input, session: first, pnl: -1.99 });
     await expect(service.saveTrade({ ...input, session: second })).resolves.toMatchObject({ synced: true, warnings: [] });
-    await expect(service.saveTrade({ ...input, session: second })).rejects.toThrow('2 operações');
+    await expect(service.saveTrade({ ...input, session: second })).resolves.toMatchObject({ synced: true });
+    expect((await service.list()).discipline.streak).toBe(0);
   });
 
   it.each(['2026-10-24', '2026-10-25'])('aceita operações em %s dentro dos limites e conta o dia na ofensiva', async (date) => {
@@ -235,7 +241,6 @@ describe('createJournalService', () => {
     await service.saveTrade(input);
     await service.saveTrade({ ...input, date });
     await expect(service.saveTrade({ ...input, date })).resolves.toMatchObject({ synced: true, warnings: [] });
-    await expect(service.saveTrade({ ...input, date })).rejects.toThrow('2 operações');
     expect((await service.list()).discipline).toEqual({ streak: 2, violations: [] });
   });
 
@@ -248,12 +253,10 @@ describe('createJournalService', () => {
     expect(first.warnings).toEqual([]);
     const stop = await service.saveTrade({ ...input, pnl: -72 });
     expect(stop.warnings[0]).toMatch(/Limite de perda diária atingido/);
-    await expect(service.saveTrade(input)).rejects.toThrow('2 operações');
     const nextDay = await service.saveTrade({ ...input, date: '2026-10-22', pnl: -108 });
     expect(nextDay.warnings[0]).toMatch(/Limite de perda diária atingido/);
     const afterStop = await service.saveTrade({ ...input, date: '2026-10-22', pnl: 10, session: 'night' });
     expect(afterStop).toMatchObject({ synced: true, warnings: ['Limite de perda diária atingido. Encerre as operações do dia.'] });
-    await expect(service.saveTrade({ ...input, date: '2026-10-22' })).rejects.toThrow('2 operações');
     expect((await service.list()).discipline.violations).toContainEqual(expect.objectContaining({
       kind: 'LOSS_OVER_LIMIT', date: '2026-10-22',
     }));

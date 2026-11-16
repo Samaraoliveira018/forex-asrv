@@ -123,7 +123,7 @@ export function JournalTab({
         />
 
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone="neutral" pill>Operações hoje: {stats.todayCount}/{MAX_DAILY_TRADES} (inclui BE)</Badge>
+          <Badge tone={stats.todayCount > MAX_DAILY_TRADES ? 'danger' : 'neutral'} pill>Operações hoje: {stats.todayCount}/{MAX_DAILY_TRADES} (inclui BE)</Badge>
           <Badge tone={stats.todayStops >= MAX_DAILY_TRADES ? 'danger' : stats.todayStops > 0 ? 'warning' : 'neutral'} pill>Stop Loss: {stats.todayStops}/{MAX_DAILY_TRADES}</Badge>
 
           <Button variant="success" size="sm" onClick={onNoTradeDay}>
@@ -180,7 +180,7 @@ export function JournalTab({
       <div>
         <h1 className="asrv-page-title">Diário de Trading</h1>
         <p className="asrv-page-subtitle">
-          Regras: Máximo de {MAX_DAILY_TRADES} operações por dia, incluindo breakeven. Encerre após 2 losses. Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.
+          Regras: Máximo de {MAX_DAILY_TRADES} operações por dia, incluindo breakeven. Registros acima do limite zeram a ofensiva. Encerre após 2 losses. Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.
         </p>
       </div>
 

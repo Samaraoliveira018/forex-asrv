@@ -223,7 +223,7 @@
         <!-- Section Title -->
         <div>
           <h2 class="asrv-page-title">Diário de Trading</h2>
-          <p class="asrv-page-subtitle">Regras: Máximo de <span data-daily-trade-cap>2</span> operações por dia, incluindo breakeven. Encerre após 2 losses. Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</p>
+          <p class="asrv-page-subtitle">Regras: Máximo de <span data-daily-trade-cap>2</span> operações por dia, incluindo breakeven. Registros acima do limite zeram a ofensiva. Encerre após 2 losses. Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</p>
         </div>
 
         <p id="today-plan-status" class="asrv-page-subtitle"></p>
@@ -397,7 +397,7 @@
       <!-- TAB 3: PLANO OPERACIONAL -->
       <section id="tab-plan" class="tab-content hidden space-y-6">
         <h2 class="asrv-page-title">Plano Operacional</h2>
-        <p class="asrv-page-subtitle">Máximo de <span data-daily-trade-cap>2</span> operações por dia, incluindo breakeven. Encerre após 2 losses. Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</p>
+        <p class="asrv-page-subtitle">Máximo de <span data-daily-trade-cap>2</span> operações por dia, incluindo breakeven. Registros acima do limite zeram a ofensiva. Encerre após 2 losses. Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</p>
         <form id="daily-plan-form" class="asrv-card space-y-4" onsubmit="saveDailyPlan(event)">
           <h3 class="asrv-section-title">Checklist Operacional Diário</h3>
           <label class="block">Data do checklist
@@ -1397,15 +1397,6 @@
       if (!cloudEnabled()) return;
       const uid = cloudUser.id;
 
-      const byDate = new Map();
-      for (const trade of trades) {
-        const day = byDate.get(trade.date) || [];
-        if (day.length >= MAX_DAILY_TRADES) {
-          throw new Error('O backup contém datas com mais de duas operações.');
-        }
-        day.push(trade);
-        byDate.set(trade.date, day);
-      }
       const { error: e1 } = await sb.from('trades').delete().eq('user_id', uid);
       if (e1) throw e1;
       const { error: e2 } = await sb.from('no_trade_days').delete().eq('user_id', uid);
@@ -1672,7 +1663,7 @@
         const lossLimit = dailyLossLimit(balance);
         const before = balance;
         balance += dayTrades.reduce((sum, t) => sum + t.pnl, 0);
-        const broken = dayTrades.length > 0 && ((grossDailyLoss(dayTrades) > lossLimit || (dayTrades.length > 1 && grossDailyLoss(dayTrades.slice(0, -1)) >= lossLimit)) ||
+        const broken = dayTrades.length > 0 && (dayTrades.length > MAX_DAILY_TRADES || (grossDailyLoss(dayTrades) > lossLimit || (dayTrades.length > 1 && grossDailyLoss(dayTrades.slice(0, -1)) >= lossLimit)) ||
           (balance <= 0 && (before > 0 || dayTrades.some(t => t.pnl < 0))));
         if (broken) streakDays = 0;
         else if (dayTrades.length > 0 || !isWeekend(date)) streakDays += 1;
@@ -1947,7 +1938,6 @@
       const addsToDay = previous?.date !== date;
       const tradesOnDate = trades.filter(t => t.date === date && t.id !== editId);
       const limit = lossLimitOn(date, editId);
-      if (addsToDay && tradesOnDate.length >= MAX_DAILY_TRADES) { alert(`O limite de ${MAX_DAILY_TRADES} operações no dia já foi atingido.`); return; }
       const savedTrade = { id: previous?.id ?? newTradeId(), date, asset, type, session, lots, pnl, notes,
         screenshot_path: previous?.screenshot_path ?? '' };
 
@@ -1983,6 +1973,9 @@
         alert('Limite de perda diária atingido. Encerre as operações do dia.');
       } else if (addsToDay && tradesOnDate.length === MAX_DAILY_TRADES - 1 && isStop(pnl) && tradesOnDate.every(trade => isStop(trade.pnl))) {
         alert('Dois losses registrados. Encerre as operações do dia.');
+      }
+      if (addsToDay && tradesOnDate.length >= MAX_DAILY_TRADES) {
+        alert(`Limite de ${MAX_DAILY_TRADES} operações ultrapassado. A ofensiva reinicia no próximo dia válido.`);
       }
       saveData();
       if (shotDataUrl) await queueCloud('uploadScreenshot', { id: savedTrade.id, dataUrl: shotDataUrl });
@@ -2195,7 +2188,10 @@ US$ 1 = R$ ${rateFormatter.format(rate)} · ${quoteDateFormatter.format(timestam
 
       const todayStr = getLocalDateStr();
       const todayTrades = trades.filter(t => t.date === todayStr);
-      document.getElementById('today-total-trades').innerText = todayTrades.length;
+      const tradeCount = document.getElementById('today-total-trades');
+      tradeCount.innerText = todayTrades.length;
+      const tradeTone = todayTrades.length > MAX_DAILY_TRADES ? 'danger' : 'neutral';
+      tradeCount.parentElement.className = `asrv-badge asrv-badge--${tradeTone} asrv-badge--pill`;
       const stops = todayTrades.filter(trade => isStop(trade.pnl)).length;
       const stopBadge = document.getElementById('today-stop-loss');
       const stopTone = stops >= MAX_DAILY_TRADES ? 'danger' : stops > 0 ? 'warning' : 'neutral';
