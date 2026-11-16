@@ -1,17 +1,12 @@
 name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Tag da release (ex.: v0.1.0). Precisa ser igual à version do package.json com prefixo v.'
-        required: true
-        type: string
-      prerelease:
-        description: 'Marcar como pré-release'
-        required: false
-        default: false
-        type: boolean
+  push:
+    branches:
+      - 'release/v0.1.11'
+
+env:
+  RELEASE_SHA: 38548695b89c41ce99ffebadfd8bbe995c34784e
 
 permissions:
   contents: write
@@ -22,7 +17,6 @@ concurrency:
 
 jobs:
   release:
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
@@ -30,6 +24,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ env.RELEASE_SHA }}
           fetch-depth: 0
 
       - name: Setup Node
@@ -46,7 +41,7 @@ jobs:
 
       - name: Validate version and tag
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: v0.1.11
         run: |
           set -euo pipefail
 
@@ -113,7 +108,7 @@ jobs:
 
       - name: Package release assets
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: v0.1.11
         run: |
           set -euo pipefail
 
@@ -135,15 +130,11 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.version }}
-          PRERELEASE: ${{ inputs.prerelease }}
+          VERSION: v0.1.11
         run: |
           set -euo pipefail
 
-          flags=(--target "$GITHUB_SHA" --title "Diário Trader ASRV $VERSION" --generate-notes)
-          if [[ "$PRERELEASE" == "true" ]]; then
-            flags+=(--prerelease)
-          fi
+          flags=(--target "$RELEASE_SHA" --title "Diário Trader ASRV $VERSION" --generate-notes)
 
           gh release create "$VERSION" \
             release/asrv-web-*.zip \
@@ -154,7 +145,7 @@ jobs:
 
       - name: Summary
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: v0.1.11
         run: |
           {
             echo "## Release $VERSION publicada"
