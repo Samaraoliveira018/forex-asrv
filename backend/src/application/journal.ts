@@ -187,9 +187,6 @@ export function createJournalService(deps: JournalDeps): JournalService {
       if (addsToDay && sameDay.length >= MAX_DAILY_TRADES) {
         throw new DomainError('TRADE_RULE', 'O limite de duas operações no dia já foi atingido.');
       }
-      if ((addsToDay || previous?.session !== trade.session) && sameDay.some(item => item.session !== trade.session)) {
-        throw new DomainError('TRADE_RULE', 'As operações do dia devem ser da mesma sessão.');
-      }
       if (addsToDay && limit != null && grossLoss(sameDay) >= limit) {
         throw new DomainError('TRADE_RULE', 'O limite de perda diária já foi atingido.');
       }

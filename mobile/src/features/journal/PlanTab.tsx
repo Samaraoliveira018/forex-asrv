@@ -13,7 +13,7 @@ export function PlanTab({ plans, onSave }: {
   return (
     <View style={{ gap: spacing.md }}>
       <Text style={{ color: colors.text, fontSize: typography.hero }}>Plano Operacional</Text>
-      <Text style={{ color: colors.text }}>Máximo de duas operações por dia, incluindo break even, na mesma sessão. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</Text>
+      <Text style={{ color: colors.text }}>Máximo de duas operações por dia, somando manhã e noite, incluindo break even. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</Text>
       <Input label="Data do checklist" value={dateDraft} onChangeText={value => setDateDraft(maskDateInput(value))} keyboardType="numeric" />
       {date && date <= today() && <DailyChecklist key={date} date={date} saved={plans.find(plan => plan.date === date)} onSave={onSave} />}
     </View>

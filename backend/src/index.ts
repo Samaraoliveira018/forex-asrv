@@ -73,3 +73,5 @@ export { CHECKLIST_SECTIONS, MAX_DAILY_TRADES, OFFENSIVE_INTERVAL, grossLoss, is
 export type { DailyPlan } from './domain/dailyPlan';
 export { historyRange } from './domain/stats';
 export type { HistoryPeriod } from './domain/stats';
+
+export { formatBalanceInBrl, watchUsdBrlQuote, type UsdBrlQuote } from './infrastructure/usdBrl';

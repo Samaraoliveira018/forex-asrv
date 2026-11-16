@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   consecutiveLossCount,
   MAX_DAILY_TRADES,
   OFFENSIVE_INTERVAL,
+  formatBalanceInBrl,
   grossLoss,
   historyRange,
   isBreakEven,
@@ -12,6 +13,8 @@ import {
   sessionLabel,
   type JournalSnapshot,
   type Trade,
+  type UsdBrlQuote,
+  watchUsdBrlQuote,
 } from '@asrv/backend';
 import {
   Badge,
@@ -68,6 +71,13 @@ export function JournalTab({
   onNoTradeDay: () => void;
   onDeleteNoTradeDay: (day: string) => void;
 }) {
+  const [quote, setQuote] = useState<UsdBrlQuote>();
+  const [quoteUnavailable, setQuoteUnavailable] = useState<boolean>();
+  useEffect(() => watchUsdBrlQuote(next => {
+    if (next) setQuote(next);
+    setQuoteUnavailable(next === null);
+  }), []);
+
   const [selectedDate, setSelectedDate] = useState('');
   const [historyPeriod, setHistoryPeriod] = useState<HistoryPeriod>('day');
   const [resultFilter, setResultFilter] = useState('all');
@@ -173,7 +183,7 @@ export function JournalTab({
       <div>
         <h1 className="asrv-page-title">Diário de Trading</h1>
         <p className="asrv-page-subtitle">
-          Regras: Máximo de duas operações por dia, incluindo break even, na mesma sessão. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.
+          Regras: Máximo de duas operações por dia, somando manhã e noite, incluindo break even. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.
         </p>
       </div>
 
@@ -220,7 +230,7 @@ export function JournalTab({
         <StatCard
           label="Patrimônio Total"
           value={money(stats.balance, hidden)}
-          hint={`${stats.returnPct >= 0 ? '+' : ''}${stats.returnPct.toFixed(2)}% em relação ao inicial`}
+          hint={`${stats.returnPct >= 0 ? '+' : ''}${stats.returnPct.toFixed(2)}% em relação ao inicial\n${formatBalanceInBrl(stats.balance, hidden, quote ?? (quoteUnavailable ? null : undefined), quoteUnavailable)}`}
           hintTone={stats.returnPct >= 0 ? 'success' : 'danger'}
         />
         <StatCard

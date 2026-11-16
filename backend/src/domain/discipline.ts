@@ -1,7 +1,7 @@
 import { MAX_DAILY_TRADES, dailyLossLimit, grossLoss, isWeekend } from './dailyPlan';
 import { type Trade, type TradeSession } from './trade';
 
-export type ViolationKind = 'DAILY_TRADE_LIMIT' | 'MIXED_SESSIONS' | 'LOSS_OVER_LIMIT' | 'BALANCE_DEPLETED';
+export type ViolationKind = 'DAILY_TRADE_LIMIT' | 'LOSS_OVER_LIMIT' | 'BALANCE_DEPLETED';
 
 export interface Violation {
   kind: ViolationKind;
@@ -34,9 +34,6 @@ export function evaluateDiscipline(input: DisciplineInput): DisciplineResult {
   for (const [date, trades] of [...tradesByDate].sort(([a], [b]) => a.localeCompare(b))) {
     if (trades.length > MAX_DAILY_TRADES) {
       violations.push({ kind: 'DAILY_TRADE_LIMIT', date, message: `Mais de duas operações registradas em ${date}.` });
-    }
-    if (new Set(trades.map(trade => trade.session)).size > 1) {
-      violations.push({ kind: 'MIXED_SESSIONS', date, message: `Operações em duas sessões no mesmo dia (${date}).` });
     }
     const limit = dailyLossLimit(balance);
     if (grossLoss(trades) > limit || (trades.length > 1 && grossLoss(trades.slice(0, -1)) >= limit)) {

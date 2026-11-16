@@ -223,10 +223,12 @@ describe('createJournalService', () => {
     await expect(service.saveTrade({ ...input, date: '2026-10-22' })).resolves.toMatchObject({ synced: true });
   });
 
-  it.each([['day', 'night'], ['night', 'day']] as const)('impede misturar %s e %s na mesma data', async (first, second) => {
+  it.each([['day', 'night'], ['night', 'day']] as const)('salva %s e %s no mesmo dia dentro dos limites', async (first, second) => {
     const { service } = setup();
     await service.saveTrade({ ...input, session: first });
-    await expect(service.saveTrade({ ...input, session: second })).rejects.toThrow('mesma sessão');
+    await expect(service.saveTrade({ ...input, session: second })).resolves.toMatchObject({ synced: true });
+    await expect(service.saveTrade({ ...input, session: second })).rejects.toThrow('duas operações');
+    expect((await service.list()).discipline).toEqual({ streak: 1, violations: [] });
   });
 
   it.each(['2026-10-24', '2026-10-25'])('aceita operações em %s dentro dos limites e conta o dia na ofensiva', async (date) => {

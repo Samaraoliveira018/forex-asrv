@@ -223,7 +223,7 @@
         <!-- Section Title -->
         <div>
           <h2 class="asrv-page-title">Diário de Trading</h2>
-          <p class="asrv-page-subtitle">Regras: Máximo de duas operações por dia, incluindo break even, na mesma sessão. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</p>
+          <p class="asrv-page-subtitle">Regras: Máximo de duas operações por dia, somando manhã e noite, incluindo break even. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</p>
         </div>
 
         <p id="today-plan-status" class="asrv-page-subtitle"></p>
@@ -262,6 +262,7 @@
             <p class="asrv-stat__label">Patrimônio Total</p>
             <h3 class="asrv-stat__value" id="kpi-total-balance">$ 150.00</h3>
             <span class="asrv-stat__hint" id="kpi-return-pct">+0.00% do saldo inicial</span>
+            <p class="asrv-stat__hint" id="kpi-balance-brl">Buscando cotação USD/BRL…</p>
           </div>
 
           <div class="asrv-card">
@@ -396,7 +397,7 @@
       <!-- TAB 3: PLANO OPERACIONAL -->
       <section id="tab-plan" class="tab-content hidden space-y-6">
         <h2 class="asrv-page-title">Plano Operacional</h2>
-        <p class="asrv-page-subtitle">Máximo de duas operações por dia, incluindo break even, na mesma sessão. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</p>
+        <p class="asrv-page-subtitle">Máximo de duas operações por dia, somando manhã e noite, incluindo break even. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</p>
         <form id="daily-plan-form" class="asrv-card space-y-4" onsubmit="saveDailyPlan(event)">
           <h3 class="asrv-section-title">Checklist Operacional Diário</h3>
           <label class="block">Data do checklist
@@ -849,6 +850,13 @@
     let currentMarket = 'internacional';
     let currentView = 'grid';
     let isValueHidden = false;
+    let usdBrlQuote;
+    let quoteUnavailable = false;
+    const brlFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+    const rateFormatter = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+    const quoteDateFormatter = new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
+    });
 
 
     let equityChartInstance = null;
@@ -1391,8 +1399,8 @@
       const byDate = new Map();
       for (const trade of trades) {
         const day = byDate.get(trade.date) || [];
-        if (day.some(item => item.session !== trade.session) || day.length >= 2 || grossDailyLoss(day) >= lossLimitOn(trade.date)) {
-          throw new Error('O backup contém operações que excedem os limites diários ou misturam sessões.');
+        if (day.length >= 2 || grossDailyLoss(day) >= lossLimitOn(trade.date)) {
+          throw new Error('O backup contém operações que excedem os limites diários.');
         }
         day.push(trade);
         byDate.set(trade.date, day);
@@ -1670,7 +1678,6 @@
         const before = balance;
         balance += dayTrades.reduce((sum, t) => sum + t.pnl, 0);
         const broken = dayTrades.length > 0 && (dayTrades.length > 2 ||
-          new Set(dayTrades.map(t => t.session)).size > 1 ||
           (grossDailyLoss(dayTrades) > lossLimit || (dayTrades.length > 1 && grossDailyLoss(dayTrades.slice(0, -1)) >= lossLimit)) ||
           (balance <= 0 && (before > 0 || dayTrades.some(t => t.pnl < 0))));
         if (broken) streakDays = 0;
@@ -1946,7 +1953,6 @@
       const addsToDay = previous?.date !== date;
       const tradesOnDate = trades.filter(t => t.date === date && t.id !== editId);
       if (addsToDay && tradesOnDate.length >= 2) { alert('O limite de duas operações no dia já foi atingido.'); return; }
-      if ((addsToDay || previous?.session !== session) && tradesOnDate.some(t => t.session !== session)) { alert('As operações do dia devem ser da mesma sessão.'); return; }
       const limit = lossLimitOn(date, editId);
       if (addsToDay && grossDailyLoss(tradesOnDate) >= limit) { alert('O limite de perda diária já foi atingido.'); return; }
       const savedTrade = { id: previous?.id ?? newTradeId(), date, asset, type, session, lots, pnl, notes,
@@ -2144,12 +2150,52 @@
       document.getElementById('journal-day-summary').innerHTML = cards.map(([label, value, color]) => `<div><p class="asrv-stat__label">${label}</p><p class="text-2xl font-bold ${color}">${value}</p></div>`).join('');
     }
 
+    function renderBalanceInBrl(balance) {
+      const hint = document.getElementById('kpi-balance-brl');
+      if (isValueHidden) {
+        hint.textContent = 'Saldo em reais: ••••••';
+        return;
+      }
+      if (!usdBrlQuote) {
+        hint.textContent = quoteUnavailable ? 'Cotação USD/BRL indisponível' : 'Buscando cotação USD/BRL…';
+        return;
+      }
+      const { rate, timestamp } = usdBrlQuote;
+      const source = quoteUnavailable ? 'Última cotação disponível' : 'AwesomeAPI';
+      hint.textContent = `≈ ${brlFormatter.format(balance * rate)}
+US$ 1 = R$ ${rateFormatter.format(rate)} · ${quoteDateFormatter.format(timestamp)} (Brasília) · ${source}`;
+    }
+
+    async function refreshUsdBrlQuote() {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      try {
+        const response = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL', { signal: controller.signal });
+        if (!response.ok) throw new Error('Cotação indisponível');
+        const payload = await response.json();
+        const rate = Number(payload?.USDBRL?.bid);
+        const timestamp = Number(payload?.USDBRL?.timestamp) * 1000;
+        if (!(rate > 0 && Number.isFinite(rate) && timestamp > 0 && timestamp < 8.64e15)) {
+          throw new Error('Cotação inválida');
+        }
+        usdBrlQuote = { rate, timestamp };
+        quoteUnavailable = false;
+      } catch {
+        quoteUnavailable = true;
+      } finally {
+        clearTimeout(timeout);
+        setTimeout(refreshUsdBrlQuote, 60000);
+      }
+      renderBalanceInBrl(initialBalance + trades.reduce((sum, trade) => sum + trade.pnl, 0));
+    }
+
     function refreshUI() {
       const totalTrades = trades.length;
       const wins = trades.filter(t => t.pnl > 0).length;
       const totalPnl = trades.reduce((acc, t) => acc + t.pnl, 0);
       const winRate = totalTrades > 0 ? ((wins / totalTrades) * 100).toFixed(0) : 0;
       const totalBalance = initialBalance + totalPnl;
+      renderBalanceInBrl(totalBalance);
       const returnPct = initialBalance > 0 ? ((totalPnl / initialBalance) * 100).toFixed(2) : 0;
 
       const todayStr = getLocalDateStr();
@@ -2447,6 +2493,7 @@
 
     window.onload = async function() {
       loadInitialData();
+      void refreshUsdBrlQuote();
       try {
         await initCloud();
       } catch (err) {
