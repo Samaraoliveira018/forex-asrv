@@ -1,0 +1,41 @@
+create or replace function public.enforce_daily_trade_rules()
+returns trigger language plpgsql set search_path = '' as $$
+declare
+  adding_to_day boolean;
+  daily_count integer;
+  previous_losses numeric;
+  daily_limit numeric;
+begin
+  perform pg_advisory_xact_lock(hashtextextended(new.user_id::text, 2311));
+  adding_to_day := not exists (
+    select 1 from public.trades
+    where user_id = new.user_id and id = new.id and "date" = new."date"
+  );
+
+  select count(*),
+    coalesce(sum(round(greatest(-pnl, 0), 2)), 0)
+  into daily_count, previous_losses
+  from public.trades
+  where user_id = new.user_id and "date" = new."date" and id <> new.id;
+
+  if adding_to_day and daily_count >= 4 then
+    raise exception 'O limite de 4 operações no dia já foi atingido.';
+  end if;
+  if adding_to_day then
+    select round(greatest(0,
+      coalesce((select initial_balance from public.settings where user_id = new.user_id), 150)
+      + coalesce(sum(pnl), 0)
+    ) * 0.10, 2)
+    into daily_limit
+    from public.trades
+    where user_id = new.user_id and "date" < new."date" and id <> new.id;
+
+    if previous_losses >= daily_limit then
+      raise exception 'O limite de perda diária já foi atingido.';
+    end if;
+    -- Novas operações e operações movidas entram no fim da data de destino.
+    new.created_at := clock_timestamp();
+  end if;
+  return new;
+end;
+$$;
