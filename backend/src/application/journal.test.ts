@@ -244,15 +244,17 @@ describe('createJournalService', () => {
     expect((await service.list()).discipline).toEqual({ streak: 2, violations: [] });
   });
 
-  it('salva o checklist por dia e bloqueia ao atingir 10% do saldo de abertura', async () => {
+  it('salva o checklist por dia e bloqueia ao atingir 25% do saldo de abertura', async () => {
     const { service } = setup();
     await service.saveDailyPlan({ date: input.date, lossLimit: 10, answers: { sleep: true, trend: 'Alta' } });
     await service.saveDailyPlan({ date: '2026-10-22', lossLimit: 20, answers: { sleep: false } });
     await service.saveTrade({ ...input, date: '2026-10-20', pnl: 200 });
     const first = await service.saveTrade({ ...input, pnl: -120 });
-    expect(first.warnings[0]).toMatch(/Limite de perda diária atingido/);
+    expect(first.warnings).toEqual([]);
+    const stop = await service.saveTrade({ ...input, pnl: -180 });
+    expect(stop.warnings[0]).toMatch(/Limite de perda diária atingido/);
     await expect(service.saveTrade(input)).rejects.toThrow('limite de perda diária');
-    const nextDay = await service.saveTrade({ ...input, date: '2026-10-22', pnl: -108 });
+    const nextDay = await service.saveTrade({ ...input, date: '2026-10-22', pnl: -225 });
     expect(nextDay.warnings[0]).toMatch(/Limite de perda diária atingido/);
     await expect(service.saveTrade({ ...input, date: '2026-10-22' })).rejects.toThrow('limite de perda diária');
     expect((await service.list()).dailyPlans).toEqual([

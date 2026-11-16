@@ -178,7 +178,7 @@ export function JournalTab({
       <div>
         <h1 className="asrv-page-title">Diário de Trading</h1>
         <p className="asrv-page-subtitle">
-          Regras: Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.
+          Regras: Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 25% de perda sobre o saldo de abertura do dia.
         </p>
       </div>
 

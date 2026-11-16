@@ -14,7 +14,7 @@ describe('ofensiva', () => {
   });
 
   it('detecta operação após o stop de perda, mesmo em outra sessão', () => {
-    const result = evaluateDiscipline({ trades: [trade({ pnl: -5 }), trade({ pnl: -5 }), trade({ pnl: 0, session: 'night' }), trade(), trade()], noTradeDays: [], initialBalance: 100 });
+    const result = evaluateDiscipline({ trades: [trade({ pnl: -10 }), trade({ pnl: -15 }), trade({ pnl: 0, session: 'night' }), trade(), trade()], noTradeDays: [], initialBalance: 100 });
     expect(result.streak).toBe(0);
     expect(result.violations.map(item => item.kind)).toEqual(['LOSS_OVER_LIMIT']);
   });
@@ -29,7 +29,7 @@ describe('ofensiva', () => {
   });
 
   it('soma perdas da data, incluindo taxas do break even, e aceita o limite exato', () => {
-    const input = { trades: [trade({ pnl: -9.9 }), trade({ pnl: -0.1 })], noTradeDays: [], initialBalance: 100 };
+    const input = { trades: [trade({ pnl: -24.9 }), trade({ pnl: -0.1 })], noTradeDays: [], initialBalance: 100 };
     expect(evaluateDiscipline(input).streak).toBe(1);
     const result = evaluateDiscipline({ ...input, initialBalance: 99.5 });
     expect(result.streak).toBe(0);

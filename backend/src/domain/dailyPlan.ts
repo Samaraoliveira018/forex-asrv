@@ -1,7 +1,7 @@
 export const OFFENSIVE_INTERVAL = 30;
 
 export function dailyLossLimit(openingBalance: number): number {
-  return Math.round(Math.max(0, openingBalance) * 10 + 1e-8) / 100;
+  return Math.round(Math.max(0, openingBalance) * 25 + 1e-8) / 100;
 }
 
 export const CHECKLIST_SECTIONS = [

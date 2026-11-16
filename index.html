@@ -222,7 +222,7 @@
         <!-- Section Title -->
         <div>
           <h2 class="asrv-page-title">Diário de Trading</h2>
-          <p class="asrv-page-subtitle">Regras: Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</p>
+          <p class="asrv-page-subtitle">Regras: Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 25% de perda sobre o saldo de abertura do dia.</p>
         </div>
 
         <p id="today-plan-status" class="asrv-page-subtitle"></p>
@@ -396,7 +396,7 @@
       <!-- TAB 3: PLANO OPERACIONAL -->
       <section id="tab-plan" class="tab-content hidden space-y-6">
         <h2 class="asrv-page-title">Plano Operacional</h2>
-        <p class="asrv-page-subtitle">Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</p>
+        <p class="asrv-page-subtitle">Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 25% de perda sobre o saldo de abertura do dia.</p>
         <form id="daily-plan-form" class="asrv-card space-y-4" onsubmit="saveDailyPlan(event)">
           <h3 class="asrv-section-title">Checklist Operacional Diário</h3>
           <label class="block">Data do checklist
@@ -1654,7 +1654,7 @@
     }
 
     function dailyLossLimit(openingBalance) {
-      return Math.round(Math.max(0, openingBalance) * 10 + 1e-8) / 100;
+      return Math.round(Math.max(0, openingBalance) * 25 + 1e-8) / 100;
     }
 
     function lossLimitOn(date, excludedId) {
@@ -2195,7 +2195,7 @@ US$ 1 = R$ ${rateFormatter.format(rate)} · ${quoteDateFormatter.format(timestam
       const plan = dailyPlans.find(item => item.date === todayStr);
       const loss = grossDailyLoss(todayTrades);
       const limit = lossLimitOn(todayStr);
-      const limitStatus = (isValueHidden ? 'Limite diário: 10% do saldo de abertura.' : `Perda hoje: ${loss.toFixed(2)} de ${limit.toFixed(2)}.`) +
+      const limitStatus = (isValueHidden ? 'Limite diário: 25% do saldo de abertura.' : `Perda hoje: ${loss.toFixed(2)} de ${limit.toFixed(2)}.`) +
         (loss >= limit ? ' Stop diário atingido.' : '');
       document.getElementById('today-plan-status').innerText = `${plan ? 'Checklist de hoje salvo.' : 'Checklist de hoje pendente no Plano Operacional.'} ${limitStatus}`;
 
