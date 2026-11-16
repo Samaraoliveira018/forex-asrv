@@ -186,8 +186,8 @@
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
-            <div class="asrv-badge asrv-badge--neutral asrv-badge--pill">Operações hoje: <span id="today-total-trades">0</span>/2 (inclui BE)</div>
-            <div id="today-loss-stop" class="asrv-badge asrv-badge--neutral asrv-badge--pill" role="status">Loss seguidos: 0/2</div>
+            <div class="asrv-badge asrv-badge--neutral asrv-badge--pill">Operações hoje: <span id="today-total-trades">0</span>/<span data-daily-trade-cap></span> (inclui BE)</div>
+            <div id="today-loss-stop" class="asrv-badge asrv-badge--neutral asrv-badge--pill" role="status">Loss hoje: 0</div>
 
             <!-- Botão Marcar Dia Sem Operar -->
             <button onclick="markNoTradeDay()" class="asrv-btn asrv-btn--success asrv-btn--sm">
@@ -223,7 +223,7 @@
         <!-- Section Title -->
         <div>
           <h2 class="asrv-page-title">Diário de Trading</h2>
-          <p class="asrv-page-subtitle">Regras: Máximo de duas operações por dia, somando manhã e noite, incluindo break even. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</p>
+          <p class="asrv-page-subtitle">Regras: Máximo de <span data-daily-trade-cap></span> operações por dia, somando manhã e noite, incluindo break even. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</p>
         </div>
 
         <p id="today-plan-status" class="asrv-page-subtitle"></p>
@@ -397,7 +397,7 @@
       <!-- TAB 3: PLANO OPERACIONAL -->
       <section id="tab-plan" class="tab-content hidden space-y-6">
         <h2 class="asrv-page-title">Plano Operacional</h2>
-        <p class="asrv-page-subtitle">Máximo de duas operações por dia, somando manhã e noite, incluindo break even. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</p>
+        <p class="asrv-page-subtitle">Máximo de <span data-daily-trade-cap></span> operações por dia, somando manhã e noite, incluindo break even. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</p>
         <form id="daily-plan-form" class="asrv-card space-y-4" onsubmit="saveDailyPlan(event)">
           <h3 class="asrv-section-title">Checklist Operacional Diário</h3>
           <label class="block">Data do checklist
@@ -837,6 +837,7 @@
 
   <!-- JAVASCRIPT LOGIC -->
   <script>
+    const MAX_DAILY_TRADES = 3;
     let journalSelectedDate = '';
     let journalPeriod = 'day';
     let dailyPlans = [];
@@ -1399,7 +1400,7 @@
       const byDate = new Map();
       for (const trade of trades) {
         const day = byDate.get(trade.date) || [];
-        if (day.length >= 2 || grossDailyLoss(day) >= lossLimitOn(trade.date)) {
+        if (day.length >= MAX_DAILY_TRADES || grossDailyLoss(day) >= lossLimitOn(trade.date)) {
           throw new Error('O backup contém operações que excedem os limites diários.');
         }
         day.push(trade);
@@ -1650,12 +1651,6 @@
       return day === 0 || day === 6;
     }
 
-    function consecutiveLossStopIndex(dayTrades) {
-      return dayTrades.findIndex((trade, index) =>
-        index > 0 && isStop(dayTrades[index - 1].pnl) && isStop(trade.pnl)
-      );
-    }
-
     function grossDailyLoss(dayTrades) {
       return dayTrades.reduce((sum, t) => sum + Math.round(Math.max(0, -t.pnl) * 100), 0) / 100;
     }
@@ -1677,7 +1672,7 @@
         const lossLimit = dailyLossLimit(balance);
         const before = balance;
         balance += dayTrades.reduce((sum, t) => sum + t.pnl, 0);
-        const broken = dayTrades.length > 0 && (dayTrades.length > 2 ||
+        const broken = dayTrades.length > 0 && (dayTrades.length > MAX_DAILY_TRADES ||
           (grossDailyLoss(dayTrades) > lossLimit || (dayTrades.length > 1 && grossDailyLoss(dayTrades.slice(0, -1)) >= lossLimit)) ||
           (balance <= 0 && (before > 0 || dayTrades.some(t => t.pnl < 0))));
         if (broken) streakDays = 0;
@@ -1952,7 +1947,7 @@
       const previous = trades.find(t => t.id === editId);
       const addsToDay = previous?.date !== date;
       const tradesOnDate = trades.filter(t => t.date === date && t.id !== editId);
-      if (addsToDay && tradesOnDate.length >= 2) { alert('O limite de duas operações no dia já foi atingido.'); return; }
+      if (addsToDay && tradesOnDate.length >= MAX_DAILY_TRADES) { alert(`O limite de ${MAX_DAILY_TRADES} operações no dia já foi atingido.`); return; }
       const limit = lossLimitOn(date, editId);
       if (addsToDay && grossDailyLoss(tradesOnDate) >= limit) { alert('O limite de perda diária já foi atingido.'); return; }
       const savedTrade = { id: previous?.id ?? newTradeId(), date, asset, type, session, lots, pnl, notes,
@@ -2201,13 +2196,11 @@ US$ 1 = R$ ${rateFormatter.format(rate)} · ${quoteDateFormatter.format(timestam
       const todayStr = getLocalDateStr();
       const todayTrades = trades.filter(t => t.date === todayStr);
       document.getElementById('today-total-trades').innerText = todayTrades.length;
-      const lossCount = consecutiveLossStopIndex(todayTrades) >= 0
-        ? 2
-        : isStop(todayTrades.at(-1)?.pnl ?? 0) ? 1 : 0;
+      const lossCount = todayTrades.filter(trade => isStop(trade.pnl)).length;
       const lossBadge = document.getElementById('today-loss-stop');
-      const lossTone = lossCount === 2 ? 'danger' : lossCount === 1 ? 'warning' : 'neutral';
+      const lossTone = lossCount > 0 ? 'warning' : 'neutral';
       lossBadge.className = 'asrv-badge asrv-badge--' + lossTone + ' asrv-badge--pill';
-      lossBadge.innerText = 'Loss seguidos: ' + lossCount + '/2' + (lossCount === 2 ? ' · Stop do dia' : '');
+      lossBadge.innerText = 'Loss hoje: ' + lossCount;
       const plan = dailyPlans.find(item => item.date === todayStr);
       const loss = grossDailyLoss(todayTrades);
       const limit = lossLimitOn(todayStr);
@@ -2492,6 +2485,7 @@ US$ 1 = R$ ${rateFormatter.format(rate)} · ${quoteDateFormatter.format(timestam
     }
 
     window.onload = async function() {
+      document.querySelectorAll('[data-daily-trade-cap]').forEach(label => { label.textContent = MAX_DAILY_TRADES; });
       loadInitialData();
       void refreshUsdBrlQuote();
       try {

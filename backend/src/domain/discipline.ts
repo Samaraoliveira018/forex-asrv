@@ -33,7 +33,7 @@ export function evaluateDiscipline(input: DisciplineInput): DisciplineResult {
   let balance = input.initialBalance;
   for (const [date, trades] of [...tradesByDate].sort(([a], [b]) => a.localeCompare(b))) {
     if (trades.length > MAX_DAILY_TRADES) {
-      violations.push({ kind: 'DAILY_TRADE_LIMIT', date, message: `Mais de duas operações registradas em ${date}.` });
+      violations.push({ kind: 'DAILY_TRADE_LIMIT', date, message: `Mais de ${MAX_DAILY_TRADES} operações registradas em ${date}.` });
     }
     const limit = dailyLossLimit(balance);
     if (grossLoss(trades) > limit || (trades.length > 1 && grossLoss(trades.slice(0, -1)) >= limit)) {

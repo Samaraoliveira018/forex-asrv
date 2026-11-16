@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
-  consecutiveLossCount,
   MAX_DAILY_TRADES,
   OFFENSIVE_INTERVAL,
   formatBalanceInBrl,
@@ -103,8 +102,6 @@ export function JournalTab({
   const plan = snapshot.dailyPlans.find(item => item.date === currentDay);
   const todayTrades = snapshot.trades.filter(trade => trade.date === currentDay);
   const lossesToday = grossLoss(todayTrades);
-  const lossCount = consecutiveLossCount(todayTrades);
-  const lossTone = lossCount === 2 ? 'danger' : lossCount === 1 ? 'warning' : 'neutral';
   const filteredSnapshot = {
     ...snapshot,
     trades: datedTrades.filter(t => resultFilter === 'all' || (resultFilter === 'be' ? isBreakEven(t.pnl) : resultFilter === 'win' ? t.pnl > 0 && !isBreakEven(t.pnl) : t.pnl < 0 && !isBreakEven(t.pnl))),
@@ -136,7 +133,7 @@ export function JournalTab({
 
       <View style={styles.actions}>
         <Badge tone="neutral" pill>Operações hoje: {stats.todayCount}/{MAX_DAILY_TRADES} (inclui BE)</Badge>
-        <Badge tone={lossTone} pill>Loss seguidos: {lossCount}/2{lossCount === 2 ? ' · Stop do dia' : ''}</Badge>
+        <Badge tone={stats.todayStops > 0 ? 'warning' : 'neutral'} pill>Loss hoje: {stats.todayStops}</Badge>
         <Button variant="success" size="sm" onPress={onNoTradeDay}>
           Dia sem operar
         </Button>
@@ -187,7 +184,7 @@ export function JournalTab({
       <View>
         <Text style={styles.pageTitle}>Diário de Trading</Text>
         <Text style={styles.pageSubtitle}>
-          Máximo de duas operações por dia, somando manhã e noite, incluindo break even. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.
+          Máximo de {MAX_DAILY_TRADES} operações por dia, somando manhã e noite, incluindo break even. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.
         </Text>
       </View>
 
