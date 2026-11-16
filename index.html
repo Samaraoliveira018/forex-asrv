@@ -1399,8 +1399,8 @@
       const byDate = new Map();
       for (const trade of trades) {
         const day = byDate.get(trade.date) || [];
-        if (day.length >= MAX_DAILY_TRADES || grossDailyLoss(day) >= lossLimitOn(trade.date)) {
-          throw new Error('O backup contém operações que excedem os limites diários.');
+        if (day.length >= MAX_DAILY_TRADES) {
+          throw new Error('O backup contém datas com mais de duas operações.');
         }
         day.push(trade);
         byDate.set(trade.date, day);
@@ -1946,7 +1946,6 @@
       const addsToDay = previous?.date !== date;
       const tradesOnDate = trades.filter(t => t.date === date && t.id !== editId);
       const limit = lossLimitOn(date, editId);
-      if (addsToDay && grossDailyLoss(tradesOnDate) >= limit) { alert('O limite de perda diária já foi atingido.'); return; }
       if (addsToDay && tradesOnDate.length >= MAX_DAILY_TRADES) { alert(`O limite de ${MAX_DAILY_TRADES} operações no dia já foi atingido.`); return; }
       const savedTrade = { id: previous?.id ?? newTradeId(), date, asset, type, session, lots, pnl, notes,
         screenshot_path: previous?.screenshot_path ?? '' };

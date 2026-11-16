@@ -185,10 +185,6 @@ export function createJournalService(deps: JournalDeps): JournalService {
       const limit = initialBalance === null
         ? null
         : dailyLossLimit(openingBalanceOn(otherTrades, initialBalance, trade.date));
-      if (addsToDay && limit != null && grossLoss(sameDay) >= limit) {
-        throw new DomainError('TRADE_RULE', 'O limite de perda diária já foi atingido.');
-      }
-
       if (addsToDay && sameDay.length >= MAX_DAILY_TRADES) {
         throw new DomainError('TRADE_RULE', `O limite de ${MAX_DAILY_TRADES} operações no dia já foi atingido.`);
       }
