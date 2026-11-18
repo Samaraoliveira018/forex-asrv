@@ -28,7 +28,7 @@ export function App() {
 
   if (status === 'loading') {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#0b0f19] text-slate-400">
+      <main className="flex min-h-screen items-center justify-center bg-[#101118] text-slate-400">
         <p role="status">Carregando…</p>
       </main>
     );

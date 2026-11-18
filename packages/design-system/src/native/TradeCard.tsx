@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   kicker: {
-    color: '#6b7280',
+    color: '#9698ae',
     fontSize: typography.caption,
   },
   strong: {

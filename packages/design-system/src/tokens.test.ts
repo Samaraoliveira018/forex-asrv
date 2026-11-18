@@ -9,13 +9,13 @@ describe('tokens', () => {
   });
 
   it('mantém a paleta visual do index.html', () => {
-    expect(colors.background).toBe('#0b0f19');
-    expect(colors.surface).toBe('#111827');
-    expect(colors.border).toBe('#1f2937');
-    expect(colors.primary).toBe('#2563eb');
-    expect(colors.success).toBe('#10b981');
-    expect(colors.danger).toBe('#ef4444');
-    expect(colors.orange).toBe('#f97316');
+    expect(colors.background).toBe('#101118');
+    expect(colors.surface).toBe('#191b26');
+    expect(colors.border).toBe('#2e3142');
+    expect(colors.primary).toBe('#c4b5fd');
+    expect(colors.success).toBe('#a7dccb');
+    expect(colors.danger).toBe('#e8b4bd');
+    expect(colors.orange).toBe('#c4b5fd');
   });
 
   it('mantém espaçamentos positivos e crescentes', () => {

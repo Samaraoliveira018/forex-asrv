@@ -20,18 +20,6 @@ function setup(hidden = false, view: 'grid' | 'list' = 'grid', entries = trades)
 }
 
 describe('Consulta do diário por data', () => {
-  it('conta no Stop Loss apenas as perdas do dia fora do breakeven', () => {
-    const entries = trades.map(trade => {
-      if (trade.id === 'loss') return { ...trade, date: today(), pnl: -2 };
-      if (trade.id === 'be') return { ...trade, date: today(), pnl: -1.99 };
-      return trade;
-    });
-    setup(false, 'grid', entries);
-    const operations = screen.getByText('Operações hoje: 2/2 (inclui BE)');
-    expect(operations.nextElementSibling).toHaveTextContent('Stop Loss: 1/2');
-    expect(operations.nextElementSibling).toHaveAttribute('data-tone', 'warning');
-  });
-
   it('mostra apenas as operações da data e soma ganhos, perdas e BE no resultado', () => {
     setup();
     expect(screen.getByText('EURUSD')).toBeInTheDocument();

@@ -155,3 +155,24 @@ para instalação direta e testes em dispositivos/emuladores. Publicação na Pl
 um keystore de produção ou credenciais EAS. O código mobile e as configurações nativas
 (geradas por `expo prebuild` durante o próprio workflow) entram no source archive
 automático da release.
+
+
+## Diário simplificado · v0.2.0
+
+Site e Android usam a identidade lavanda e menta sobre fundo escuro. A navegação
+principal tem Diário, Histórico e Plano; análises detalhadas continuam disponíveis
+no menu de ações. O histórico mantém calendário e resultados por dia, semana e mês.
+
+A gestão diária soma manhã e noite: encerra ao atingir **2 stops ou 2 takes**.
+O contador de operações considera apenas resultados fora do breakeven
+(`abs(pnl) < US$ 2`). Exemplo: 1 stop + 1 take ainda permite uma operação;
+2 takes encerram o dia. BE não conta para os limites de resultado e mantém seu
+valor real no saldo e no cálculo da perda financeira. O stop financeiro continua
+em 10% do saldo de abertura do dia. O registro permanece disponível: operar fora
+da gestão reinicia a ofensiva, sem impedir que o diário reflita o ocorrido.
+
+A conversão USD/BRL consulta AwesomeAPI a cada minuto. Em caso de falha, usa uma
+referência diária identificada da ExchangeRate-API, reutilizada por até uma hora.
+A última taxa é salva no dispositivo, com data e indicação de cache quando usada
+sem rede. A interface permite tentar a atualização manualmente. Esta conversão é
+uma referência; não inclui spread, impostos nem custos da corretora.

@@ -29,14 +29,14 @@ function renderJournal() {
 }
 
 describe('JournalScreen', () => {
-  it('mostra o resumo, o gráfico e o histórico', async () => {
+  it('mostra o saldo e permite abrir o histórico', async () => {
     renderJournal();
 
-    expect(await screen.findByText('EURUSD')).toBeInTheDocument();
-    expect(screen.getAllByText('$ 1,100.00').length).toBeGreaterThan(0);
-    expect(screen.getByText('Operações Registradas')).toBeInTheDocument();
-    expect(screen.getByRole('progressbar', { name: 'Progresso da ofensiva' })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Evolução do patrimônio' })).toBeInTheDocument();
+    expect(await screen.findByText('Saldo atual')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Consultar diário por data')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Histórico' }));
+    expect(screen.getByText('EURUSD')).toBeInTheDocument();
+    expect(screen.getByLabelText('Consultar diário por data')).toBeInTheDocument();
   });
 
   it('registra uma nova operação pelo modal e atualiza a lista', async () => {
@@ -66,6 +66,7 @@ describe('JournalScreen', () => {
       }),
       undefined,
     );
+    await user.click(await screen.findByRole('button', { name: 'Histórico' }));
     expect(await screen.findByText('GBPUSD')).toBeInTheDocument();
     expect(screen.getAllByText('Noite').length).toBeGreaterThan(0);
   });
@@ -97,6 +98,7 @@ describe('JournalScreen', () => {
     const fake = renderJournal();
     const user = userEvent.setup();
 
+    await user.click(await screen.findByRole('button', { name: 'Histórico' }));
     await user.click(
       await screen.findByRole('button', { name: 'Editar EURUSD de 21/10/26' }),
     );
@@ -136,6 +138,7 @@ describe('JournalScreen', () => {
     const user = userEvent.setup();
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
+    await user.click(await screen.findByRole('button', { name: 'Histórico' }));
     await user.click(
       await screen.findByRole('button', { name: 'Excluir EURUSD de 21/10/26' }),
     );
@@ -159,10 +162,10 @@ describe('JournalScreen', () => {
     renderJournal();
     const user = userEvent.setup();
 
-    await user.click(await screen.findByRole('button', { name: 'Dashboard' }));
+    await user.click(await screen.findByRole('button', { name: 'Visão geral' }));
     expect(screen.getByText('Dashboard Geral')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Dados Estatísticos' }));
+    await user.click(screen.getByRole('button', { name: 'Estatísticas' }));
     expect(screen.getByText('Dados Estatísticos Detalhados')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Distribuição de resultados' })).toBeInTheDocument();
   });
@@ -171,6 +174,7 @@ describe('JournalScreen', () => {
     renderJournal();
     const user = userEvent.setup();
 
+    await user.click(await screen.findByRole('button', { name: 'Histórico' }));
     await user.click(await screen.findByRole('tab', { name: 'Lista' }));
     expect(screen.getByRole('columnheader', { name: 'Ativo' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'EURUSD' })).toBeInTheDocument();
@@ -211,6 +215,7 @@ describe('JournalScreen', () => {
     );
     const user = userEvent.setup();
 
+    await user.click(await screen.findByRole('button', { name: 'Histórico' }));
     await user.click(await screen.findByRole('tab', { name: 'Lista' }));
     const rows = within(screen.getByRole('table')).getAllByRole('row');
 

@@ -2,11 +2,10 @@ import { DomainError } from '../domain/errors';
 import {
   createTrade,
   isIsoDate,
-  isStop,
   type Trade,
   type TradeInput,
 } from '../domain/trade';
-import { CHECKLIST_SECTIONS, MAX_DAILY_TRADES, dailyLossLimit, grossLoss, type DailyPlan } from '../domain/dailyPlan';
+import { CHECKLIST_SECTIONS, dailyOutcomeCounts, outcomeLimitExceeded, dailyLossLimit, grossLoss, type DailyPlan } from '../domain/dailyPlan';
 import { evaluateDiscipline, type DisciplineResult } from '../domain/discipline';
 import { calculateStats, openingBalanceOn, type Stats } from '../domain/stats';
 import type {
@@ -188,12 +187,15 @@ export function createJournalService(deps: JournalDeps): JournalService {
       const warnings: string[] = [];
       if (limit != null && grossLoss([...sameDay, trade]) >= limit) {
         warnings.push('Limite de perda diária atingido. Encerre as operações do dia.');
-      } else if (addsToDay && sameDay.length === MAX_DAILY_TRADES - 1 && isStop(trade.pnl) && sameDay.every(item => isStop(item.pnl))) {
-        warnings.push('Dois losses registrados. Encerre as operações do dia.');
       }
-
-      if (addsToDay && sameDay.length >= MAX_DAILY_TRADES) {
-        warnings.push(`Limite de ${MAX_DAILY_TRADES} operações ultrapassado. A ofensiva reinicia no próximo dia válido.`);
+      const dayTrades = [...sameDay, trade];
+      const counts = dailyOutcomeCounts(dayTrades);
+      if (counts.stops >= 2) warnings.push('Dois stops registrados. Encerre as operações do dia.');
+      if (counts.takes >= 2) warnings.push('Dois takes registrados. Encerre as operações do dia.');
+      const orderedDay = addsToDay ? dayTrades : [...existingTrades.values()]
+        .filter(item => item.date === trade.date).map(item => item.id === trade.id ? trade : item);
+      if (outcomeLimitExceeded(orderedDay)) {
+        warnings.push('Operação após 2 stops ou 2 takes. A ofensiva reinicia no próximo dia válido.');
       }
 
       if (typeof screenshotDataUrl === 'string') {

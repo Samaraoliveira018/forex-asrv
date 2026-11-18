@@ -20,13 +20,12 @@ import { StatsTab } from './StatsTab';
 import { TradeModal } from './TradeModal';
 import { formatDate, money, parseDateInput, today } from './format';
 
-type Tab = 'dashboard' | 'journal' | 'plan' | 'stats';
+type Tab = 'dashboard' | 'journal' | 'history' | 'plan' | 'stats';
 
 const navItems: ReadonlyArray<{ id: Tab; label: string; icon: string }> = [
-  { id: 'dashboard', label: 'Dashboard', icon: 'fa-table-cells-large' },
   { id: 'journal', label: 'Diário de Trading', icon: 'fa-book-open' },
-  { id: 'plan', label: 'Plano Operacional', icon: 'fa-clipboard-list' },
-  { id: 'stats', label: 'Dados Estatísticos', icon: 'fa-chart-pie' },
+  { id: 'history', label: 'Histórico', icon: 'fa-calendar-days' },
+  { id: 'plan', label: 'Plano', icon: 'fa-clipboard-list' },
 ];
 
 export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
@@ -279,14 +278,14 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
 
   if (!snapshot) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#0b0f19] text-slate-400">
+      <main className="flex min-h-screen items-center justify-center bg-[#101118] text-slate-400">
         <p role="status">Carregando diário…</p>
       </main>
     );
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0b0f19] text-slate-200">
+    <div className="flex h-screen overflow-hidden bg-[#101118] text-slate-200">
       <button
         type="button"
         className="asrv-icon-button asrv-mobile-only fixed left-4 top-4 z-50"
@@ -302,9 +301,9 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
         }`}
       >
         <div>
-          <div className="border-b border-[#1f2937] p-5">
+          <div className="border-b border-[#2e3142] p-5">
             <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-white">
-              <span className="asrv-brand-mark">DT</span>
+              <span className="asrv-brand-mark">A</span>
               Diário Trader ASRV
             </h1>
             <p className="mt-1 text-xs text-slate-400">
@@ -326,7 +325,7 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
           </nav>
         </div>
 
-        <div className="space-y-2 border-t border-[#1f2937] p-3">
+        <div className="space-y-2 border-t border-[#2e3142] p-3">
           <div className="rounded border border-gray-800 bg-gray-900/80 px-2 py-1">
             <p className="text-[10px] font-semibold uppercase text-gray-400">Armazenamento</p>
             <p className="mt-0.5 flex items-center gap-1 text-xs font-medium">
@@ -350,6 +349,8 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
             </Button>
           </div>
 
+          <Button variant="ghost" size="sm" onClick={() => navigate('dashboard')}>Visão geral</Button>
+          <Button variant="ghost" size="sm" onClick={() => navigate('stats')}>Estatísticas</Button>
           <div className="grid grid-cols-2 gap-1.5 pt-1">
             <Button variant="secondary" size="sm" onClick={handleExport}>
               <i className="fa-solid fa-download text-[10px]" aria-hidden="true" /> Exportar
@@ -423,8 +424,11 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
               </Alert>
             ) : null}
 
-            {tab === 'journal' ? (
+            {tab === 'journal' || tab === 'history' ? (
               <JournalTab
+                mode={tab === 'history' ? 'history' : 'home'}
+                onOpenHistory={() => setTab('history')}
+                onOpenPlan={() => setTab('plan')}
                 snapshot={snapshot}
                 hidden={hidden}
                 market={market}
@@ -443,20 +447,12 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
             {tab === 'dashboard' ? <DashboardTab snapshot={snapshot} hidden={hidden} /> : null}
 
             {tab === 'plan' ? (
-              <PlanTab plans={snapshot.dailyPlans} onSave={handleSaveDailyPlan} />
+              <PlanTab streak={snapshot.discipline.streak} plans={snapshot.dailyPlans} onSave={handleSaveDailyPlan} />
             ) : null}
 
             {tab === 'stats' ? <StatsTab snapshot={snapshot} /> : null}
 
-            <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-[#1f2937] pt-4 text-[11px] text-slate-500">
-              <span>Diário Trader ASRV · disciplina e gestão de risco</span>
-              <span>
-                Patrimônio:{' '}
-                <strong className="text-slate-300">
-                  {money(snapshot.stats.balance, hidden)}
-                </strong>
-              </span>
-            </footer>
+
           </div>
         </main>
       </div>

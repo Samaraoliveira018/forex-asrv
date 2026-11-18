@@ -30,13 +30,12 @@ import { StatsTab } from './StatsTab';
 import { TradeModal } from './TradeModal';
 import { formatDate, maskDateInput, money, parseDateInput, today } from './format';
 
-type Tab = 'dashboard' | 'journal' | 'plan' | 'stats';
+type Tab = 'dashboard' | 'journal' | 'history' | 'plan' | 'stats';
 
 const tabs: ReadonlyArray<{ id: Tab; label: string; icon: string }> = [
-  { id: 'dashboard', label: 'Dashboard', icon: '▦' },
   { id: 'journal', label: 'Diário', icon: '▤' },
+  { id: 'history', label: 'Histórico', icon: '◷' },
   { id: 'plan', label: 'Plano', icon: '☑' },
-  { id: 'stats', label: 'Estatísticas', icon: '◔' },
 ];
 
 export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
@@ -165,6 +164,7 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
   }
 
   function openBalance() {
+    setActionsOpen(false);
     setBalanceDraft(String(snapshot?.initialBalance ?? 0));
     setBalanceError('');
     setBalanceOpen(true);
@@ -333,7 +333,7 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
       <View style={[styles.topbar, { paddingTop: insets.top + spacing.sm }]}>
         <View style={styles.brand}>
           <View style={styles.brandMark}>
-            <Text style={styles.brandMarkText}>DT</Text>
+            <Text style={styles.brandMarkText}>A</Text>
           </View>
           <Text style={styles.brandTitle} numberOfLines={1}>
             Diário Trader ASRV
@@ -342,7 +342,7 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
 
         <View style={styles.topbarRight}>
           <Badge tone="orange" pill>
-            🔥 {snapshot.discipline.streak}
+            {snapshot.discipline.streak} dias
           </Badge>
           <Button
             variant="ghost"
@@ -355,38 +355,6 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
         </View>
       </View>
 
-      <View style={styles.accountBar}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Editar saldo inicial"
-          onPress={openBalance}
-          style={({ pressed }) => [styles.balanceChip, pressed && styles.pressed]}
-        >
-          <Text style={styles.balanceLabel}>Saldo inicial</Text>
-          <Text style={styles.balanceValue}>{money(snapshot.initialBalance)}</Text>
-        </Pressable>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Sincronizar dados"
-          accessibilityState={{ busy: syncing, disabled: syncing }}
-          disabled={syncing}
-          onPress={handleSync}
-          style={({ pressed }) => [
-            styles.syncChip,
-            pressed && !syncing && styles.pressed,
-            syncing && styles.disabled,
-          ]}
-        >
-          <Text style={styles.syncText}>{syncing ? 'Sincronizando…' : 'Sincronizar'}</Text>
-          {pending > 0 ? (
-            <Badge tone="warning">{pending} pendência(s)</Badge>
-          ) : (
-            <Text style={styles.syncOk}>Em dia</Text>
-          )}
-        </Pressable>
-      </View>
-
       <ScrollView
         style={styles.contentScroll}
         contentContainerStyle={styles.content}
@@ -397,8 +365,11 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
           <Alert tone="warning">{warnings.join('\n')}</Alert>
         ) : null}
 
-        {tab === 'journal' ? (
+        {tab === 'journal' || tab === 'history' ? (
           <JournalTab
+            mode={tab === 'history' ? 'history' : 'home'}
+            onOpenHistory={() => setTab('history')}
+            onOpenPlan={() => setTab('plan')}
             snapshot={snapshot}
             hidden={hidden}
             market={market}
@@ -417,17 +388,11 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
         {tab === 'dashboard' ? <DashboardTab snapshot={snapshot} hidden={hidden} /> : null}
 
         {tab === 'plan' ? (
-          <PlanTab plans={snapshot.dailyPlans} onSave={handleSaveDailyPlan} />
+          <PlanTab streak={snapshot.discipline.streak} plans={snapshot.dailyPlans} onSave={handleSaveDailyPlan} />
         ) : null}
 
         {tab === 'stats' ? <StatsTab snapshot={snapshot} /> : null}
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Diário Trader ASRV · disciplina e gestão de risco</Text>
-          <Text style={styles.footerText}>
-            Patrimônio: <Text style={styles.footerStrong}>{money(snapshot.stats.balance, hidden)}</Text>
-          </Text>
-        </View>
       </ScrollView>
 
       <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
@@ -525,6 +490,40 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
           </Button>
         }
       >
+      <View style={styles.accountBar}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Editar saldo inicial"
+          onPress={openBalance}
+          style={({ pressed }) => [styles.balanceChip, pressed && styles.pressed]}
+        >
+          <Text style={styles.balanceLabel}>Saldo inicial</Text>
+          <Text style={styles.balanceValue}>{money(snapshot.initialBalance)}</Text>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Sincronizar dados"
+          accessibilityState={{ busy: syncing, disabled: syncing }}
+          disabled={syncing}
+          onPress={handleSync}
+          style={({ pressed }) => [
+            styles.syncChip,
+            pressed && !syncing && styles.pressed,
+            syncing && styles.disabled,
+          ]}
+        >
+          <Text style={styles.syncText}>{syncing ? 'Sincronizando…' : 'Sincronizar'}</Text>
+          {pending > 0 ? (
+            <Badge tone="warning">{pending} pendência(s)</Badge>
+          ) : (
+            <Text style={styles.syncOk}>Em dia</Text>
+          )}
+        </Pressable>
+      </View>
+
+        <Button variant="secondary" fullWidth onPress={() => { setTab('dashboard'); setActionsOpen(false); }}>Visão geral</Button>
+        <Button variant="secondary" fullWidth onPress={() => { setTab('stats'); setActionsOpen(false); }}>Estatísticas</Button>
         <Text style={styles.actionDescription}>
           Faça backup do diário, restaure um JSON existente ou limpe todo o histórico.
         </Text>
@@ -562,6 +561,40 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
           </>
         }
       >
+      <View style={styles.accountBar}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Editar saldo inicial"
+          onPress={openBalance}
+          style={({ pressed }) => [styles.balanceChip, pressed && styles.pressed]}
+        >
+          <Text style={styles.balanceLabel}>Saldo inicial</Text>
+          <Text style={styles.balanceValue}>{money(snapshot.initialBalance)}</Text>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Sincronizar dados"
+          accessibilityState={{ busy: syncing, disabled: syncing }}
+          disabled={syncing}
+          onPress={handleSync}
+          style={({ pressed }) => [
+            styles.syncChip,
+            pressed && !syncing && styles.pressed,
+            syncing && styles.disabled,
+          ]}
+        >
+          <Text style={styles.syncText}>{syncing ? 'Sincronizando…' : 'Sincronizar'}</Text>
+          {pending > 0 ? (
+            <Badge tone="warning">{pending} pendência(s)</Badge>
+          ) : (
+            <Text style={styles.syncOk}>Em dia</Text>
+          )}
+        </Pressable>
+      </View>
+
+        <Button variant="secondary" fullWidth onPress={() => { setTab('dashboard'); setActionsOpen(false); }}>Visão geral</Button>
+        <Button variant="secondary" fullWidth onPress={() => { setTab('stats'); setActionsOpen(false); }}>Estatísticas</Button>
         <Text style={styles.actionDescription}>
           Cole o conteúdo do arquivo exportado pelo Diário Trader ASRV.
         </Text>
@@ -714,7 +747,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   footerText: {
-    color: '#6b7280',
+    color: '#9698ae',
     fontSize: typography.caption - 1,
   },
   footerStrong: {

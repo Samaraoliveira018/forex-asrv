@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     fontSize: typography.caption,
   },
   tiny: {
-    color: '#6b7280',
+    color: '#9698ae',
     fontSize: typography.caption - 1,
   },
   center: {

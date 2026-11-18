@@ -59,9 +59,9 @@ export function StatsTab({ snapshot }: { snapshot: JournalSnapshot }) {
           <DonutChart
             ariaLabel="Distribuição de resultados"
             segments={[
-              { label: 'Gains (Win)', value: stats.wins, color: '#10b981' },
-              { label: 'Losses (Perda)', value: stats.losses, color: '#ef4444' },
-              { label: 'Break Even (0x0)', value: stats.breakEvens, color: '#6b7280' },
+              { label: 'Gains (Win)', value: stats.wins, color: '#a7dccb' },
+              { label: 'Losses (Perda)', value: stats.losses, color: '#e8b4bd' },
+              { label: 'Break Even (0x0)', value: stats.breakEvens, color: '#9698ae' },
             ]}
           />
         </Card>
@@ -74,7 +74,7 @@ export function StatsTab({ snapshot }: { snapshot: JournalSnapshot }) {
             ariaLabel="Proporção por direção"
             segments={[
               { label: 'Compra (Long)', value: stats.buyCount, color: '#ffffff' },
-              { label: 'Venda (Short)', value: stats.sellCount, color: '#ef4444' },
+              { label: 'Venda (Short)', value: stats.sellCount, color: '#e8b4bd' },
             ]}
           />
         </Card>

@@ -1,13 +1,10 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
+import { DailyHome } from './DailyHome';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
-  MAX_DAILY_TRADES,
-  OFFENSIVE_INTERVAL,
-  formatBalanceInBrl,
-  grossLoss,
   historyRange,
   isBreakEven,
-  offensiveMilestones,
   isWeekend,
   type HistoryPeriod,
   sessionLabel,
@@ -21,7 +18,6 @@ import {
   Button,
   Card,
   EmptyState,
-  ProgressBar,
   SegmentedControl,
   StatCard,
   TradeCard,
@@ -30,7 +26,6 @@ import {
   spacing,
   typography,
 } from '@asrv/design-system';
-import { EquityChart } from './charts';
 import { formatDate, money, signedMoney, signedPercent, signedValue, today } from './format';
 
 export type JournalView = 'grid' | 'list';
@@ -50,6 +45,9 @@ function sortTradesByMostRecent(trades: readonly Trade[]): Trade[] {
 
 export function JournalTab({
   snapshot,
+  mode = 'history',
+  onOpenHistory = () => {},
+  onOpenPlan = () => {},
   hidden,
   market,
   view,
@@ -63,6 +61,9 @@ export function JournalTab({
   onDeleteNoTradeDay,
 }: {
   snapshot: JournalSnapshot;
+  mode?: 'home' | 'history';
+  onOpenHistory?: () => void;
+  onOpenPlan?: () => void;
   hidden: boolean;
   market: Market;
   view: JournalView;
@@ -75,12 +76,13 @@ export function JournalTab({
   onNoTradeDay: () => void;
   onDeleteNoTradeDay: (day: string) => void;
 }) {
+  const [quoteAttempt, setQuoteAttempt] = useState(0);
   const [quote, setQuote] = useState<UsdBrlQuote>();
   const [quoteUnavailable, setQuoteUnavailable] = useState<boolean>();
   useEffect(() => watchUsdBrlQuote(next => {
     if (next) setQuote(next);
     setQuoteUnavailable(next === null);
-  }), []);
+  }, AsyncStorage), [quoteAttempt]);
 
   const [selectedDate, setSelectedDate] = useState('');
   const [historyPeriod, setHistoryPeriod] = useState<HistoryPeriod>('day');
@@ -98,10 +100,6 @@ export function JournalTab({
     setHistoryPeriod(period);
     if (!selectedDate) setSelectedDate(today());
   }
-  const currentDay = today();
-  const plan = snapshot.dailyPlans.find(item => item.date === currentDay);
-  const todayTrades = snapshot.trades.filter(trade => trade.date === currentDay);
-  const lossesToday = grossLoss(todayTrades);
   const filteredSnapshot = {
     ...snapshot,
     trades: datedTrades.filter(t => resultFilter === 'all' || (resultFilter === 'be' ? isBreakEven(t.pnl) : resultFilter === 'win' ? t.pnl > 0 && !isBreakEven(t.pnl) : t.pnl < 0 && !isBreakEven(t.pnl))),
@@ -110,88 +108,20 @@ export function JournalTab({
   const historyMoney = (value: number) => hidden ? '••••••' : `${value < 0 ? '- ' : value > 0 ? '+ ' : ''}US$ ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const gains = datedTrades.reduce((sum, t) => sum + Math.max(0, t.pnl), 0);
   const losses = datedTrades.reduce((sum, t) => sum + Math.min(0, t.pnl), 0);
-  const { stats, discipline } = snapshot;
-  const milestones = offensiveMilestones(discipline.streak);
-  const nextMilestone = (Math.floor(discipline.streak / OFFENSIVE_INTERVAL) + 1) * OFFENSIVE_INTERVAL;
   const periodTone = (pnl: number) => (pnl > 0 ? 'success' : pnl < 0 ? 'danger' : 'muted');
-  const periodHint = (period: (typeof stats.periods)['daily']) =>
-    `Resultado: ${signedPercent(period.pct)}\nPerda: ${period.lossPct.toFixed(2)}%`;
+
+  if (mode === 'home') return <DailyHome snapshot={snapshot} hidden={hidden}
+    quote={quote ?? (quoteUnavailable ? null : undefined)} quoteUnavailable={quoteUnavailable}
+    onRefreshQuote={() => setQuoteAttempt(value => value + 1)} onToggleHidden={onToggleHidden}
+    onNewTrade={onNewTrade} onOpenHistory={onOpenHistory} onOpenPlan={onOpenPlan}
+    onNoTradeDay={onNoTradeDay} onEditTrade={onEditTrade} />;
 
   return (
     <View style={styles.screen}>
-      <View style={styles.marketRow}>
-        <SegmentedControl
-          label="Mercado"
-          value={market}
-          onChange={onMarketChange}
-          options={[
-            { value: 'nacional', label: 'Nacional' },
-            { value: 'internacional', label: 'Internacional' },
-          ]}
-        />
-      </View>
-
-      <View style={styles.actions}>
-        <Badge tone={stats.todayCount > MAX_DAILY_TRADES ? 'danger' : 'neutral'} pill>Operações hoje: {stats.todayCount}/{MAX_DAILY_TRADES} (inclui BE)</Badge>
-        <Badge tone={stats.todayStops >= MAX_DAILY_TRADES ? 'danger' : stats.todayStops > 0 ? 'warning' : 'neutral'} pill>Stop Loss: {stats.todayStops}/{MAX_DAILY_TRADES}</Badge>
-        <Button variant="success" size="sm" onPress={onNoTradeDay}>
-          Dia sem operar
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          accessibilityLabel={hidden ? 'Mostrar valores' : 'Ocultar valores'}
-          onPress={onToggleHidden}
-        >
-          {hidden ? 'Mostrar' : 'Ocultar'}
-        </Button>
-        <Button onPress={onNewTrade}>Nova operação</Button>
-      </View>
-
-      <Card>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionIcon}>🏆</Text>
-          <Text style={styles.sectionTitle}>Metas de Ofensiva (Disciplina Trader)</Text>
-        </View>
-        <Text style={styles.goal}>
-          Próxima meta: {nextMilestone} dias ({discipline.streak}/{nextMilestone})
-        </Text>
-        <ProgressBar
-          label="Progresso da ofensiva"
-          value={Math.min(discipline.streak, nextMilestone)}
-          max={nextMilestone}
-        />
-        <View style={styles.milestones}>
-          {milestones.map((milestone) => {
-            const reached = discipline.streak >= milestone;
-            return (
-              <View
-                key={milestone}
-                style={[styles.milestone, reached && styles.milestoneReached]}
-              >
-                <Text style={[styles.milestoneTitle, reached && styles.milestoneTitleReached]}>
-                  {milestone} Dias
-                </Text>
-                <Text style={[styles.milestoneLabel, reached && styles.milestoneLabelReached]}>
-                  {milestone / OFFENSIVE_INTERVAL}ª ofensiva
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-      </Card>
-
-      <View>
-        <Text style={styles.pageTitle}>Diário de Trading</Text>
-        <Text style={styles.pageSubtitle}>
-          Máximo de {MAX_DAILY_TRADES} operações por dia, incluindo breakeven. Registros acima do limite zeram a ofensiva. Encerre após 2 losses. Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.
-        </Text>
-      </View>
-
-      <Text style={styles.meta}>
-        {plan ? 'Checklist de hoje salvo.' : 'Checklist de hoje pendente no Plano Operacional.'}{' '}
-        {`Perda hoje: ${historyMoney(lossesToday)} de ${historyMoney(stats.dailyLossLimit)}.${lossesToday >= stats.dailyLossLimit ? ' · Stop diário atingido.' : ''}`}
-      </Text>
+      <Text style={styles.pageTitle}>Histórico</Text>
+      <View style={styles.actions}><Button onPress={onNewTrade}>Nova operação</Button>
+        <Button variant="ghost" accessibilityLabel={hidden ? 'Mostrar valores' : 'Ocultar valores'} onPress={onToggleHidden}>{hidden ? 'Mostrar' : 'Ocultar'}</Button>
+        <Button variant="secondary" onPress={onNoTradeDay}>Dia sem operar</Button></View>
       <Card>
         <Text style={styles.sectionTitle}>Histórico do diário</Text>
         <Text style={styles.pageSubtitle}>Escolha uma data e consulte as operações do dia, da semana ou do mês.</Text>
@@ -209,9 +139,9 @@ export function JournalTab({
               if (day < 1) return <View key={i} style={{ width: '14.2857%' }} />;
               const key = dateKey(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day));
               const recorded = snapshot.trades.some(t => t.date === key) || snapshot.noTradeDays.includes(key);
-              return <Pressable key={i} accessibilityRole="button" accessibilityLabel={`${formatDate(key)}${recorded ? ', com registros' : ''}`} accessibilityState={{ selected: selectedDate === key }} onPress={() => { setSelectedDate(key); setCalendarOpen(false); }} style={{ width: '14.2857%', minHeight: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: selectedDate === key ? '#2563eb' : 'transparent', borderRadius: 8 }}>
-                <Text style={{ color: recorded ? '#34d399' : '#f8fafc', fontWeight: recorded ? '700' : '400' }}>{day}</Text>
-                {recorded && <Text style={{ color: '#34d399', fontSize: 10 }}>•</Text>}
+              return <Pressable key={i} accessibilityRole="button" accessibilityLabel={`${formatDate(key)}${recorded ? ', com registros' : ''}`} accessibilityState={{ selected: selectedDate === key }} onPress={() => { setSelectedDate(key); setCalendarOpen(false); }} style={{ width: '14.2857%', minHeight: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: selectedDate === key ? '#c4b5fd' : 'transparent', borderRadius: 8 }}>
+                <Text style={{ color: recorded ? '#a7dccb' : '#f8fafc', fontWeight: recorded ? '700' : '400' }}>{day}</Text>
+                {recorded && <Text style={{ color: '#a7dccb', fontSize: 10 }}>•</Text>}
               </Pressable>;
             })}
           </View>
@@ -233,67 +163,6 @@ export function JournalTab({
         </View>
         <SegmentedControl label="Mostrar operações" value={resultFilter} onChange={setResultFilter} options={[{ value: 'all', label: 'Todos' }, { value: 'win', label: 'Ganhos' }, { value: 'loss', label: 'Perdas' }, { value: 'be', label: 'BE' }]} />
         {filteredSnapshot.trades.length === 0 && filteredSnapshot.noTradeDays.length === 0 && <Text style={styles.meta}>Nenhum registro para a data e o resultado selecionados.</Text>}
-      </Card>
-
-      <View style={styles.statsGrid}>
-        <StatCard
-          label="Patrimônio Total"
-          value={money(stats.balance, hidden)}
-          hint={`${stats.returnPct >= 0 ? '+' : ''}${stats.returnPct.toFixed(2)}% em relação ao inicial\n${formatBalanceInBrl(stats.balance, hidden, quote ?? (quoteUnavailable ? null : undefined), quoteUnavailable)}`}
-          hintTone={stats.returnPct >= 0 ? 'success' : 'danger'}
-        />
-        <StatCard
-          label="Resultado Acumulado"
-          value={signedMoney(stats.totalPnl, hidden)}
-          tone={stats.totalPnl > 0 ? 'success' : stats.totalPnl < 0 ? 'danger' : 'muted'}
-        />
-        <StatCard label="Win Rate" value={`${stats.winRate.toFixed(0)}%`} />
-        <StatCard label="Operações Registradas" value={String(stats.totalTrades)} />
-      </View>
-
-      <View style={styles.periodGrid}>
-        <StatCard
-          label="Resultado Diário"
-          value={signedMoney(stats.periods.daily.pnl, hidden)}
-          tone={periodTone(stats.periods.daily.pnl)}
-          hint={periodHint(stats.periods.daily)}
-          hintTone={stats.periods.daily.pnl >= 0 ? 'success' : 'danger'}
-        />
-        <StatCard
-          label="Resultado Semanal"
-          value={signedMoney(stats.periods.weekly.pnl, hidden)}
-          tone={periodTone(stats.periods.weekly.pnl)}
-          hint={periodHint(stats.periods.weekly)}
-          hintTone={stats.periods.weekly.pnl >= 0 ? 'success' : 'danger'}
-        />
-        <StatCard
-          label="Resultado Mensal"
-          value={signedMoney(stats.periods.monthly.pnl, hidden)}
-          tone={periodTone(stats.periods.monthly.pnl)}
-          hint={periodHint(stats.periods.monthly)}
-          hintTone={stats.periods.monthly.pnl >= 0 ? 'success' : 'danger'}
-        />
-      </View>
-
-      <Card>
-        <View style={styles.chartHeader}>
-          <View style={styles.flex}>
-            <Text style={styles.sectionTitle}>📈 Performance do Patrimônio</Text>
-            <Text style={styles.pageSubtitle}>Evolução do saldo com base nas operações</Text>
-          </View>
-        </View>
-        <View style={styles.chartSummary}>
-          <Text style={styles.meta}>Trades: {stats.totalTrades}</Text>
-          <Text style={styles.meta}>Win Rate: {stats.winRate.toFixed(0)}%</Text>
-          <Text style={[styles.meta, stats.totalPnl >= 0 ? styles.positive : styles.negative]}>
-            P/L: {signedMoney(stats.totalPnl, hidden)}
-          </Text>
-        </View>
-        <EquityChart
-          initialBalance={snapshot.initialBalance}
-          trades={snapshot.trades}
-          hidden={hidden}
-        />
       </Card>
 
       <SegmentedControl
@@ -569,7 +438,7 @@ const styles = StyleSheet.create({
     color: colors.orangeText,
   },
   milestoneLabel: {
-    color: '#6b7280',
+    color: '#9698ae',
     fontSize: typography.caption - 1,
   },
   milestoneLabelReached: {

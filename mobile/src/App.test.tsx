@@ -39,7 +39,7 @@ describe('App (mobile)', () => {
       </BffProvider>,
     );
 
-    expect(await screen.findByText('EURUSD')).toBeTruthy();
+    expect(await screen.findByText('Saldo atual')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Entrar' })).toBeNull();
   });
 });

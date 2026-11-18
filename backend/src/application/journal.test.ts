@@ -218,22 +218,22 @@ describe('createJournalService', () => {
     const { service } = setup();
     await service.saveTrade({ ...input, pnl: -5, session: 'day' });
     const second = await service.saveTrade({ ...input, pnl: -5, session: 'night' });
-    expect(second.warnings).toContain('Dois losses registrados. Encerre as operações do dia.');
+    expect(second.warnings).toContain('Dois stops registrados. Encerre as operações do dia.');
     expect((await service.list()).discipline).toEqual({ streak: 1, violations: [] });
     const third = await service.saveTrade({ ...input, asset: 'UKOUSD', pnl: -9.39 });
     expect(third).toMatchObject({ synced: true, trade: { asset: 'UKOUSD', pnl: -9.39 } });
-    expect(third.warnings).toContain('Limite de 2 operações ultrapassado. A ofensiva reinicia no próximo dia válido.');
+    expect(third.warnings).toContain('Operação após 2 stops ou 2 takes. A ofensiva reinicia no próximo dia válido.');
     expect((await service.list()).discipline).toMatchObject({ streak: 0, violations: [{ kind: 'DAILY_TRADE_LIMIT', date: input.date }] });
     await service.saveTrade({ ...input, date: '2026-10-22' });
     expect((await service.list()).discipline.streak).toBe(1);
   });
 
-  it.each([['day', 'night'], ['night', 'day']] as const)('conta breakeven em %s e %s no limite diário', async (first, second) => {
+  it.each([['day', 'night'], ['night', 'day']] as const)('exclui breakeven em %s e %s do limite diário', async (first, second) => {
     const { service } = setup();
     await service.saveTrade({ ...input, session: first, pnl: -1.99 });
     await expect(service.saveTrade({ ...input, session: second })).resolves.toMatchObject({ synced: true, warnings: [] });
     await expect(service.saveTrade({ ...input, session: second })).resolves.toMatchObject({ synced: true });
-    expect((await service.list()).discipline.streak).toBe(0);
+    expect((await service.list()).discipline.streak).toBe(1);
   });
 
   it.each(['2026-10-24', '2026-10-25'])('aceita operações em %s dentro dos limites e conta o dia na ofensiva', async (date) => {

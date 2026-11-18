@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   hint: {
-    color: '#6b7280',
+    color: '#9698ae',
     fontSize: typography.caption - 1,
   },
 });
@@ -84,7 +84,7 @@ const valueToneStyles = StyleSheet.create({
 });
 
 const hintToneStyles = StyleSheet.create({
-  default: { color: '#6b7280' },
+  default: { color: '#9698ae' },
   success: { color: colors.successText },
   danger: { color: colors.dangerText },
 });

@@ -40,7 +40,7 @@ describe('App', () => {
       </BffProvider>,
     );
 
-    expect(await screen.findByText('EURUSD')).toBeInTheDocument();
+    expect(await screen.findByText('Saldo atual')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Entrar' })).not.toBeInTheDocument();
   });
 });

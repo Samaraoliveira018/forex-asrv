@@ -1,12 +1,8 @@
 import { useEffect, useState } from 'react';
+import { DailyHome } from './DailyHome';
 import {
-  MAX_DAILY_TRADES,
-  OFFENSIVE_INTERVAL,
-  formatBalanceInBrl,
-  grossLoss,
   historyRange,
   isBreakEven,
-  offensiveMilestones,
   isWeekend,
   type HistoryPeriod,
   sessionLabel,
@@ -20,12 +16,10 @@ import {
   Button,
   Card,
   EmptyState,
-  ProgressBar,
   SegmentedControl,
   StatCard,
   TradeCard,
 } from '@asrv/design-system';
-import { EquityChart } from './charts';
 import { formatDate, money, signedMoney, signedPercent, signedValue, today } from './format';
 
 export type JournalView = 'grid' | 'list';
@@ -45,6 +39,9 @@ function sortTradesByMostRecent(trades: readonly Trade[]): Trade[] {
 
 export function JournalTab({
   snapshot,
+  mode = 'history',
+  onOpenHistory = () => {},
+  onOpenPlan = () => {},
   hidden,
   market,
   view,
@@ -58,6 +55,9 @@ export function JournalTab({
   onDeleteNoTradeDay,
 }: {
   snapshot: JournalSnapshot;
+  mode?: 'home' | 'history';
+  onOpenHistory?: () => void;
+  onOpenPlan?: () => void;
   hidden: boolean;
   market: Market;
   view: JournalView;
@@ -70,12 +70,13 @@ export function JournalTab({
   onNoTradeDay: () => void;
   onDeleteNoTradeDay: (day: string) => void;
 }) {
+  const [quoteAttempt, setQuoteAttempt] = useState(0);
   const [quote, setQuote] = useState<UsdBrlQuote>();
   const [quoteUnavailable, setQuoteUnavailable] = useState<boolean>();
   useEffect(() => watchUsdBrlQuote(next => {
     if (next) setQuote(next);
     setQuoteUnavailable(next === null);
-  }), []);
+  }, typeof localStorage !== 'undefined' ? localStorage : undefined), [quoteAttempt]);
 
   const [selectedDate, setSelectedDate] = useState('');
   const [historyPeriod, setHistoryPeriod] = useState<HistoryPeriod>('day');
@@ -90,10 +91,6 @@ export function JournalTab({
     setHistoryPeriod(period);
     if (!selectedDate) setSelectedDate(today());
   }
-  const currentDay = today();
-  const plan = snapshot.dailyPlans.find(item => item.date === currentDay);
-  const todayTrades = snapshot.trades.filter(trade => trade.date === currentDay);
-  const lossesToday = grossLoss(todayTrades);
   const filteredSnapshot = {
     ...snapshot,
     trades: datedTrades.filter(t => resultFilter === 'all' || (resultFilter === 'be' ? isBreakEven(t.pnl) : resultFilter === 'win' ? t.pnl > 0 && !isBreakEven(t.pnl) : t.pnl < 0 && !isBreakEven(t.pnl))),
@@ -102,93 +99,18 @@ export function JournalTab({
   const historyMoney = (value: number) => hidden ? '••••••' : `${value < 0 ? '- ' : value > 0 ? '+ ' : ''}$ ${Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const gains = datedTrades.reduce((sum, t) => sum + Math.max(0, t.pnl), 0);
   const losses = datedTrades.reduce((sum, t) => sum + Math.min(0, t.pnl), 0);
-  const { stats, discipline } = snapshot;
-  const milestones = offensiveMilestones(discipline.streak);
-  const nextMilestone = (Math.floor(discipline.streak / OFFENSIVE_INTERVAL) + 1) * OFFENSIVE_INTERVAL;
   const periodTone = (pnl: number) => (pnl > 0 ? 'success' : pnl < 0 ? 'danger' : 'muted');
-  const periodHint = (period: (typeof stats.periods)['daily']) =>
-    `Resultado: ${signedPercent(period.pct)}\nPerda: ${period.lossPct.toFixed(2)}%`;
+
+  if (mode === 'home') return <DailyHome snapshot={snapshot} hidden={hidden}
+    quote={quote ?? (quoteUnavailable ? null : undefined)} quoteUnavailable={quoteUnavailable}
+    onRefreshQuote={() => setQuoteAttempt(value => value + 1)} onToggleHidden={onToggleHidden}
+    onNewTrade={onNewTrade} onOpenHistory={onOpenHistory} onOpenPlan={onOpenPlan}
+    onNoTradeDay={onNoTradeDay} onEditTrade={onEditTrade} />;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <SegmentedControl
-          ariaLabel="Mercado"
-          value={market}
-          onChange={onMarketChange}
-          options={[
-            { value: 'nacional', label: 'Mercado Nacional' },
-            { value: 'internacional', label: 'Mercado Internacional' },
-          ]}
-        />
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge tone={stats.todayCount > MAX_DAILY_TRADES ? 'danger' : 'neutral'} pill>Operações hoje: {stats.todayCount}/{MAX_DAILY_TRADES} (inclui BE)</Badge>
-          <Badge tone={stats.todayStops >= MAX_DAILY_TRADES ? 'danger' : stats.todayStops > 0 ? 'warning' : 'neutral'} pill>Stop Loss: {stats.todayStops}/{MAX_DAILY_TRADES}</Badge>
-
-          <Button variant="success" size="sm" onClick={onNoTradeDay}>
-            <i className="fa-solid fa-calendar-check" aria-hidden="true" />
-            Registrar Dia Sem Operar
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={hidden ? 'Mostrar valores' : 'Ocultar valores'}
-            onClick={onToggleHidden}
-          >
-            <i className={`fa-solid ${hidden ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden="true" />
-          </Button>
-
-          <Button className="ml-auto" onClick={onNewTrade}>
-            <i className="fa-solid fa-plus text-xs" aria-hidden="true" />
-            Nova operação
-          </Button>
-        </div>
-      </div>
-
-      <section className="asrv-streak space-y-3" aria-label="Metas de ofensiva">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <i className="fa-solid fa-trophy text-amber-400" aria-hidden="true" />
-            <h2 className="asrv-section-title">Metas de Ofensiva (Disciplina Trader)</h2>
-          </div>
-          <span className="text-xs font-semibold text-orange-400">
-            Próxima meta: {nextMilestone} dias ({discipline.streak}/{nextMilestone})
-          </span>
-        </div>
-
-        <ProgressBar
-          label="Progresso da ofensiva"
-          value={Math.min(discipline.streak, nextMilestone)}
-          max={nextMilestone}
-        />
-
-        <div className="asrv-streak__milestones">
-          {milestones.map((milestone) => (
-            <div
-              key={milestone}
-              className={`asrv-milestone ${discipline.streak >= milestone ? 'is-reached' : ''}`}
-            >
-              <strong>{milestone} Dias</strong>
-              <span>{milestone / OFFENSIVE_INTERVAL}ª ofensiva</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <div>
-        <h1 className="asrv-page-title">Diário de Trading</h1>
-        <p className="asrv-page-subtitle">
-          Regras: Máximo de {MAX_DAILY_TRADES} operações por dia, incluindo breakeven. Registros acima do limite zeram a ofensiva. Encerre após 2 losses. Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.
-        </p>
-      </div>
-
-      <p className="asrv-page-subtitle">
-        {plan ? 'Checklist de hoje salvo.' : 'Checklist de hoje pendente no Plano Operacional.'}{' '}
-        {`Perda hoje: ${historyMoney(lossesToday)} de ${historyMoney(stats.dailyLossLimit)}.${lossesToday >= stats.dailyLossLimit ? ' · Stop diário atingido.' : ''}`}
-      </p>
-
+      <div className="flex items-center justify-between gap-3"><h1 className="asrv-page-title">Histórico</h1>
+        <div className="flex flex-wrap gap-2"><Button variant="ghost" onClick={onToggleHidden}>{hidden ? 'Mostrar valores' : 'Ocultar valores'}</Button><Button onClick={onNewTrade}>Nova operação</Button><Button variant="secondary" onClick={onNoTradeDay}>Dia sem operar</Button></div></div>
       <Card ariaLabel="Consultar diário por data">
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex-1">
@@ -221,76 +143,6 @@ export function JournalTab({
           </select>
         </label>
         {filteredSnapshot.trades.length === 0 && filteredSnapshot.noTradeDays.length === 0 && <p role="status" className="mt-3 text-sm text-slate-400">Nenhum registro para a data e o resultado selecionados.</p>}
-      </Card>
-
-      <section aria-label="Indicadores" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Patrimônio Total"
-          value={money(stats.balance, hidden)}
-          hint={`${stats.returnPct >= 0 ? '+' : ''}${stats.returnPct.toFixed(2)}% em relação ao inicial\n${formatBalanceInBrl(stats.balance, hidden, quote ?? (quoteUnavailable ? null : undefined), quoteUnavailable)}`}
-          hintTone={stats.returnPct >= 0 ? 'success' : 'danger'}
-        />
-        <StatCard
-          label="Resultado Acumulado"
-          value={signedMoney(stats.totalPnl, hidden)}
-          tone={stats.totalPnl > 0 ? 'success' : stats.totalPnl < 0 ? 'danger' : 'muted'}
-        />
-        <StatCard label="Win Rate" value={`${stats.winRate.toFixed(0)}%`} />
-        <StatCard label="Operações Registradas" value={String(stats.totalTrades)} />
-      </section>
-
-      <section
-        aria-label="Resultados por período"
-        className="grid grid-cols-1 gap-4 sm:grid-cols-3"
-      >
-        <StatCard
-          label="Resultado Diário"
-          value={signedMoney(stats.periods.daily.pnl, hidden)}
-          tone={periodTone(stats.periods.daily.pnl)}
-          hint={periodHint(stats.periods.daily)}
-          hintTone={stats.periods.daily.pnl >= 0 ? 'success' : 'danger'}
-          icon={<i className="fa-solid fa-sun" aria-hidden="true" />}
-        />
-        <StatCard
-          label="Resultado Semanal"
-          value={signedMoney(stats.periods.weekly.pnl, hidden)}
-          tone={periodTone(stats.periods.weekly.pnl)}
-          hint={periodHint(stats.periods.weekly)}
-          hintTone={stats.periods.weekly.pnl >= 0 ? 'success' : 'danger'}
-          icon={<i className="fa-solid fa-calendar-week" aria-hidden="true" />}
-        />
-        <StatCard
-          label="Resultado Mensal"
-          value={signedMoney(stats.periods.monthly.pnl, hidden)}
-          tone={periodTone(stats.periods.monthly.pnl)}
-          hint={periodHint(stats.periods.monthly)}
-          hintTone={stats.periods.monthly.pnl >= 0 ? 'success' : 'danger'}
-          icon={<i className="fa-solid fa-calendar" aria-hidden="true" />}
-        />
-      </section>
-
-      <Card ariaLabel="Performance do patrimônio">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="asrv-section-title">
-              <i className="fa-solid fa-chart-line mr-2 text-blue-500" aria-hidden="true" />
-              Performance do Patrimônio
-            </h2>
-            <p className="asrv-page-subtitle">Evolução do saldo com base nas operações</p>
-          </div>
-          <div className="asrv-chart__stats">
-            <span>
-              Trades: <strong>{stats.totalTrades}</strong>
-            </span>
-            <span>
-              Win Rate: <strong>{stats.winRate.toFixed(0)}%</strong>
-            </span>
-            <span>
-              P/L: <strong className="asrv-positive">{signedMoney(stats.totalPnl, hidden)}</strong>
-            </span>
-          </div>
-        </div>
-        <EquityChart initialBalance={snapshot.initialBalance} trades={snapshot.trades} hidden={hidden} />
       </Card>
 
       <div className="space-y-4">

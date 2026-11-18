@@ -1,5 +1,26 @@
+import { isBreakEven, isStop } from './trade';
+
 export const OFFENSIVE_INTERVAL = 30;
+/** Limite por resultado: stops e takes têm contadores independentes. */
 export const MAX_DAILY_TRADES = 2;
+
+export function dailyOutcomeCounts(trades: readonly { pnl: number }[]) {
+  const counted = trades.filter(trade => !isBreakEven(trade.pnl));
+  const stops = counted.filter(trade => isStop(trade.pnl)).length;
+  return { operations: counted.length, stops, takes: counted.length - stops, breakEvens: trades.length - counted.length };
+}
+
+export function outcomeLimitExceeded(trades: readonly { pnl: number }[]): boolean {
+  let stops = 0;
+  let takes = 0;
+  for (const trade of trades) {
+    if (isBreakEven(trade.pnl)) continue;
+    if (stops >= MAX_DAILY_TRADES || takes >= MAX_DAILY_TRADES) return true;
+    if (isStop(trade.pnl)) stops += 1;
+    else takes += 1;
+  }
+  return false;
+}
 
 export function dailyLossLimit(openingBalance: number): number {
   return Math.round(Math.max(0, openingBalance) * 10 + 1e-8) / 100;

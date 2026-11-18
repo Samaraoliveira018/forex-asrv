@@ -67,6 +67,7 @@ describe('JournalScreen (mobile)', () => {
       createTrade({ ...trade, id: 'other', date: otherDay, asset: 'XAUUSD', pnl: 50 }),
     ];
     await renderJournal({ trades: entries });
+    await fireEvent.press(screen.getByRole('tab', { name: 'Histórico' }));
     await fireEvent.press(screen.getByRole('button', { name: 'Abrir calendário' }));
     const formatted = `01/${day.slice(5, 7)}/${day.slice(2, 4)}`;
     await fireEvent.press(screen.getByRole('button', { name: `${formatted}, com registros` }));
@@ -86,13 +87,14 @@ describe('JournalScreen (mobile)', () => {
     expect(screen.getByText('XAUUSD')).toBeTruthy();
   }, 20000);
 
-  it('mostra o resumo, a ofensiva e o histórico', async () => {
+  it('mostra o saldo e mantém histórico e plano em abas próprias', async () => {
     await renderJournal();
-
-    expect(await screen.findByText('EURUSD')).toBeTruthy();
-    expect(screen.getAllByText('US$ 1.100,00').length).toBeGreaterThan(0);
-    expect(screen.getByText('Metas de Ofensiva (Disciplina Trader)')).toBeTruthy();
+    expect(await screen.findByText('Saldo atual')).toBeTruthy();
     expect(screen.getByText(/Operações hoje: 0/)).toBeTruthy();
+    expect(screen.queryByText('Abrir calendário')).toBeNull();
+    await fireEvent.press(screen.getByRole('tab', { name: 'Histórico' }));
+    expect(screen.getByText('EURUSD')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Abrir calendário' })).toBeTruthy();
   });
 
   it('registra uma nova operação pelo modal e atualiza a lista', async () => {
@@ -119,6 +121,7 @@ describe('JournalScreen (mobile)', () => {
         undefined,
       );
     });
+    await fireEvent.press(screen.getByRole('tab', { name: 'Histórico' }));
     expect(await screen.findByText('GBPUSD')).toBeTruthy();
   });
 
@@ -157,6 +160,7 @@ describe('JournalScreen (mobile)', () => {
   it('edita uma operação existente mantendo o id', async () => {
     const { fake } = await renderJournal();
 
+    await fireEvent.press(screen.getByRole('tab', { name: 'Histórico' }));
     await screen.findByText('EURUSD');
     await fireEvent.press(screen.getByLabelText('Editar EURUSD de 21/10/26'));
     expect(await screen.findByText('Editar Operação')).toBeTruthy();
@@ -169,6 +173,7 @@ describe('JournalScreen (mobile)', () => {
         undefined,
       );
     });
+    await fireEvent.press(screen.getByRole('tab', { name: 'Diário' }));
     expect((await screen.findAllByText('US$ 1.150,00')).length).toBeGreaterThan(0);
   });
 
@@ -191,6 +196,7 @@ describe('JournalScreen (mobile)', () => {
   it('exclui uma operação pelo histórico após confirmação', async () => {
     const { fake } = await renderJournal();
 
+    await fireEvent.press(screen.getByRole('tab', { name: 'Histórico' }));
     await screen.findByText('EURUSD');
     await fireEvent.press(screen.getByLabelText('Excluir EURUSD de 21/10/26'));
 
@@ -201,6 +207,7 @@ describe('JournalScreen (mobile)', () => {
   it('registra e remove um dia sem operação', async () => {
     const { fake } = await renderJournal();
 
+    await fireEvent.press(screen.getByRole('tab', { name: 'Histórico' }));
     await screen.findByText('EURUSD');
     await fireEvent.press(screen.getByRole('button', { name: 'Dia sem operar' }));
     expect(await screen.findByText('Registrar Dia Sem Operar')).toBeTruthy();
@@ -221,6 +228,7 @@ describe('JournalScreen (mobile)', () => {
   it('edita o saldo inicial pelo topo', async () => {
     const { fake } = await renderJournal();
 
+    await fireEvent.press(screen.getByLabelText('Mais ações'));
     await fireEvent.press(await screen.findByLabelText('Editar saldo inicial'));
     expect((await screen.findAllByText('Saldo Inicial')).length).toBeGreaterThan(0);
     await fireEvent.changeText(screen.getByLabelText('Saldo Inicial'), '1500');
@@ -229,12 +237,13 @@ describe('JournalScreen (mobile)', () => {
     await waitFor(() =>
       expect(fake.mocks.saveInitialBalance).toHaveBeenCalledWith(1500),
     );
-    expect(await screen.findByText('US$ 1.500,00')).toBeTruthy();
+    expect(await screen.findByText('US$ 1.600,00')).toBeTruthy();
   });
 
   it('alterna entre grid e lista e oculta os valores', async () => {
     await renderJournal();
 
+    await fireEvent.press(screen.getByRole('tab', { name: 'Histórico' }));
     await screen.findByText('EURUSD');
     expect(screen.getByText(/Lotes \/ Contratos/)).toBeTruthy();
 
@@ -274,6 +283,7 @@ describe('JournalScreen (mobile)', () => {
     });
     await renderJournal({ trades: [older, recentFirst, recentLast] });
 
+    await fireEvent.press(screen.getByRole('tab', { name: 'Histórico' }));
     await fireEvent.press(await screen.findByRole('tab', { name: 'Lista' }));
     await waitFor(() => expect(screen.queryByText(/Lotes \/ Contratos/)).toBeNull());
 
@@ -286,17 +296,19 @@ describe('JournalScreen (mobile)', () => {
   it('navega entre Dashboard, Diário, Plano e Estatísticas', async () => {
     await renderJournal();
 
-    await fireEvent.press(screen.getByRole('tab', { name: 'Dashboard' }));
+    await fireEvent.press(screen.getByLabelText('Mais ações'));
+    await fireEvent.press(screen.getByRole('button', { name: 'Visão geral' }));
     expect(await screen.findByText('Dashboard Geral')).toBeTruthy();
 
     await fireEvent.press(screen.getByRole('tab', { name: 'Plano' }));
     expect(await screen.findByText('Checklist Operacional Diário')).toBeTruthy();
 
-    await fireEvent.press(screen.getByRole('tab', { name: 'Estatísticas' }));
+    await fireEvent.press(screen.getByLabelText('Mais ações'));
+    await fireEvent.press(screen.getByRole('button', { name: 'Estatísticas' }));
     expect(await screen.findByText('Dados Estatísticos Detalhados')).toBeTruthy();
 
     await fireEvent.press(screen.getByRole('tab', { name: 'Diário' }));
-    expect(await screen.findByText('Diário de Trading')).toBeTruthy();
+    expect(await screen.findByText('Saldo atual')).toBeTruthy();
   });
 
   it('importa um backup JSON pelo menu de ações', async () => {
@@ -335,12 +347,14 @@ describe('JournalScreen (mobile)', () => {
       expect(fake.mocks.registerNoTradeDay).toHaveBeenCalledWith('2026-10-18'),
     );
     expect(fake.mocks.saveInitialBalance).toHaveBeenCalledWith(1200);
+    await fireEvent.press(screen.getByRole('tab', { name: 'Histórico' }));
     expect(await screen.findByText('GBPUSD')).toBeTruthy();
   });
 
   it('reseta o histórico pelo menu de ações', async () => {
     const { fake } = await renderJournal();
 
+    await fireEvent.press(screen.getByRole('tab', { name: 'Histórico' }));
     await screen.findByText('EURUSD');
     await fireEvent.press(screen.getByLabelText('Mais ações'));
     await fireEvent.press(screen.getByRole('button', { name: 'Resetar Todos os Dados' }));
@@ -360,6 +374,7 @@ describe('JournalScreen (mobile)', () => {
       </BffProvider>,
     );
 
+    await fireEvent.press(screen.getByLabelText('Mais ações'));
     expect(await screen.findByText('2 pendência(s)')).toBeTruthy();
     fake.mocks.pendingCount.mockResolvedValue(0);
     await fireEvent.press(screen.getByLabelText('Sincronizar dados'));

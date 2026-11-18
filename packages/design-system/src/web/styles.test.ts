@@ -10,10 +10,10 @@ const index = readFileSync(resolve(root, 'index.html'), 'utf8');
 
 describe('CSS compartilhado com o index.html', () => {
   it('usa a paleta do app atual', () => {
-    expect(css).toContain('--asrv-color-background: #0b0f19');
-    expect(css).toContain('--asrv-color-surface: #111827');
-    expect(css).toContain('--asrv-color-primary: #2563eb');
-    expect(css).toContain('--asrv-color-success: #10b981');
+    expect(css).toContain('--asrv-color-background: #101118');
+    expect(css).toContain('--asrv-color-surface: #191b26');
+    expect(css).toContain('--asrv-color-primary: #c4b5fd');
+    expect(css).toContain('--asrv-color-success: #a7dccb');
   });
 
   it('expõe os componentes extraídos do index.html', () => {

@@ -41,3 +41,17 @@ describe('ofensiva', () => {
     expect(offensiveMilestones(151)).toEqual([180, 210, 240, 270, 300]);
   });
 });
+
+it.each([
+  [[1, -1.99, 0, 10, -2, 15], false], // 2 takes + 1 stop, diversos BE: para no segundo take.
+  [[10, 0, 10], false],
+  [[-2, 1.99, -2], false],
+  [[10, -2, 10, -2], true], // Nova entrada após o segundo take.
+  [[-2, 0, -2, 10], true],
+  [[10, 10, -1, 1], false], // BE nunca conta nos limites de resultado.
+] as const)('limites por resultado na sequência %j', (results, broken) => {
+  const input = { trades: results.map(pnl => trade({ pnl })), noTradeDays: [], initialBalance: 1000 };
+  const result = evaluateDiscipline(input);
+  expect(result.violations.some(item => item.kind === 'DAILY_TRADE_LIMIT')).toBe(broken);
+  expect(result.streak).toBe(broken ? 0 : 1);
+});

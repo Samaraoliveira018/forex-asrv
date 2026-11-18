@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { CHECKLIST_SECTIONS, MAX_DAILY_TRADES, type DailyPlan } from '@asrv/backend';
+import { CHECKLIST_SECTIONS, offensiveMilestones, type DailyPlan } from '@asrv/backend';
 import { Alert, Button, Card, Checkbox } from '@asrv/design-system';
 import { today } from './format';
 
-export function PlanTab({ plans, onSave }: {
+export function PlanTab({ plans, onSave, streak = 0 }: {
+  streak?: number;
   plans: readonly DailyPlan[];
   onSave: (plan: DailyPlan) => Promise<void>;
 }) {
@@ -11,7 +12,11 @@ export function PlanTab({ plans, onSave }: {
   return (
     <div className="space-y-4">
       <h1 className="asrv-page-title">Plano Operacional</h1>
-      <p className="asrv-page-subtitle">Máximo de {MAX_DAILY_TRADES} operações por dia, incluindo breakeven. Registros acima do limite zeram a ofensiva. Encerre após 2 losses. Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</p>
+      <p className="asrv-page-subtitle">Encerre ao atingir 2 stops ou 2 takes no dia, somando dia e noite. Breakeven (resultado entre −US$ 2 e +US$ 2, sem os extremos) não conta nos limites. Stop financeiro: 10% do saldo de abertura. Operações fora da gestão são registradas e zeram a ofensiva.</p>
+      <Card ariaLabel="Metas de ofensiva"><h2 className="asrv-section-title">Sua disciplina · {streak} dias</h2>
+        <p className="asrv-page-subtitle">Próxima meta: {(Math.floor(streak / 30) + 1) * 30} dias</p>
+        <div className="asrv-streak__milestones">{offensiveMilestones(streak).map(day => <div key={day} className={`asrv-milestone ${streak >= day ? 'is-reached' : ''}`}>{day} dias</div>)}</div>
+      </Card>
       <label className="flex flex-wrap items-center gap-3">Data do checklist
         <input type="date" value={date} max={today()} onChange={event => { if (event.target.value) setDate(event.target.value); }} className="asrv-field__input" />
       </label>

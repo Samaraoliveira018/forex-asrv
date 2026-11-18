@@ -56,7 +56,7 @@ export function StatsTab({ snapshot }: { snapshot: JournalSnapshot }) {
           segments={[
             { label: 'Gains (Win)', value: stats.wins, color: colors.success },
             { label: 'Losses (Perda)', value: stats.losses, color: colors.danger },
-            { label: 'Break Even (0x0)', value: stats.breakEvens, color: '#6b7280' },
+            { label: 'Break Even (0x0)', value: stats.breakEvens, color: '#9698ae' },
           ]}
         />
       </Card>

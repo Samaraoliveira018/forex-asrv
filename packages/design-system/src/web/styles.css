@@ -6,36 +6,36 @@
  */
 
 :root {
-  --asrv-color-background: #0b0f19;
-  --asrv-color-surface: #111827;
-  --asrv-color-surface-alt: #1e293b;
-  --asrv-color-border: #1f2937;
-  --asrv-color-border-strong: #374151;
-  --asrv-color-text: #f3f4f6;
-  --asrv-color-text-muted: #9ca3af;
-  --asrv-color-text-subtle: #6b7280;
-  --asrv-color-primary: #2563eb;
-  --asrv-color-primary-hover: #3b82f6;
-  --asrv-color-primary-active: #1d4ed8;
-  --asrv-color-primary-text: #ffffff;
-  --asrv-color-success: #10b981;
-  --asrv-color-success-text: #34d399;
-  --asrv-color-success-strong: #6ee7b7;
-  --asrv-color-success-surface: #022c22;
-  --asrv-color-success-border: #065f46;
-  --asrv-color-danger: #ef4444;
-  --asrv-color-danger-text: #fca5a5;
-  --asrv-color-danger-strong: #f87171;
-  --asrv-color-danger-surface: #450a0a;
-  --asrv-color-danger-border: #991b1b;
-  --asrv-color-warning: #f59e0b;
-  --asrv-color-warning-text: #fcd34d;
-  --asrv-color-warning-surface: #451a03;
-  --asrv-color-warning-border: #92400e;
-  --asrv-color-orange: #f97316;
-  --asrv-color-orange-text: #fdba74;
-  --asrv-color-orange-surface: #431407;
-  --asrv-color-orange-border: #9a3412;
+  --asrv-color-background: #101118;
+  --asrv-color-surface: #191b26;
+  --asrv-color-surface-alt: #242735;
+  --asrv-color-border: #2e3142;
+  --asrv-color-border-strong: #42465b;
+  --asrv-color-text: #f4f2fa;
+  --asrv-color-text-muted: #adaebf;
+  --asrv-color-text-subtle: #9698ae;
+  --asrv-color-primary: #c4b5fd;
+  --asrv-color-primary-hover: #d6ccff;
+  --asrv-color-primary-active: #b4a2f2;
+  --asrv-color-primary-text: #191525;
+  --asrv-color-success: #a7dccb;
+  --asrv-color-success-text: #a7dccb;
+  --asrv-color-success-strong: #bde9db;
+  --asrv-color-success-surface: #1a302c;
+  --asrv-color-success-border: #37564d;
+  --asrv-color-danger: #e8b4bd;
+  --asrv-color-danger-text: #e8b4bd;
+  --asrv-color-danger-strong: #e8b4bd;
+  --asrv-color-danger-surface: #35232d;
+  --asrv-color-danger-border: #69454f;
+  --asrv-color-warning: #e7d3a3;
+  --asrv-color-warning-text: #e7d3a3;
+  --asrv-color-warning-surface: #332d23;
+  --asrv-color-warning-border: #66563d;
+  --asrv-color-orange: #c4b5fd;
+  --asrv-color-orange-text: #d6ccff;
+  --asrv-color-orange-surface: #28233a;
+  --asrv-color-orange-border: #554570;
   --asrv-radius-sm: 6px;
   --asrv-radius-md: 8px;
   --asrv-radius-lg: 12px;
@@ -166,7 +166,7 @@ body.asrv-app {
   gap: 6px;
   border: 1px solid var(--asrv-color-border);
   border-radius: var(--asrv-radius-md);
-  background: #111827;
+  background: #191b26;
   padding: 4px 12px;
 }
 
@@ -508,7 +508,7 @@ body.asrv-app {
   padding: 10px 12px;
   border-radius: var(--asrv-radius-sm);
   border: 1px solid var(--asrv-color-border);
-  background: #111827;
+  background: #191b26;
   color: #ffffff;
   font-size: 12px;
   font-family: inherit;
@@ -594,8 +594,8 @@ body.asrv-app {
 }
 
 .asrv-badge--neutral {
-  background: #1f2937;
-  border-color: #374151;
+  background: #2e3142;
+  border-color: #42465b;
   color: #d1d5db;
 }
 
@@ -730,13 +730,13 @@ body.asrv-app {
   overflow: hidden;
   border: 1px solid var(--asrv-color-border);
   border-radius: 999px;
-  background: #111827;
+  background: #191b26;
 }
 
 .asrv-progress__bar {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #f97316, #fbbf24);
+  background: linear-gradient(90deg, #c4b5fd, #fbbf24);
   transition: width 500ms ease;
 }
 
@@ -760,9 +760,9 @@ body.asrv-app {
 }
 
 .asrv-milestone {
-  border: 1px solid #1f2937;
+  border: 1px solid #2e3142;
   border-radius: var(--asrv-radius-md);
-  background: #111827;
+  background: #191b26;
   padding: 6px;
   color: var(--asrv-color-text-muted);
   font-size: 11px;
@@ -1115,3 +1115,34 @@ body.asrv-app {
     font-size: 24px;
   }
 }
+
+/* Lavanda e menta · foco no diário, com espaço entre as decisões. */
+.asrv-sidebar { background: var(--asrv-color-background); }
+.asrv-topbar { background: var(--asrv-color-background); }
+.asrv-card { border-radius: 20px; box-shadow: none; }
+.asrv-topbar__streak { border-color: var(--asrv-color-border); background: var(--asrv-color-surface); color: var(--asrv-color-primary); }
+.asrv-streak { background: var(--asrv-color-surface); border-color: var(--asrv-color-border); }
+.asrv-progress__bar { background: var(--asrv-color-primary); }
+.asrv-btn--primary { color: var(--asrv-color-primary-text); box-shadow: none; }
+.asrv-btn { min-height: 44px; border-radius: 12px; }
+.asrv-segmented__item.is-active { color: var(--asrv-color-primary-text); }
+.asrv-balance-hero { padding: 28px; }
+.asrv-balance-hero__value { margin: 12px 0; font-size: clamp(32px, 4vw, 46px); font-weight: 700; letter-spacing: -1.5px; line-height: 1.2; }
+.asrv-conversion { white-space: pre-line; color: var(--asrv-color-text-muted); font-size: 12px; line-height: 1.9; margin: 0; }
+.asrv-conversion::first-line { color: var(--asrv-color-primary); font-size: 22px; font-weight: 500; }
+.asrv-home-columns { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 24px; }
+.asrv-daily-home { max-width: 1100px; margin: 12px auto; }
+.asrv-daily-counters { display: flex; flex-wrap: wrap; gap: 8px; }
+.asrv-register { width: 100%; min-height: 54px; font-size: 16px; }
+.asrv-today-result { font-size: 30px; font-weight: 600; margin: 16px 0; }
+.asrv-compact-trade { display: flex; width: 100%; justify-content: space-between; gap: 16px; align-items: center; border: 0; border-bottom: 1px solid var(--asrv-color-border); padding: 18px 0; background: transparent; color: var(--asrv-color-text); text-align: left; cursor: pointer; }
+.asrv-compact-trade small { display: block; color: var(--asrv-color-text-muted); font-size: 12px; margin-top: 4px; }
+.asrv-compact-trade:hover { background: var(--asrv-color-surface-alt); }
+.asrv-stop-notice { font-size: 13px; color: var(--asrv-color-warning-text); padding: 14px; border: 1px solid var(--asrv-color-border); border-radius: 12px; }
+.asrv-app :is(.text-blue-400,.text-blue-500,.text-orange-400,.text-orange-500) { color: var(--asrv-color-primary); }
+.asrv-app :is(.text-emerald-400,.text-green-400) { color: var(--asrv-color-success-text); }
+.asrv-app :is(.text-red-400,.text-red-500) { color: var(--asrv-color-danger-text); }
+.asrv-app :is(.bg-gray-900,.bg-slate-900) { background: var(--asrv-color-surface); }
+.asrv-app :is(.border-gray-800,.border-slate-700) { border-color: var(--asrv-color-border); }
+@media (max-width: 850px) { .asrv-home-columns { grid-template-columns: minmax(0,1fr); } }
+@media (prefers-reduced-motion: reduce) { .asrv-app * { animation: none !important; transition: none !important; } }

@@ -36,7 +36,7 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: () => void }) {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#0b0f19] px-4 text-slate-100">
+    <main className="flex min-h-screen items-center justify-center bg-[#101118] px-4 text-slate-100">
       <div className="w-full max-w-sm">
         <Card>
           <div className="flex items-center gap-2">
@@ -91,7 +91,7 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: () => void }) {
             </button>
           </form>
 
-          <p className="mt-3 border-t border-[#1f2937] pt-3 text-center text-[10px] text-slate-500">
+          <p className="mt-3 border-t border-[#2e3142] pt-3 text-center text-[10px] text-slate-500">
             O cadastro é fechado. Use o usuário criado no painel do Supabase.
           </p>
         </Card>

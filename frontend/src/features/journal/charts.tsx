@@ -1,14 +1,14 @@
 import type { Trade } from '@asrv/backend';
 
 const CHART_COLORS = {
-  primary: '#2563eb',
-  success: '#10b981',
-  danger: '#ef4444',
-  warning: '#f59e0b',
-  muted: '#6b7280',
-  grid: '#1f2937',
-  label: '#6b7280',
-  white: '#f3f4f6',
+  primary: '#c4b5fd',
+  success: '#a7dccb',
+  danger: '#e8b4bd',
+  warning: '#e7d3a3',
+  muted: '#9698ae',
+  grid: '#2e3142',
+  label: '#9698ae',
+  white: '#f4f2fa',
 };
 
 export function EquityChart({

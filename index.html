@@ -19,13 +19,13 @@
         extend: {
           colors: {
             brand: {
-              dark: '#0b0f19',
-              card: '#111827',
-              border: '#1f2937',
-              accent: '#2563eb',
-              accentHover: '#1d4ed8',
-              green: '#10b981',
-              red: '#ef4444'
+              dark: '#101118',
+              card: '#191b26',
+              border: '#2e3142',
+              accent: '#c4b5fd',
+              accentHover: '#b4a2f2',
+              green: '#a7dccb',
+              red: '#e8b4bd'
             }
           }
         }
@@ -34,8 +34,8 @@
   </script>
   <style>
     body {
-      background-color: #0b0f19;
-      color: #f3f4f6;
+      background-color: #101118;
+      color: #f4f2fa;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     }
     .custom-scrollbar::-webkit-scrollbar {
@@ -43,10 +43,10 @@
       height: 6px;
     }
     .custom-scrollbar::-webkit-scrollbar-track {
-      background: #0b0f19;
+      background: #101118;
     }
     .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #1f2937;
+      background: #2e3142;
       border-radius: 3px;
     }
     #auth-modal {
@@ -74,7 +74,7 @@
       <!-- Header / Logo -->
       <div class="p-5 border-b border-brand-border">
         <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-          <span class="asrv-brand-mark">DT</span>
+          <span class="asrv-brand-mark">A</span>
           Diário Trader ASRV
         </h1>
         <p class="text-xs text-gray-400 mt-1">Gestão de risco e diário com disciplina</p>
@@ -82,26 +82,19 @@
 
       <!-- Navigation Links -->
       <nav class="p-3 space-y-1">
-        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item asrv-nav-item w-full text-sm transition">
-          <i class="fa-solid fa-table-cells-large w-5 text-center"></i>
-          Dashboard
-        </button>
-
         <button onclick="switchTab('journal')" id="nav-journal" class="nav-item asrv-nav-item is-active w-full text-sm transition">
           <i class="fa-solid fa-book-open w-5 text-center"></i>
-          Diário de Trading
+          Diário
         </button>
 
+        <button onclick="switchTab('history')" id="nav-history" class="nav-item asrv-nav-item"><i class="fa-solid fa-calendar-days"></i> Histórico</button>
         <button onclick="switchTab('plan')" id="nav-plan" class="nav-item asrv-nav-item w-full text-sm transition">
           <i class="fa-solid fa-clipboard-list w-5 text-center"></i>
-          Plano Operacional
+          Plano
         </button>
 
-        <button onclick="switchTab('stats')" id="nav-stats" class="nav-item asrv-nav-item w-full text-sm transition">
-          <i class="fa-solid fa-chart-pie w-5 text-center"></i>
-          Dados Estatísticos
-        </button>
-      </nav>
+
+      </nav><details class="p-3"><summary class="asrv-kicker cursor-pointer">Mais análises</summary><button class="asrv-nav-item" onclick="switchTab('dashboard')">Visão geral</button><button class="asrv-nav-item" onclick="switchTab('stats')">Estatísticas</button></details>
     </div>
 
     <!-- Storage / Export Options Footer -->
@@ -133,7 +126,7 @@
           <input type="file" id="import-file" onchange="importData(event)" class="hidden" accept=".json">
         </label>
       </div>
-      
+
       <button onclick="resetData()" class="w-full text-center text-[11px] text-red-400 hover:text-red-300 py-1 hover:underline">
         Resetar Todos os Dados
       </button>
@@ -142,14 +135,14 @@
 
   <!-- MAIN CONTENT AREA -->
   <div class="flex-1 flex flex-col h-screen overflow-hidden">
-    
+
     <!-- TOP BAR WITH DUOLINGO STREAK AND BALANCE -->
     <header class="asrv-topbar flex items-center justify-between px-4 md:px-6 flex-shrink-0">
       <div class="flex items-center gap-3">
         <span class="hidden whitespace-nowrap text-sm font-semibold tracking-wide text-white lg:inline">Diário Trader ASRV</span>
-        
+
         <!-- OFENSIVA STREAK (DUOLINGO STYLE) -->
-        <div class="asrv-topbar__streak" title="Dias seguidos de disciplina (operações sem limite e 4 stops por sessão, dia e noite, ou registrando dia sem operações; break even não é stop)">
+        <div class="asrv-topbar__streak" title="Dias de disciplina: até 2 stops ou 2 takes por dia. Breakeven não conta nos limites.">
           <i class="fa-solid fa-fire text-orange-500 animate-bounce"></i>
           <span id="streak-count">0</span>
           <span class="hidden font-medium text-[11px] text-orange-300 lg:inline">dias de disciplina</span>
@@ -176,57 +169,27 @@
     <main class="asrv-main asrv-scrollbar flex-1 overflow-y-auto p-4 md:p-6">
 
       <!-- TAB 1: DIÁRIO DE TRADING -->
-      <section id="tab-journal" class="tab-content space-y-6">
-        
-        <!-- Top Market Selector & Action Buttons -->
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <div class="asrv-segmented">
-            <button onclick="setMarket('nacional')" id="btn-m-nac" class="asrv-segmented__item">Mercado Nacional</button>
-            <button onclick="setMarket('internacional')" id="btn-m-int" class="asrv-segmented__item is-active">Mercado Internacional</button>
+      <section id="tab-journal" class="tab-content asrv-daily-home space-y-6">
+        <div class="flex items-center justify-between gap-3"><div><p class="asrv-kicker">SEU ESPAÇO DE TRADING</p><h2 class="asrv-page-title">Um dia de cada vez.</h2></div><button onclick="toggleVisibility()" class="asrv-btn asrv-btn--ghost" aria-label="Ocultar ou mostrar valores"><i class="fa-solid fa-eye" id="eye-icon"></i></button></div>
+        <div class="asrv-home-columns">
+          <div class="space-y-5">
+            <div class="asrv-card asrv-balance-hero" aria-label="Saldo atual"><p class="asrv-kicker">Saldo atual</p><p class="asrv-balance-hero__value" id="kpi-total-balance">US$ 0,00</p><p id="kpi-balance-brl" class="asrv-conversion" aria-live="polite">Buscando cotação USD/BRL…</p><span id="kpi-return-pct" class="hidden" style="display:none"></span><button class="asrv-btn asrv-btn--ghost asrv-btn--sm" onclick="refreshUsdBrlQuote()">Atualizar cotação</button><a id="quote-attribution" class="hidden asrv-kicker underline" href="https://www.exchangerate-api.com" target="_blank" rel="noreferrer">Rates by ExchangeRate-API</a></div>
+            <div class="asrv-daily-counters"><div class="asrv-badge asrv-badge--neutral asrv-badge--pill">Operações hoje: <span id="today-total-trades">0</span></div><div id="today-stop-loss" class="asrv-badge asrv-badge--neutral asrv-badge--pill" aria-live="polite">Stop Loss: 0/2</div><div id="today-take-profit" class="asrv-badge asrv-badge--neutral asrv-badge--pill" aria-live="polite">Take Profit: 0/2</div></div>
+            <p id="home-stop-notice" class="asrv-stop-notice hidden" role="status">Meta ou stop diário atingido. Encerre por hoje. Você pode registrar operações já realizadas.</p>
+            <button class="asrv-btn asrv-btn--primary asrv-register" onclick="openModal()">+ Registrar operação</button>
+            <p class="asrv-kicker" id="home-be-count">BE não conta nos limites</p>
+            <div class="asrv-card"><div class="flex items-center justify-between gap-3"><div><h3 class="asrv-section-title">Seu plano de hoje</h3><p id="home-checklist" class="asrv-page-subtitle">Checklist pendente</p></div><button class="asrv-btn asrv-btn--secondary asrv-btn--sm" onclick="switchTab('plan')">Abrir plano</button></div></div>
           </div>
-
-          <div class="flex flex-wrap items-center gap-2">
-            <div class="asrv-badge asrv-badge--neutral asrv-badge--pill">Operações hoje: <span id="today-total-trades">0</span>/<span data-daily-trade-cap>2</span> (inclui BE)</div>
-            <div id="today-stop-loss" class="asrv-badge asrv-badge--neutral asrv-badge--pill" aria-live="polite">Stop Loss: 0/2</div>
-
-            <!-- Botão Marcar Dia Sem Operar -->
-            <button onclick="markNoTradeDay()" class="asrv-btn asrv-btn--success asrv-btn--sm">
-              <i class="fa-solid fa-calendar-check text-emerald-400"></i> Registrar Dia Sem Operar
-            </button>
-
-            <button onclick="toggleVisibility()" class="asrv-icon-button">
-              <i class="fa-solid fa-eye" id="eye-icon"></i>
-            </button>
-            <button onclick="openModal()" class="asrv-btn asrv-btn--primary asrv-btn--md ml-auto">
-              <i class="fa-solid fa-plus text-xs"></i> Nova operação
-            </button>
+          <div class="space-y-5">
+            <div class="asrv-card"><p class="asrv-kicker">Resultado de hoje</p><p class="asrv-today-result" id="home-result">US$ 0,00</p><p id="today-plan-status" class="asrv-page-subtitle"></p></div>
+            <div class="asrv-card"><div class="flex items-center justify-between gap-3 mb-3"><h3 class="asrv-section-title">Hoje</h3><button class="asrv-btn asrv-btn--ghost asrv-btn--sm" onclick="switchTab('history')">Ver histórico</button></div><div id="home-trades"></div></div>
           </div>
         </div>
+      </section>
 
-        <!-- METAS DE OFENSIVA (DUOLINGO STYLE METAS) -->
-        <div class="asrv-streak space-y-3">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="flex items-center gap-2">
-              <i class="fa-solid fa-trophy text-amber-400 text-base"></i>
-              <h3 class="asrv-section-title">Metas de Ofensiva (Disciplina Trader)</h3>
-            </div>
-            <span class="text-xs font-semibold text-orange-400" id="streak-goal-text">Próxima meta: 30 dias</span>
-          </div>
-          
-          <div class="asrv-progress">
-            <div id="streak-progress-bar" class="asrv-progress__bar" style="width: 0%"></div>
-          </div>
+      <section id="tab-history" class="tab-content hidden space-y-6">
+        <h2 class="asrv-page-title">Histórico</h2>
 
-          <div id="offensive-milestones" class="grid grid-cols-5 gap-2 text-center pt-1"></div>
-        </div>
-
-        <!-- Section Title -->
-        <div>
-          <h2 class="asrv-page-title">Diário de Trading</h2>
-          <p class="asrv-page-subtitle">Regras: Máximo de <span data-daily-trade-cap>2</span> operações por dia, incluindo breakeven. Registros acima do limite zeram a ofensiva. Encerre após 2 losses. Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</p>
-        </div>
-
-        <p id="today-plan-status" class="asrv-page-subtitle"></p>
         <section class="asrv-card space-y-4" aria-label="Consultar diário por data">
           <div class="flex flex-wrap items-end gap-3">
             <div class="flex-1">
@@ -256,15 +219,9 @@
           </label>
         </section>
 
+        <details class="space-y-4"><summary class="asrv-section-title cursor-pointer">Ver análises do patrimônio</summary>
         <!-- 4 MAIN KPI CARDS -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div class="asrv-card">
-            <p class="asrv-stat__label">Patrimônio Total</p>
-            <h3 class="asrv-stat__value" id="kpi-total-balance">$ 150.00</h3>
-            <span class="asrv-stat__hint" id="kpi-return-pct">+0.00% do saldo inicial</span>
-            <p class="asrv-stat__hint" id="kpi-balance-brl">Buscando cotação USD/BRL…</p>
-          </div>
-
           <div class="asrv-card">
             <p class="asrv-stat__label">Resultado Acumulado</p>
             <h3 class="asrv-stat__value" id="kpi-pnl">+ $ 0.00</h3>
@@ -323,6 +280,7 @@
           </div>
         </div>
 
+        </details>
         <!-- VIEW TOGGLE & TRADES TABLE / GRID -->
         <div class="space-y-4">
           <div class="flex items-center justify-between">
@@ -397,7 +355,24 @@
       <!-- TAB 3: PLANO OPERACIONAL -->
       <section id="tab-plan" class="tab-content hidden space-y-6">
         <h2 class="asrv-page-title">Plano Operacional</h2>
-        <p class="asrv-page-subtitle">Máximo de <span data-daily-trade-cap>2</span> operações por dia, incluindo breakeven. Registros acima do limite zeram a ofensiva. Encerre após 2 losses. Resultados com valor absoluto menor que US$ 2 são breakeven. Pare ao atingir 10% de perda sobre o saldo de abertura do dia.</p>
+        <p class="asrv-page-subtitle">Encerre após 2 stops ou 2 takes no dia, somando dia e noite. Breakeven (valor absoluto menor que US$ 2) não conta nos limites. Stop financeiro de 10% do saldo de abertura. Registros fora da gestão zeram a ofensiva.</p>
+        <!-- METAS DE OFENSIVA (DUOLINGO STYLE METAS) -->
+        <div class="asrv-streak space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-trophy text-amber-400 text-base"></i>
+              <h3 class="asrv-section-title">Metas de Ofensiva (Disciplina Trader)</h3>
+            </div>
+            <span class="text-xs font-semibold text-orange-400" id="streak-goal-text">Próxima meta: 30 dias</span>
+          </div>
+
+          <div class="asrv-progress">
+            <div id="streak-progress-bar" class="asrv-progress__bar" style="width: 0%"></div>
+          </div>
+
+          <div id="offensive-milestones" class="grid grid-cols-5 gap-2 text-center pt-1"></div>
+        </div>
+
         <form id="daily-plan-form" class="asrv-card space-y-4" onsubmit="saveDailyPlan(event)">
           <h3 class="asrv-section-title">Checklist Operacional Diário</h3>
           <label class="block">Data do checklist
@@ -853,6 +828,15 @@
     let isValueHidden = false;
     let usdBrlQuote;
     let quoteUnavailable = false;
+    let quoteTimer;
+    let quoteLoading = false;
+    let fallbackQuote;
+    let fallbackFetchedAt = 0;
+    try {
+      const cached = JSON.parse(localStorage.getItem('asrv:usd-brl:v1') || 'null');
+      if (cached && Number.isFinite(cached.rate) && cached.rate > 0 && cached.timestamp > 0 && cached.timestamp <= Date.now() + 300000) usdBrlQuote = { ...cached, cached: true };
+    } catch {}
+
     const brlFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
     const rateFormatter = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
     const quoteDateFormatter = new Intl.DateTimeFormat('pt-BR', {
@@ -873,6 +857,21 @@
     // Stop = perda real (fora da tolerância de break even).
     function isStop(pnl) {
       return Number.isFinite(pnl) && pnl < 0 && !isBreakEven(pnl);
+    }
+
+    function dailyOutcomeCounts(list) {
+      const counted = list.filter(t => !isBreakEven(t.pnl));
+      const stops = counted.filter(t => isStop(t.pnl)).length;
+      return { operations: counted.length, stops, takes: counted.length - stops, breakEvens: list.length - counted.length };
+    }
+    function outcomeLimitExceeded(list) {
+      let stops = 0, takes = 0;
+      for (const t of list) {
+        if (isBreakEven(t.pnl)) continue;
+        if (stops >= 2 || takes >= 2) return true;
+        if (isStop(t.pnl)) stops++; else takes++;
+      }
+      return false;
     }
 
     // Histórico sempre do mais recente para o mais antigo (empate: último registrado primeiro).
@@ -1663,7 +1662,7 @@
         const lossLimit = dailyLossLimit(balance);
         const before = balance;
         balance += dayTrades.reduce((sum, t) => sum + t.pnl, 0);
-        const broken = dayTrades.length > 0 && (dayTrades.length > MAX_DAILY_TRADES || (grossDailyLoss(dayTrades) > lossLimit || (dayTrades.length > 1 && grossDailyLoss(dayTrades.slice(0, -1)) >= lossLimit)) ||
+        const broken = dayTrades.length > 0 && (outcomeLimitExceeded(dayTrades) || (grossDailyLoss(dayTrades) > lossLimit || (dayTrades.length > 1 && grossDailyLoss(dayTrades.slice(0, -1)) >= lossLimit)) ||
           (balance <= 0 && (before > 0 || dayTrades.some(t => t.pnl < 0))));
         if (broken) streakDays = 0;
         else if (dayTrades.length > 0 || !isWeekend(date)) streakDays += 1;
@@ -1834,7 +1833,7 @@
       if (activeNav) activeNav.classList.add('is-active');
 
       if (window.innerWidth < 768) document.getElementById('sidebar').classList.add('hidden');
-      if (tabId === 'journal') {
+      if (tabId === 'history') {
         renderEquityChart();
       }
       if (tabId === 'dashboard') {
@@ -1971,11 +1970,12 @@
       if (modalShot.removed && cloudEnabled()) await removeTradeScreenshotFile(savedTrade.id);
       if (grossDailyLoss([...tradesOnDate, savedTrade]) >= limit) {
         alert('Limite de perda diária atingido. Encerre as operações do dia.');
-      } else if (addsToDay && tradesOnDate.length === MAX_DAILY_TRADES - 1 && isStop(pnl) && tradesOnDate.every(trade => isStop(trade.pnl))) {
-        alert('Dois losses registrados. Encerre as operações do dia.');
       }
-      if (addsToDay && tradesOnDate.length >= MAX_DAILY_TRADES) {
-        alert(`Limite de ${MAX_DAILY_TRADES} operações ultrapassado. A ofensiva reinicia no próximo dia válido.`);
+      const counts = dailyOutcomeCounts([...tradesOnDate, savedTrade]);
+      if (counts.stops >= 2) alert('Dois stops registrados. Encerre as operações do dia.');
+      if (counts.takes >= 2) alert('Dois takes registrados. Encerre as operações do dia.');
+      if (outcomeLimitExceeded(trades.filter(t => t.date === date))) {
+        alert('Operação após 2 stops ou 2 takes. A ofensiva reinicia no próximo dia válido.');
       }
       saveData();
       if (shotDataUrl) await queueCloud('uploadScreenshot', { id: savedTrade.id, dataUrl: shotDataUrl });
@@ -2149,32 +2149,43 @@
         return;
       }
       const { rate, timestamp } = usdBrlQuote;
-      const source = quoteUnavailable ? 'Última cotação disponível' : 'AwesomeAPI';
+      const source = quoteUnavailable || usdBrlQuote.cached ? 'Última cotação salva' : usdBrlQuote.source === 'ExchangeRate-API' ? 'Referência diária · ExchangeRate-API' : 'AwesomeAPI';
+      document.getElementById('quote-attribution').classList.toggle('hidden', usdBrlQuote.source !== 'ExchangeRate-API');
       hint.textContent = `≈ ${brlFormatter.format(balance * rate)}
 US$ 1 = R$ ${rateFormatter.format(rate)} · ${quoteDateFormatter.format(timestamp)} (Brasília) · ${source}`;
     }
 
     async function refreshUsdBrlQuote() {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
-      try {
-        const response = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL', { signal: controller.signal });
-        if (!response.ok) throw new Error('Cotação indisponível');
-        const payload = await response.json();
-        const rate = Number(payload?.USDBRL?.bid);
-        const timestamp = Number(payload?.USDBRL?.timestamp) * 1000;
-        if (!(rate > 0 && Number.isFinite(rate) && timestamp > 0 && timestamp < 8.64e15)) {
-          throw new Error('Cotação inválida');
-        }
-        usdBrlQuote = { rate, timestamp };
-        quoteUnavailable = false;
-      } catch {
-        quoteUnavailable = true;
-      } finally {
-        clearTimeout(timeout);
-        setTimeout(refreshUsdBrlQuote, 60000);
+      if (quoteLoading) return;
+      quoteLoading = true;
+      clearTimeout(quoteTimer);
+      let next;
+      const endpoints = ['https://economia.awesomeapi.com.br/json/last/USD-BRL', 'https://open.er-api.com/v6/latest/USD'];
+      for (let i = 0; i < endpoints.length; i++) {
+        if (i === 1 && fallbackQuote && Date.now() - fallbackFetchedAt < 3600000) { next = fallbackQuote; break; }
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 7000);
+        try {
+          const response = await fetch(endpoints[i], { signal: controller.signal });
+          if (!response.ok) throw new Error('Cotação indisponível');
+          const payload = await response.json();
+          const rate = Number(i === 0 ? payload?.USDBRL?.bid : payload?.rates?.BRL);
+          const timestamp = Number(i === 0 ? payload?.USDBRL?.timestamp : payload?.time_last_update_unix) * 1000;
+          if (!(rate > 0 && Number.isFinite(rate) && timestamp > 0 && timestamp <= Date.now() + 300000) ||
+            (i === 1 && (payload?.result !== 'success' || payload?.base_code !== 'USD'))) throw new Error('Cotação inválida');
+          next = { rate, timestamp, source: i === 0 ? 'AwesomeAPI' : 'ExchangeRate-API' };
+          if (i === 1) { fallbackQuote = next; fallbackFetchedAt = Date.now(); }
+          break;
+        } catch {} finally { clearTimeout(timeout); }
       }
+      if (next) {
+        usdBrlQuote = next;
+        try { localStorage.setItem('asrv:usd-brl:v1', JSON.stringify(next)); } catch {}
+      }
+      quoteUnavailable = !next;
+      quoteLoading = false;
       renderBalanceInBrl(initialBalance + trades.reduce((sum, trade) => sum + trade.pnl, 0));
+      quoteTimer = setTimeout(refreshUsdBrlQuote, 60000);
     }
 
     function refreshUI() {
@@ -2188,21 +2199,46 @@ US$ 1 = R$ ${rateFormatter.format(rate)} · ${quoteDateFormatter.format(timestam
 
       const todayStr = getLocalDateStr();
       const todayTrades = trades.filter(t => t.date === todayStr);
-      const tradeCount = document.getElementById('today-total-trades');
-      tradeCount.innerText = todayTrades.length;
-      const tradeTone = todayTrades.length > MAX_DAILY_TRADES ? 'danger' : 'neutral';
-      tradeCount.parentElement.className = `asrv-badge asrv-badge--${tradeTone} asrv-badge--pill`;
-      const stops = todayTrades.filter(trade => isStop(trade.pnl)).length;
+      const counts = dailyOutcomeCounts(todayTrades);
+      document.getElementById('today-total-trades').innerText = counts.operations;
       const stopBadge = document.getElementById('today-stop-loss');
-      const stopTone = stops >= MAX_DAILY_TRADES ? 'danger' : stops > 0 ? 'warning' : 'neutral';
-      stopBadge.className = `asrv-badge asrv-badge--${stopTone} asrv-badge--pill`;
-      stopBadge.textContent = `Stop Loss: ${stops}/${MAX_DAILY_TRADES}`;
+      stopBadge.className = `asrv-badge asrv-badge--${counts.stops >= 2 ? 'danger' : 'neutral'} asrv-badge--pill`;
+      stopBadge.textContent = `Stop Loss: ${counts.stops}/2`;
+      const takeBadge = document.getElementById('today-take-profit');
+      takeBadge.className = `asrv-badge asrv-badge--${counts.takes >= 2 ? 'success' : 'neutral'} asrv-badge--pill`;
+      takeBadge.textContent = `Take Profit: ${counts.takes}/2`;
+      document.getElementById('home-be-count').textContent = `BE não conta nos limites · ${counts.breakEvens} BE hoje`;
       const plan = dailyPlans.find(item => item.date === todayStr);
       const loss = grossDailyLoss(todayTrades);
       const limit = lossLimitOn(todayStr);
       const limitStatus = (isValueHidden ? 'Limite diário: 10% do saldo de abertura.' : `Perda hoje: ${loss.toFixed(2)} de ${limit.toFixed(2)}.`) +
         (loss >= limit ? ' Stop diário atingido.' : '');
-      document.getElementById('today-plan-status').innerText = `${plan ? 'Checklist de hoje salvo.' : 'Checklist de hoje pendente no Plano Operacional.'} ${limitStatus}`;
+      document.getElementById('today-plan-status').innerText = limitStatus;
+      document.getElementById('home-checklist').textContent = plan ? 'Checklist salvo.' : 'Reserve um momento para o checklist.';
+      document.getElementById('home-stop-notice').classList.toggle('hidden', !(counts.stops >= 2 || counts.takes >= 2 || (todayTrades.length > 0 && loss >= limit)));
+      const todayPnl = todayTrades.reduce((sum, t) => sum + t.pnl, 0);
+      const usd = value => isValueHidden ? '••••••' : value.toLocaleString('pt-BR', { style: 'currency', currency: 'USD' });
+      const result = document.getElementById('home-result');
+      result.innerText = usd(todayPnl);
+      result.className = `asrv-today-result ${todayPnl < 0 ? 'asrv-negative' : 'asrv-positive'}`;
+      const homeTrades = document.getElementById('home-trades');
+      homeTrades.replaceChildren();
+      for (const trade of [...todayTrades].reverse().slice(0, 4)) {
+        const row = document.createElement('button');
+        row.type = 'button'; row.className = 'asrv-compact-trade';
+        row.addEventListener('click', () => editTrade(trade.id));
+        const label = document.createElement('span'); label.textContent = `${trade.asset} · ${trade.session === 'night' ? 'Noite' : 'Dia'}`;
+        const value = document.createElement('span'); value.className = isBreakEven(trade.pnl) ? 'asrv-muted' : trade.pnl > 0 ? 'asrv-positive' : 'asrv-negative';
+        value.textContent = `${usd(trade.pnl)}${isBreakEven(trade.pnl) ? ' · BE' : ''}`;
+        row.append(label, value); homeTrades.append(row);
+      }
+      if (!todayTrades.length) {
+        const text = document.createElement('p'); text.className = 'asrv-page-subtitle';
+        text.textContent = noTradeDays.includes(todayStr) ? 'Dia registrado sem operar.' : 'Seu diário está pronto para a primeira operação.';
+        const button = document.createElement('button'); button.className = 'asrv-btn asrv-btn--secondary mt-3'; button.textContent = 'Dia sem operar'; button.addEventListener('click', markNoTradeDay);
+        homeTrades.append(text, button);
+      }
+
 
       updatePeriodResults(todayStr);
 
@@ -2217,7 +2253,7 @@ US$ 1 = R$ ${rateFormatter.format(rate)} · ${quoteDateFormatter.format(timestam
 
       document.getElementById('kpi-total-balance').innerText = isValueHidden
         ? '••••••'
-        : `${totalBalance < 0 ? '- ' : ''}$ ${Math.abs(totalBalance).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+        : totalBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'USD' });
       document.getElementById('kpi-return-pct').innerText = `${returnPct >= 0 ? '+' : ''}${returnPct}% em relação ao inicial`;
       document.getElementById('kpi-return-pct').className = `asrv-stat__hint ${returnPct >= 0 ? 'asrv-stat__hint--success' : 'asrv-stat__hint--danger'}`;
 
@@ -2233,14 +2269,14 @@ US$ 1 = R$ ${rateFormatter.format(rate)} · ${quoteDateFormatter.format(timestam
       renderJournalGrid();
       renderJournalList();
       // Desenha apenas gráficos de abas visíveis; as demais são (re)desenhadas ao trocar de aba
-      if (isTabVisible('journal')) renderEquityChart();
+      if (isTabVisible('history')) renderEquityChart();
       if (isTabVisible('dashboard')) renderAssetChart();
       if (isTabVisible('stats')) renderStatsCharts();
     }
 
     function renderJournalGrid() {
       const container = document.getElementById('journal-grid-view');
-      
+
       const allItems = [
         ...trades.filter(matchesJournalTrade).map(t => ({ ...t, itemType: 'trade' })),
         ...noTradeDays.filter(d => journalResultFilter === 'all' && matchesJournalDate(d)).map(d => ({ date: d, itemType: 'no_trade', id: `nt-${d}` }))
@@ -2318,7 +2354,7 @@ US$ 1 = R$ ${rateFormatter.format(rate)} · ${quoteDateFormatter.format(timestam
       }
       tbody.innerHTML = orderedTrades.map((t, idx) => {
         const isBE = isBreakEven(t.pnl);
-        const statusBadge = isBE 
+        const statusBadge = isBE
           ? `<span class="asrv-badge asrv-badge--neutral">BREAK EVEN</span>`
           : `<span class="asrv-badge ${t.pnl > 0 ? 'asrv-badge--success' : 'asrv-badge--danger'}">${t.pnl > 0 ? 'WIN' : 'LOSS'}</span>`;
 
@@ -2368,7 +2404,7 @@ US$ 1 = R$ ${rateFormatter.format(rate)} · ${quoteDateFormatter.format(timestam
           datasets: [{
             label: 'Patrimônio',
             data: chartData,
-            borderColor: '#10b981',
+            borderColor: '#a7dccb',
             borderWidth: 2.5,
             fill: true,
             backgroundColor: gradient,
@@ -2381,8 +2417,8 @@ US$ 1 = R$ ${rateFormatter.format(rate)} · ${quoteDateFormatter.format(timestam
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            x: { grid: { color: '#1f2937' }, ticks: { color: '#6b7280' } },
-            y: { grid: { color: '#1f2937' }, ticks: { color: '#6b7280' } }
+            x: { grid: { color: '#2e3142' }, ticks: { color: '#9698ae' } },
+            y: { grid: { color: '#2e3142' }, ticks: { color: '#9698ae' } }
           }
         }
       });
@@ -2398,7 +2434,7 @@ US$ 1 = R$ ${rateFormatter.format(rate)} · ${quoteDateFormatter.format(timestam
         type: 'bar',
         data: {
           labels: Object.keys(counts).length ? Object.keys(counts) : ['Nenhum ativo'],
-          datasets: [{ label: 'Operações', data: Object.keys(counts).length ? Object.values(counts) : [0], backgroundColor: '#2563eb', borderRadius: 6 }]
+          datasets: [{ label: 'Operações', data: Object.keys(counts).length ? Object.values(counts) : [0], backgroundColor: '#c4b5fd', borderRadius: 6 }]
         },
         options: { responsive: true, maintainAspectRatio: false }
       });
@@ -2444,13 +2480,13 @@ US$ 1 = R$ ${rateFormatter.format(rate)} · ${quoteDateFormatter.format(timestam
             labels: ['Gains (Win)', 'Losses (Perda)', 'Break Even (0x0)'],
             datasets: [{
               data: totalCount > 0 ? [wins, losses, breakevens] : [0, 0, 1],
-              backgroundColor: totalCount > 0 ? ['#10b981', '#ef4444', '#6b7280'] : ['#1f2937']
+              backgroundColor: totalCount > 0 ? ['#a7dccb', '#e8b4bd', '#9698ae'] : ['#2e3142']
             }]
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', font: { size: 11 } } } }
+            plugins: { legend: { position: 'bottom', labels: { color: '#adaebf', font: { size: 11 } } } }
           }
         });
       }
@@ -2464,13 +2500,13 @@ US$ 1 = R$ ${rateFormatter.format(rate)} · ${quoteDateFormatter.format(timestam
             labels: ['Compra (Long)', 'Venda (Short)'],
             datasets: [{
               data: totalCount > 0 ? [buys, sells] : [0, 0],
-              backgroundColor: ['#ffffff', '#ef4444']
+              backgroundColor: ['#ffffff', '#e8b4bd']
             }]
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', font: { size: 11 } } } }
+            plugins: { legend: { position: 'bottom', labels: { color: '#adaebf', font: { size: 11 } } } }
           }
         });
       }

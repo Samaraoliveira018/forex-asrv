@@ -10,3 +10,5 @@ jest.mock('expo-image-manipulator', () => ({
   SaveFormat: { JPEG: 'jpeg', PNG: 'png', WEBP: 'webp' },
   manipulateAsync: jest.fn(async () => ({ base64: 'AAECAwQ=' })),
 }));
+
+jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
