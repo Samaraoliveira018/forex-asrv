@@ -1,17 +1,8 @@
 name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Tag da release (ex.: v0.1.0). Precisa ser igual à version do package.json com prefixo v.'
-        required: true
-        type: string
-      prerelease:
-        description: 'Marcar como pré-release'
-        required: false
-        default: false
-        type: boolean
+  push:
+    branches: ['release/v0.2.0']
 
 permissions:
   contents: write
@@ -22,7 +13,6 @@ concurrency:
 
 jobs:
   release:
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
@@ -31,6 +21,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: 6c558e3c9fd7f8f71c718368941effce5de6900c
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -46,7 +37,7 @@ jobs:
 
       - name: Validate version and tag
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: v0.2.0
         run: |
           set -euo pipefail
 
@@ -113,7 +104,7 @@ jobs:
 
       - name: Package release assets
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: v0.2.0
         run: |
           set -euo pipefail
 
@@ -135,12 +126,12 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.version }}
-          PRERELEASE: ${{ inputs.prerelease }}
+          VERSION: v0.2.0
+          PRERELEASE: false
         run: |
           set -euo pipefail
 
-          flags=(--target "$GITHUB_SHA" --title "Diário Trader ASRV $VERSION" --generate-notes)
+          flags=(--target "6c558e3c9fd7f8f71c718368941effce5de6900c" --title "Diário Trader ASRV $VERSION" --generate-notes)
           if [[ "$PRERELEASE" == "true" ]]; then
             flags+=(--prerelease)
           fi
@@ -154,7 +145,7 @@ jobs:
 
       - name: Summary
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: v0.2.0
         run: |
           {
             echo "## Release $VERSION publicada"
