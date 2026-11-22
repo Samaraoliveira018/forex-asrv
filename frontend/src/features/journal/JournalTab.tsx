@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DailyHome } from './DailyHome';
-import {
+import { formatRiskReward,
   historyRange,
   isBreakEven,
   isWeekend,
@@ -251,7 +251,7 @@ function JournalGrid({
             lots={item.trade.lots}
             pnl={item.trade.pnl}
             breakEven={isBreakEven(item.trade.pnl)}
-            notes={item.trade.notes}
+            notes={[item.trade.riskReward === undefined ? '' : `Risco/retorno ${formatRiskReward(item.trade.riskReward)}`, item.trade.notes].filter(Boolean).join(' · ')}
             screenshotUrl={snapshot.screenshotUrls[item.trade.id]}
             hidden={hidden}
             onEdit={() => onEditTrade(item.trade)}
@@ -307,7 +307,7 @@ function JournalList({
                 <tr key={trade.id}>
                   <td className="text-slate-500">{index + 1}</td>
                   <td className="font-medium">{trade.date}</td>
-                  <td className="font-bold text-white">{trade.asset}</td>
+                  <td className="font-bold text-white">{trade.riskReward === undefined ? trade.asset : `${trade.asset} · R/R ${formatRiskReward(trade.riskReward)}`}</td>
                   <td>
                     <Badge tone={trade.type === 'Compra' ? 'success' : 'danger'}>
                       {trade.type}

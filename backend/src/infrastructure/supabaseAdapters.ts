@@ -23,6 +23,7 @@ type TradeRow = {
   session: string | null;
   lots: number | string;
   pnl: number | string;
+  risk_reward?: number | string | null;
   notes: string | null;
   screenshot_path: string | null;
 };
@@ -36,7 +37,7 @@ export function createSupabaseTradeRepository(
       return guard('TRADES_READ_FAILED', async () => {
         const { data, error } = await client
           .from('trades')
-          .select('id,date,asset,type,session,lots,pnl,notes,screenshot_path')
+          .select('id,date,asset,type,session,lots,pnl,risk_reward,notes,screenshot_path')
           .eq('user_id', getUserId())
           .order('date', { ascending: true })
           .order('created_at', { ascending: true })
@@ -59,6 +60,7 @@ export function createSupabaseTradeRepository(
             session: trade.session,
             lots: trade.lots,
             pnl: trade.pnl,
+            risk_reward: trade.riskReward ?? null,
             notes: trade.notes,
             screenshot_path: trade.screenshotPath,
           },
@@ -397,6 +399,7 @@ function toTrade(row: TradeRow): Trade {
     session,
     lots,
     pnl,
+    riskReward: row.risk_reward == null ? undefined : Number(row.risk_reward),
     notes: row.notes ?? '',
     screenshotPath: row.screenshot_path ?? '',
   };

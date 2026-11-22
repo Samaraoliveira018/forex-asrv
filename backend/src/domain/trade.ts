@@ -16,6 +16,7 @@ export interface Trade {
   session: TradeSession;
   lots: number;
   pnl: number;
+  riskReward?: number;
   notes: string;
   /** Caminho do print no bucket do Supabase Storage ('' quando não há print). */
   screenshotPath: string;
@@ -30,6 +31,7 @@ export interface TradeInput {
   session?: TradeSession;
   lots: number;
   pnl: number;
+  riskReward?: number;
   notes?: string;
   screenshotPath?: string;
 }
@@ -92,6 +94,10 @@ export function createTrade(input: TradeInput, options: CreateTradeOptions = {})
     throw new DomainError('INVALID_PNL', 'O resultado da operação deve ser um número.');
   }
 
+  if (input.riskReward !== undefined && (!Number.isFinite(input.riskReward) || input.riskReward <= 0)) {
+    throw new DomainError('INVALID_RISK_REWARD', 'Informe um risco/retorno maior que zero, por exemplo 3 para 1:3.');
+  }
+
   const id = input.id?.trim() || options.generateId?.() || defaultId();
 
   return {
@@ -102,6 +108,7 @@ export function createTrade(input: TradeInput, options: CreateTradeOptions = {})
     session,
     lots: input.lots,
     pnl: input.pnl,
+    riskReward: input.riskReward,
     notes: input.notes?.trim() ?? '',
     screenshotPath: normalizeScreenshotPath(input.screenshotPath),
   };
@@ -128,4 +135,14 @@ function defaultId(): string {
   }
 
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function parseRiskReward(value: string): number | undefined {
+  const input = value.trim().replace(/^1\s*:\s*/, '').replace(',', '.');
+  if (!value.trim()) return undefined;
+  return /^\d+(?:\.\d+)?$/.test(input) ? Number(input) : NaN;
+}
+
+export function formatRiskReward(value: number): string {
+  return '1:' + String(value).replace('.', ',');
 }

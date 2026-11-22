@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
-import { type Trade, type TradeInput, type TradeSession, type TradeType } from '@asrv/backend';
+import { parseRiskReward, type Trade, type TradeInput, type TradeSession, type TradeType } from '@asrv/backend';
 import { Button, Input, Modal, Select, Textarea } from '@asrv/design-system';
 import { fileToScreenshotDataUrl } from './image';
 import { formatDate, maskDateInput, parseDateInput } from './format';
@@ -12,6 +12,7 @@ type FormState = {
   lots: string;
   pnl: string;
   notes: string;
+  riskReward: string;
 };
 
 const typeOptions = [
@@ -102,6 +103,7 @@ export function TradeModal({
           lots: numberFrom(form.lots),
           pnl: numberFrom(form.pnl),
           notes: form.notes,
+          riskReward: parseRiskReward(form.riskReward),
           screenshotPath: trade?.screenshotPath ?? '',
         },
         screenshot,
@@ -186,6 +188,13 @@ export function TradeModal({
           />
         </div>
 
+        <Input
+          label="Risco/retorno (opcional)"
+          placeholder="Ex.: 3 para 1:3"
+          value={form.riskReward}
+          onChangeText={(riskReward) => setForm((current) => ({ ...current, riskReward }))}
+        />
+
         <Textarea
           label="Observações / Estratégia"
           value={form.notes}
@@ -268,6 +277,7 @@ function formFor(trade: Trade | null): FormState {
     session: trade?.session ?? 'day',
     lots: trade ? String(trade.lots) : '1',
     pnl: trade ? String(trade.pnl) : '',
+    riskReward: trade?.riskReward === undefined ? '' : String(trade.riskReward).replace('.', ','),
     notes: trade?.notes ?? '',
   };
 }

@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { DailyHome } from './DailyHome';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
-import {
+import { formatRiskReward,
   historyRange,
   isBreakEven,
   isWeekend,
@@ -236,7 +236,7 @@ function JournalGrid({
             lots={item.trade.lots}
             pnl={item.trade.pnl}
             breakEven={isBreakEven(item.trade.pnl)}
-            notes={item.trade.notes}
+            notes={[item.trade.riskReward === undefined ? '' : `Risco/retorno ${formatRiskReward(item.trade.riskReward)}`, item.trade.notes].filter(Boolean).join(' · ')}
             screenshotUrl={snapshot.screenshotUrls[item.trade.id]}
             hidden={hidden}
             onEdit={() => onEditTrade(item.trade)}
@@ -276,7 +276,7 @@ function JournalList({
         return (
           <View key={trade.id} style={[styles.listRow, index > 0 && styles.listRowBorder]}>
             <View style={styles.listMain}>
-              <Text style={styles.listAsset}>{trade.asset}</Text>
+              <Text style={styles.listAsset}>{trade.riskReward === undefined ? trade.asset : `${trade.asset} · R/R ${formatRiskReward(trade.riskReward)}`}</Text>
               <Text style={styles.meta}>
                 {trade.date} · {sessionLabel(trade.session)} · {trade.type} · {trade.lots} lote(s)
               </Text>

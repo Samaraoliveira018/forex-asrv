@@ -21,6 +21,7 @@ create table if not exists public.trades (
   session    text        not null default 'day' check (session in ('day', 'night')),
   lots       numeric     not null default 1,
   pnl        numeric     not null default 0,
+  risk_reward numeric check (risk_reward > 0 and risk_reward < 'Infinity'::numeric),
   notes      text        not null default '',
   screenshot_path text   not null default '',
   created_at timestamptz not null default now(),

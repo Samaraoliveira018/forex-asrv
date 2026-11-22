@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
-import { type Trade, type TradeInput, type TradeSession, type TradeType } from '@asrv/backend';
+import { parseRiskReward, type Trade, type TradeInput, type TradeSession, type TradeType } from '@asrv/backend';
 import {
   Alert,
   Button,
@@ -25,6 +25,7 @@ type FormState = {
   lots: string;
   pnl: string;
   notes: string;
+  riskReward: string;
 };
 
 const typeOptions: ReadonlyArray<{ value: TradeType; label: string }> = [
@@ -154,6 +155,7 @@ export function TradeModal({
           lots: numberFrom(form.lots),
           pnl: numberFrom(form.pnl),
           notes: form.notes,
+          riskReward: parseRiskReward(form.riskReward),
           screenshotPath: trade?.screenshotPath ?? '',
         },
         screenshot,
@@ -243,6 +245,13 @@ export function TradeModal({
         placeholder="Ex: 15, -6.50 ou 0"
       />
 
+      <Input
+        label="Risco/retorno (opcional)"
+        placeholder="Ex.: 3 para 1:3"
+        value={form.riskReward}
+        onChangeText={(riskReward) => setForm((current) => ({ ...current, riskReward }))}
+      />
+
       <Textarea
         label="Observações / Estratégia"
         value={form.notes}
@@ -301,6 +310,7 @@ function formFor(trade: Trade | null): FormState {
     session: trade?.session ?? 'day',
     lots: trade ? String(trade.lots) : '1',
     pnl: trade ? String(trade.pnl) : '',
+    riskReward: trade?.riskReward === undefined ? '' : String(trade.riskReward).replace('.', ','),
     notes: trade?.notes ?? '',
   };
 }

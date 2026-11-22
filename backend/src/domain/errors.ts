@@ -3,6 +3,7 @@ export type DomainErrorCode =
   | 'INVALID_ASSET'
   | 'INVALID_LOTS'
   | 'INVALID_PNL'
+  | 'INVALID_RISK_REWARD'
   | 'INVALID_TYPE'
   | 'INVALID_SESSION'
   | 'INVALID_BALANCE'

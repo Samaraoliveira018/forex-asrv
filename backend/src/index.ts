@@ -6,6 +6,8 @@ export {
   createTrade,
   isBreakEven,
   isIsoDate,
+  parseRiskReward,
+  formatRiskReward,
   isStop,
   sessionLabel,
 } from './domain/trade';
