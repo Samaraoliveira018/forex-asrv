@@ -20,7 +20,7 @@ export function DailyHome({ snapshot, hidden, quote, quoteUnavailable, onRefresh
   const trades = snapshot.trades.filter(trade => trade.date === today());
   const counts = dailyOutcomeCounts(trades);
   const losses = grossLoss(trades);
-  const stopped = counts.stops >= 2 || counts.takes >= 2 || (trades.length > 0 && losses >= snapshot.stats.dailyLossLimit);
+  const stopped = counts.stops >= 2 || counts.takes >= 2 || (losses > 0 && losses >= snapshot.stats.dailyLossLimit);
   const checked = snapshot.dailyPlans.some(plan => plan.date === today());
   return <div className="asrv-daily-home space-y-6">
     <div className="flex items-center justify-between gap-4"><div><p className="asrv-kicker">SEU ESPAÇO DE TRADING</p><h1 className="asrv-page-title">Um dia de cada vez.</h1></div>

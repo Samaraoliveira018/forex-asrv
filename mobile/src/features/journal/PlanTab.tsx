@@ -14,7 +14,7 @@ export function PlanTab({ plans, onSave, streak = 0 }: {
   return (
     <View style={{ gap: spacing.md }}>
       <Text style={{ color: colors.text, fontSize: typography.hero }}>Plano Operacional</Text>
-      <Text style={{ color: colors.text }}>Encerre ao atingir 2 stops ou 2 takes no dia, somando dia e noite. Breakeven (resultado entre −US$ 2 e +US$ 2, sem os extremos) não conta nos limites. Stop financeiro: 10% do saldo de abertura. Operações fora da gestão são registradas e zeram a ofensiva.</Text>
+      <Text style={{ color: colors.text }}>Encerre ao atingir 2 stops ou 2 takes no dia, somando dia e noite. Breakeven (resultado entre −US$ 2 e +US$ 2, sem os extremos) não conta nos limites. Atingir 25% de perda do saldo de abertura zera a ofensiva. Operações fora da gestão são registradas e zeram a ofensiva.</Text>
       <Card><Text style={{ color: colors.primary, fontSize: 18 }}>Sua disciplina · {streak} dias</Text>
         <Text style={{ color: colors.textMuted }}>Próxima meta: {(Math.floor(streak / 30) + 1) * 30} dias</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{offensiveMilestones(streak).map(day => <Badge key={day} tone={streak >= day ? 'success' : 'neutral'}>{day} dias</Badge>)}</View>

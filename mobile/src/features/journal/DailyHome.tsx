@@ -21,7 +21,7 @@ export function DailyHome({ snapshot, hidden, quote, quoteUnavailable, onRefresh
   const trades = snapshot.trades.filter(trade => trade.date === today());
   const counts = dailyOutcomeCounts(trades);
   const losses = grossLoss(trades);
-  const stopped = counts.stops >= 2 || counts.takes >= 2 || (trades.length > 0 && losses >= snapshot.stats.dailyLossLimit);
+  const stopped = counts.stops >= 2 || counts.takes >= 2 || (losses > 0 && losses >= snapshot.stats.dailyLossLimit);
   const checked = snapshot.dailyPlans.some(plan => plan.date === today());
   return <View style={styles.screen}>
     <Card style={styles.balance}>

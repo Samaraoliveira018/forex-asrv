@@ -185,8 +185,9 @@ export function createJournalService(deps: JournalDeps): JournalService {
         ? null
         : dailyLossLimit(openingBalanceOn(otherTrades, initialBalance, trade.date));
       const warnings: string[] = [];
-      if (limit != null && grossLoss([...sameDay, trade]) >= limit) {
-        warnings.push('Limite de perda diária atingido. Encerre as operações do dia.');
+      const loss = grossLoss([...sameDay, trade]);
+      if (limit != null && loss > 0 && loss >= limit) {
+        warnings.push('Limite de perda diária atingido. A ofensiva foi zerada. Encerre as operações do dia.');
       }
       const dayTrades = [...sameDay, trade];
       const counts = dailyOutcomeCounts(dayTrades);

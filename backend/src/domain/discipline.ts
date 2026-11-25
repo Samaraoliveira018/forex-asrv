@@ -36,8 +36,9 @@ export function evaluateDiscipline(input: DisciplineInput): DisciplineResult {
       violations.push({ kind: 'DAILY_TRADE_LIMIT', date, message: `Operação após 2 stops ou 2 takes em ${date}. Breakeven não conta.` });
     }
     const limit = dailyLossLimit(balance);
-    if (grossLoss(trades) > limit || (trades.length > 1 && grossLoss(trades.slice(0, -1)) >= limit)) {
-      violations.push({ kind: 'LOSS_OVER_LIMIT', date, message: `Limite de perda diária descumprido em ${date}.` });
+    const loss = grossLoss(trades);
+    if (loss > 0 && loss >= limit) {
+      violations.push({ kind: 'LOSS_OVER_LIMIT', date, message: `Limite de perda diária atingido em ${date}.` });
     }
     const before = balance;
     balance += trades.reduce((sum, trade) => sum + trade.pnl, 0);

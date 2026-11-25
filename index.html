@@ -355,7 +355,7 @@
       <!-- TAB 3: PLANO OPERACIONAL -->
       <section id="tab-plan" class="tab-content hidden space-y-6">
         <h2 class="asrv-page-title">Plano Operacional</h2>
-        <p class="asrv-page-subtitle">Encerre após 2 stops ou 2 takes no dia, somando dia e noite. Breakeven (valor absoluto menor que US$ 2) não conta nos limites. Stop financeiro de 10% do saldo de abertura. Registros fora da gestão zeram a ofensiva.</p>
+        <p class="asrv-page-subtitle">Encerre após 2 stops ou 2 takes no dia, somando dia e noite. Breakeven (valor absoluto menor que US$ 2) não conta nos limites. Atingir 25% de perda do saldo de abertura zera a ofensiva. Registros fora da gestão zeram a ofensiva.</p>
         <!-- METAS DE OFENSIVA (DUOLINGO STYLE METAS) -->
         <div class="asrv-streak space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
@@ -1654,7 +1654,7 @@
     }
 
     function dailyLossLimit(openingBalance) {
-      return Math.round(Math.max(0, openingBalance) * 10 + 1e-8) / 100;
+      return Math.round(Math.max(0, openingBalance) * 25 + 1e-8) / 100;
     }
 
     function lossLimitOn(date, excludedId) {
@@ -1668,9 +1668,10 @@
       for (const date of dates) {
         const dayTrades = trades.filter(t => t.date === date);
         const lossLimit = dailyLossLimit(balance);
+        const loss = grossDailyLoss(dayTrades);
         const before = balance;
         balance += dayTrades.reduce((sum, t) => sum + t.pnl, 0);
-        const broken = dayTrades.length > 0 && (outcomeLimitExceeded(dayTrades) || (grossDailyLoss(dayTrades) > lossLimit || (dayTrades.length > 1 && grossDailyLoss(dayTrades.slice(0, -1)) >= lossLimit)) ||
+        const broken = dayTrades.length > 0 && (outcomeLimitExceeded(dayTrades) || (loss > 0 && loss >= lossLimit) ||
           (balance <= 0 && (before > 0 || dayTrades.some(t => t.pnl < 0))));
         if (broken) streakDays = 0;
         else if (dayTrades.length > 0 || !isWeekend(date)) streakDays += 1;
@@ -1986,8 +1987,9 @@
         await queueCloud('deleteNoTrade', date);
       }
       if (modalShot.removed && cloudEnabled()) await removeTradeScreenshotFile(savedTrade.id);
-      if (grossDailyLoss([...tradesOnDate, savedTrade]) >= limit) {
-        alert('Limite de perda diária atingido. Encerre as operações do dia.');
+      const loss = grossDailyLoss([...tradesOnDate, savedTrade]);
+      if (loss > 0 && loss >= limit) {
+        alert('Limite de perda diária atingido. A ofensiva foi zerada. Encerre as operações do dia.');
       }
       const counts = dailyOutcomeCounts([...tradesOnDate, savedTrade]);
       if (counts.stops >= 2) alert('Dois stops registrados. Encerre as operações do dia.');
@@ -2024,9 +2026,9 @@
       const pnl = inPeriod.reduce((sum, t) => sum + t.pnl, 0);
       const previousPnl = trades.filter(t => t.date < start).reduce((sum, t) => sum + t.pnl, 0);
       const openingBalance = initialBalance + previousPnl;
-      const pct = openingBalance > 0 ? (pnl / openingBalance) * 100 : 0;
+      const pct = openingBalance > 0 ? (pnl / openingBalance) * 250 : 0;
       const lossPct = pnl < 0 && openingBalance > 0
-        ? Math.min(100, (Math.abs(pnl) / openingBalance) * 100)
+        ? Math.min(100, (Math.abs(pnl) / openingBalance) * 250)
         : 0;
       return { pnl, pct, lossPct };
     }
@@ -2229,11 +2231,11 @@ US$ 1 = R$ ${rateFormatter.format(rate)} · ${quoteDateFormatter.format(timestam
       const plan = dailyPlans.find(item => item.date === todayStr);
       const loss = grossDailyLoss(todayTrades);
       const limit = lossLimitOn(todayStr);
-      const limitStatus = (isValueHidden ? 'Limite diário: 10% do saldo de abertura.' : `Perda hoje: ${loss.toFixed(2)} de ${limit.toFixed(2)}.`) +
-        (loss >= limit ? ' Stop diário atingido.' : '');
+      const limitStatus = (isValueHidden ? 'Limite diário: 25% do saldo de abertura.' : `Perda hoje: ${loss.toFixed(2)} de ${limit.toFixed(2)}.`) +
+        (loss > 0 && loss >= limit ? ' Stop diário atingido.' : '');
       document.getElementById('today-plan-status').innerText = limitStatus;
       document.getElementById('home-checklist').textContent = plan ? 'Checklist salvo.' : 'Reserve um momento para o checklist.';
-      document.getElementById('home-stop-notice').classList.toggle('hidden', !(counts.stops >= 2 || counts.takes >= 2 || (todayTrades.length > 0 && loss >= limit)));
+      document.getElementById('home-stop-notice').classList.toggle('hidden', !(counts.stops >= 2 || counts.takes >= 2 || (loss > 0 && loss >= limit)));
       const todayPnl = todayTrades.reduce((sum, t) => sum + t.pnl, 0);
       const usd = value => isValueHidden ? '••••••' : value.toLocaleString('pt-BR', { style: 'currency', currency: 'USD' });
       const result = document.getElementById('home-result');

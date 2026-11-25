@@ -12,7 +12,7 @@ export function PlanTab({ plans, onSave, streak = 0 }: {
   return (
     <div className="space-y-4">
       <h1 className="asrv-page-title">Plano Operacional</h1>
-      <p className="asrv-page-subtitle">Encerre ao atingir 2 stops ou 2 takes no dia, somando dia e noite. Breakeven (resultado entre −US$ 2 e +US$ 2, sem os extremos) não conta nos limites. Stop financeiro: 10% do saldo de abertura. Operações fora da gestão são registradas e zeram a ofensiva.</p>
+      <p className="asrv-page-subtitle">Encerre ao atingir 2 stops ou 2 takes no dia, somando dia e noite. Breakeven (resultado entre −US$ 2 e +US$ 2, sem os extremos) não conta nos limites. Atingir 25% de perda do saldo de abertura zera a ofensiva. Operações fora da gestão são registradas e zeram a ofensiva.</p>
       <Card ariaLabel="Metas de ofensiva"><h2 className="asrv-section-title">Sua disciplina · {streak} dias</h2>
         <p className="asrv-page-subtitle">Próxima meta: {(Math.floor(streak / 30) + 1) * 30} dias</p>
         <div className="asrv-streak__milestones">{offensiveMilestones(streak).map(day => <div key={day} className={`asrv-milestone ${streak >= day ? 'is-reached' : ''}`}>{day} dias</div>)}</div>
