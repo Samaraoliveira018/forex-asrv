@@ -16,16 +16,18 @@ import { useBff } from '../../BffContext';
 import { DashboardTab } from './DashboardTab';
 import { JournalTab, type JournalView, type Market } from './JournalTab';
 import { PlanTab } from './PlanTab';
+import { CalculatorTab } from './CalculatorTab';
 import { StatsTab } from './StatsTab';
 import { TradeModal } from './TradeModal';
 import { formatDate, money, parseDateInput, today } from './format';
 
-type Tab = 'dashboard' | 'journal' | 'history' | 'plan' | 'stats';
+type Tab = 'dashboard' | 'journal' | 'history' | 'plan' | 'stats' | 'calculator';
 
 const navItems: ReadonlyArray<{ id: Tab; label: string; icon: string }> = [
   { id: 'journal', label: 'Diário de Trading', icon: 'fa-book-open' },
   { id: 'history', label: 'Histórico', icon: 'fa-calendar-days' },
   { id: 'plan', label: 'Plano', icon: 'fa-clipboard-list' },
+  { id: 'calculator', label: 'Calculadora', icon: 'fa-calculator' },
 ];
 
 export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
@@ -451,6 +453,7 @@ export function JournalScreen({ onSignedOut }: { onSignedOut: () => void }) {
             ) : null}
 
             {tab === 'stats' ? <StatsTab snapshot={snapshot} /> : null}
+            {tab === 'calculator' ? <CalculatorTab balance={snapshot.stats.balance} /> : null}
 
 
           </div>
