@@ -75,3 +75,5 @@ export { historyRange } from './domain/stats';
 export type { HistoryPeriod } from './domain/stats';
 
 export { formatBalanceInBrl, watchUsdBrlQuote, type UsdBrlQuote } from './infrastructure/usdBrl';
+
+export { simulateRiskReturn, parseSimulationNumber } from './domain/riskCalculator';
