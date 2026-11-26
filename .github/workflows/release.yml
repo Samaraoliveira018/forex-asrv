@@ -1,6 +1,9 @@
 name: Release
 
 on:
+  push:
+    branches: [main]
+    paths: [mobile/app.json]
   workflow_dispatch:
     inputs:
       version:
@@ -46,16 +49,18 @@ jobs:
 
       - name: Validate version and tag
         env:
-          VERSION: ${{ inputs.version }}
+          REQUESTED_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
+
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          VERSION="${REQUESTED_VERSION:-v$PKG_VERSION}"
 
           if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
             echo "Versão inválida: '$VERSION'. Use o formato v0.1.0 ou v0.1.0-beta.1." >&2
             exit 1
           fi
 
-          PKG_VERSION="$(node -p "require('./package.json').version")"
           if [[ "$VERSION" != "v$PKG_VERSION" ]]; then
             echo "A tag '$VERSION' não corresponde à version '$PKG_VERSION' do package.json." >&2
             exit 1
@@ -65,6 +70,8 @@ jobs:
             echo "A tag '$VERSION' já existe no repositório. Releases não são sobrescritas." >&2
             exit 1
           fi
+
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
 
       - name: Install dependencies
         run: npm ci
@@ -112,8 +119,6 @@ jobs:
         run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Package release assets
-        env:
-          VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
 
@@ -135,7 +140,6 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.version }}
           PRERELEASE: ${{ inputs.prerelease }}
         run: |
           set -euo pipefail
@@ -153,8 +157,6 @@ jobs:
             "${flags[@]}"
 
       - name: Summary
-        env:
-          VERSION: ${{ inputs.version }}
         run: |
           {
             echo "## Release $VERSION publicada"
