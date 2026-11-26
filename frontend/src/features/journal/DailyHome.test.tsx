@@ -8,12 +8,12 @@ import { today } from './format';
 const callbacks = { onRefreshQuote: vi.fn(), onToggleHidden: vi.fn(), onNewTrade: vi.fn(), onOpenHistory: vi.fn(), onOpenPlan: vi.fn(), onNoTradeDay: vi.fn(), onEditTrade: vi.fn() };
 
 describe('Tela inicial simplificada', () => {
-  it('mostra contadores separados e deixa BE fora deles sem perder seu valor no saldo', () => {
+  it('conta BE no total e reserva os limites para stops e takes', () => {
     const trades = [-1.99, 1.99, -2, 2].map((pnl, i) => createTrade({ id: String(i), date: today(), asset: `EURUSD${i}`, type: 'Compra', lots: 1, pnl }));
     const snapshot = emptySnapshot(trades);
     render(<DailyHome snapshot={snapshot} hidden={false} quote={{ rate: 5, timestamp: Date.now() }} {...callbacks} />);
     const counters = within(screen.getByLabelText('Contadores de hoje'));
-    expect(counters.getByText('Operações hoje: 2')).toBeInTheDocument();
+    expect(counters.getByText('Operações hoje: 4')).toBeInTheDocument();
     expect(counters.getByText('Stop Loss: 1/2')).toBeInTheDocument();
     expect(counters.getByText('Take Profit: 1/2')).toBeInTheDocument();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();

@@ -164,8 +164,7 @@ principal tem Diário, Histórico e Plano; análises detalhadas continuam dispon
 no menu de ações. O histórico mantém calendário e resultados por dia, semana e mês.
 
 A gestão diária soma manhã e noite: encerra ao atingir **2 stops ou 2 takes**.
-O contador de operações considera apenas resultados fora do breakeven
-(`abs(pnl) < US$ 2`). Exemplo: 1 stop + 1 take ainda permite uma operação;
+O total de operações inclui breakevens (`abs(pnl) < US$ 2`). Exemplo: 1 stop + 1 take ainda permite uma operação;
 2 takes encerram o dia. BE não conta para os limites de resultado e mantém seu
 valor real no saldo e no cálculo da perda financeira. O stop financeiro é de 25% do saldo de abertura do dia. A ofensiva zera ao atingir
 ou ultrapassar esse limite. O registro permanece disponível para refletir o ocorrido.

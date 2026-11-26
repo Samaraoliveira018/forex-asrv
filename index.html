@@ -867,7 +867,7 @@
     function dailyOutcomeCounts(list) {
       const counted = list.filter(t => !isBreakEven(t.pnl));
       const stops = counted.filter(t => isStop(t.pnl)).length;
-      return { operations: counted.length, stops, takes: counted.length - stops, breakEvens: list.length - counted.length };
+      return { operations: list.length, stops, takes: counted.length - stops, breakEvens: list.length - counted.length };
     }
     function outcomeLimitExceeded(list) {
       let stops = 0, takes = 0;

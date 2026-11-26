@@ -7,7 +7,7 @@ export const MAX_DAILY_TRADES = 2;
 export function dailyOutcomeCounts(trades: readonly { pnl: number }[]) {
   const counted = trades.filter(trade => !isBreakEven(trade.pnl));
   const stops = counted.filter(trade => isStop(trade.pnl)).length;
-  return { operations: counted.length, stops, takes: counted.length - stops, breakEvens: trades.length - counted.length };
+  return { operations: trades.length, stops, takes: counted.length - stops, breakEvens: trades.length - counted.length };
 }
 
 export function outcomeLimitExceeded(trades: readonly { pnl: number }[]): boolean {
