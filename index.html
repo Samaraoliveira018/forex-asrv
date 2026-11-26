@@ -94,6 +94,7 @@
         </button>
 
 
+        <button onclick="switchTab('calculator')" id="nav-calculator" class="nav-item asrv-nav-item"><i class="fa-solid fa-calculator"></i> Calculadora</button>
       </nav><details class="p-3"><summary class="asrv-kicker cursor-pointer">Mais análises</summary><button class="asrv-nav-item" onclick="switchTab('dashboard')">Visão geral</button><button class="asrv-nav-item" onclick="switchTab('stats')">Estatísticas</button></details>
     </div>
 
@@ -387,6 +388,20 @@
       </section>
 
       <!-- TAB 4: DADOS ESTATÍSTICOS -->
+      <section id="tab-calculator" class="tab-content hidden space-y-4">
+        <h2 class="text-2xl font-bold text-white">Calculadora de Risco/Retorno</h2>
+        <p class="text-sm text-gray-400">Simule seu gerenciamento sem alterar o diário.</p>
+        <div class="asrv-card grid gap-4 sm:grid-cols-2">
+          <label class="flex flex-col gap-1 text-sm text-gray-300">Capital (USD)<input id="calc-balance" class="asrv-field__input" inputmode="decimal" value="" oninput="renderRiskCalculator()"></label>
+          <label class="flex flex-col gap-1 text-sm text-gray-300">Risco por operação (%)<input id="calc-risk" class="asrv-field__input" inputmode="decimal" value="5" oninput="renderRiskCalculator()"></label>
+          <label class="flex flex-col gap-1 text-sm text-gray-300">Retorno por 1R (ex.: 2 ou 3)<input id="calc-rr" class="asrv-field__input" inputmode="decimal" value="2" oninput="renderRiskCalculator()"></label>
+          <label class="flex flex-col gap-1 text-sm text-gray-300">Taxa de acerto (%)<input id="calc-win" class="asrv-field__input" inputmode="decimal" value="50" oninput="renderRiskCalculator()"></label>
+          <label class="flex flex-col gap-1 text-sm text-gray-300">Quantidade de operações<input id="calc-operations" class="asrv-field__input" inputmode="decimal" value="30" oninput="renderRiskCalculator()"></label>
+        </div>
+        <div id="calc-result" class="asrv-card space-y-3" aria-live="polite"></div>
+        <p class="text-xs text-gray-400">Simulação teórica sem custos ou breakevens. As vitórias são arredondadas para operações inteiras. Risco fixo usa o capital inicial e pode gerar saldo negativo teórico; composto recalcula o risco a cada operação. Não é previsão de lucro.</p>
+      </section>
+
       <section id="tab-stats" class="tab-content hidden space-y-6">
         <div>
           <h2 class="asrv-page-title">Dados Estatísticos Detalhados</h2>
@@ -1830,7 +1845,67 @@
     }
 
     // NAVIGATION
+function simulateRiskReturn(balance, riskPct, rr, winPct, operations) {
+  if (![balance, riskPct, rr, winPct, operations].every(Number.isFinite)
+    || balance <= 0 || riskPct <= 0 || riskPct > 100 || rr <= 0 || rr > 100
+    || winPct < 0 || winPct > 100 || !Number.isInteger(operations) || operations < 1 || operations > 1000) return null;
+  const risk = riskPct / 100;
+  const wins = Math.round(operations * winPct / 100);
+  const losses = operations - wins;
+  const riskAmount = balance * risk;
+  const takeAmount = riskAmount * rr;
+  const fixedBalance = balance + wins * takeAmount - losses * riskAmount;
+  const compoundedBalance = balance * (1 + risk * rr) ** wins * (1 - risk) ** losses;
+  if (![riskAmount, takeAmount, fixedBalance, compoundedBalance].every(Number.isFinite)) return null;
+  return {
+    wins, losses, riskAmount, takeAmount, fixedBalance, compoundedBalance,
+    lossPct: 100 - winPct,
+    realizedWinPct: wins / operations * 100,
+    breakEvenPct: 100 / (1 + rr),
+    expectancyR: (winPct / 100) * rr - (1 - winPct / 100),
+  };
+}
+
+function parseSimulationNumber(value) {
+  const normalized = value.trim().replace(',', '.');
+  return normalized === '' ? NaN : Number(normalized);
+}
+
+    function renderRiskCalculator() {
+      const read = (key) => parseSimulationNumber(document.getElementById('calc-' + key).value);
+      const balance = read('balance');
+      const result = simulateRiskReturn(balance, read('risk'), read('rr'), read('win'), read('operations'));
+      const target = document.getElementById('calc-result');
+      target.replaceChildren();
+      if (!result) {
+        target.textContent = 'Preencha valores válidos: capital positivo, risco maior que zero até 100%, RR maior que zero até 100, acerto de 0 a 100% e 1 a 1000 operações inteiras.';
+        return;
+      }
+      const usd = (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'USD' });
+      const pct = (value) => value.toFixed(2) + '%';
+      const rows = [
+        ['Taxa de loss', pct(result.lossPct)], ['Wins / Losses simulados', result.wins + ' / ' + result.losses],
+        ['Acerto após arredondamento', pct(result.realizedWinPct)], ['Stop loss inicial', usd(result.riskAmount)],
+        ['Take profit inicial', usd(result.takeAmount)], ['Acerto mínimo teórico', pct(result.breakEvenPct)],
+        ['Expectativa por operação', result.expectancyR.toFixed(2) + 'R'],
+        ['Saldo final · risco fixo', usd(result.fixedBalance)], ['Lucro / perda · risco fixo', usd(result.fixedBalance - balance)],
+        ['Saldo final · risco composto', usd(result.compoundedBalance)], ['Lucro / perda · risco composto', usd(result.compoundedBalance - balance)],
+      ];
+      for (const [label, value] of rows) {
+        const row = document.createElement('div');
+        row.className = 'flex flex-wrap justify-between gap-2 border-b border-gray-700 pb-2';
+        const name = document.createElement('span'); name.className = 'text-sm text-gray-300'; name.textContent = label;
+        const amount = document.createElement('strong'); amount.className = 'text-emerald-200'; amount.textContent = value;
+        row.append(name, amount); target.append(row);
+      }
+    }
+
     function switchTab(tabId) {
+      if (tabId === 'calculator') {
+        const field = document.getElementById('calc-balance');
+        if (field.value === '') field.value = Math.max(0, initialBalance + trades.reduce((sum, trade) => sum + Number(trade.pnl), 0)).toFixed(2);
+        renderRiskCalculator();
+      }
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
       document.getElementById(`tab-${tabId}`).classList.remove('hidden');
 
